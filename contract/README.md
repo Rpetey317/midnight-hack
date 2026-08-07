@@ -18,6 +18,28 @@ npm run typecheck
 `npm run compile` must run before `npm test` — the tests import the compiler's generated output from
 `src/managed/`, which is gitignored.
 
+### Run it on a real chain
+
+```bash
+npm run compile:keys     # real proving keys, ~45s
+npm run devnet:up        # node + indexer + proof-server (docker)
+npm run devnet:deploy    # deploy + register both buyer policies
+npm run devnet:demo      # attest → proveCompliance ×2 → read records
+```
+
+Full setup on a fresh machine, with troubleshooting: **[../docs/08-local-setup.md](../docs/08-local-setup.md)**.
+
+### ⚠️ Do not drop the `overrides` block
+
+```json
+"overrides": { "@midnight-ntwrk/onchain-runtime-v3": "3.0.0" }
+```
+
+`midnight-js-protocol@4.1.1` pins that package to exactly 3.0.0 while `compact-runtime@0.16.0` declares
+`^3.0.0`, which floats to 3.1.0. npm installs both, each with its own WASM instance, and every circuit
+call fails with `expected instance of StateValue`. Deployment succeeds, so the failure surfaces later
+than you would expect. Any package combining `compact-runtime` with Midnight.js needs the same pin.
+
 ## What other tracks need
 
 ```typescript
@@ -64,6 +86,7 @@ drift as the project's highest risk.
 | `src/test/simulator.ts` | Hand-rolled simulator over `@midnight-ntwrk/compact-runtime` |
 | `src/test/fixtures.ts` | Deterministic test data, including the two-policy contrast bundles |
 | `src/test/audit_registry.test.ts` | 87 tests |
+| `src/devnet/` | Devnet config, wallet/provider wiring, `deploy.ts`, `demo.ts` |
 | `src/managed/` | Compiler output — gitignored, regenerate with `npm run compile` |
 
 ## Circuits
@@ -111,9 +134,10 @@ load-bearing and was learned the hard way: deliberately leaking a private field 
 
 ## Not done yet
 
-- Real proving keys (`npm run compile:keys`) — minutes, not seconds. Safe to generate now that the
-  struct is settled; tree depth (16) and the struct shape are both baked into the key.
-- Deployment. Nothing has touched a devnet or testnet.
+- **Public testnet.** Only the local devnet has been exercised; `src/devnet/config.ts` is devnet-only
+  by design. `app/README.md` documents the multi-network flow if you need preview or preprod.
+- Anchor key management. `src/devnet/config.ts` hardcodes a demo anchor secret; whoever deploys
+  becomes the anchor permanently, because the ledger field is `sealed`.
 - Wall-clock freshness enforcement. `maxAgeSeconds` bounds the validity window an attestor may grant
   (`validUntil <= generatedAt + maxAgeSeconds`), but whether evidence has *since* expired is the
   reader's judgement from `validUntil` in the public record.

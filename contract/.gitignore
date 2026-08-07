@@ -1,4 +1,11 @@
 node_modules/
 
-# Compiler output. Regenerate with `npm run compile`.
+# Compiler output — contract JS, ZKIR, and proving keys. Regenerate with
+# `npm run compile` (fast, no keys) or `npm run compile:keys` (real keys).
 src/managed/
+
+# Encrypted private-state store written by levelPrivateStateProvider.
+midnight-level-db/
+
+# Devnet deployment record written by `npm run devnet:deploy`.
+.zkuat-devnet.json

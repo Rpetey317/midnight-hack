@@ -26,6 +26,7 @@ explain non-obvious design choices.
 | [05-implementation-plan.md](05-implementation-plan.md) | Track assignments, timeline, cut list | Everyone |
 | [06-demo-script.md](06-demo-script.md) | The 2½-minute pitch and the DX feedback | Whoever presents |
 | [07-alignment-delta.md](07-alignment-delta.md) | Master Doc → as-built register, now mostly resolved | Track A |
+| [08-local-setup.md](08-local-setup.md) | **Setting this up on a fresh machine**, verified end to end | Anyone new |
 
 ## The reframing in one paragraph
 
@@ -59,8 +60,12 @@ Midnight's stack moves fast and recalled knowledge about it is unreliable, so cl
 of 2026-08-07 on schema v2: identity binding, both buyer policies, compliance records and timeline, and
 the historic-root property that validates the core design.
 
-Real proving keys and on-chain behaviour remain UNVERIFIED; nothing is deployed. Those are the next
-steps.
+**Real proving keys are generated and the contract is deployed to a local devnet.** A full
+attest → proveCompliance → read-record round trip runs with real ZK proofs, including the two-policy
+contrast. Only the local devnet has been exercised; public testnet remains UNVERIFIED.
+
+Setup on a fresh machine: **[08-local-setup.md](08-local-setup.md)** — verified by executing it end to
+end against a wiped chain.
 
 ## Naming
 

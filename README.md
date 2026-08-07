@@ -59,7 +59,7 @@ Fastest path for a new team member:
 |---|---|
 | `docs/` | ✅ Realigned to `Master-Doc.md` (2026-08-07) |
 | `app/` | ✅ Minimal `hello-world` scaffold (SDK 4.1.1), deps installed |
-| `contract/` | ✅ **Schema v2, 87 tests green.** Identity binding, both policies, compliance records. Not deployed. |
+| `contract/` | ✅ **v2, 87 tests, real keys, deployed to local devnet.** Full attest → prove → read round trip. |
 | `collector/`, `attestor/` | ⬜ |
 | `anchor/`, `cli/` | ⬜ |
 | `ui/` (vendor + buyer) | ⬜ |
@@ -74,8 +74,10 @@ asserted by the prover.
 **[docs/07-alignment-delta.md](docs/07-alignment-delta.md) records every gap and its resolution.** The
 two still open are scope decisions, not code: UI priority and standards grounding.
 
-Next: real proving keys and a testnet deploy. Both are now safe to do — a struct change re-keys every
-leaf, and the struct is settled.
+Real proving keys are generated and the contract runs on a local devnet — `npm run devnet:demo`
+executes the whole protocol with real ZK proofs. Setting this up on another machine:
+**[docs/08-local-setup.md](docs/08-local-setup.md)**, which was verified by running it end to end
+against a wiped chain.
 
 ## Integration surface
 
@@ -95,8 +97,16 @@ const key      = recordKey(canonicalJson.artifactDigest, 'bank-v1');  // the buy
 Do not reimplement any of that. See [docs/03-evidence-schema.md](docs/03-evidence-schema.md).
 
 ```bash
-cd contract && npm install && npm run compile && npm test
+cd contract
+npm install && npm run compile:keys      # real proving keys, ~45s
+npm run devnet:up && npm run devnet:deploy && npm run devnet:demo
 ```
+
+> **Heads-up for Tracks C and D:** `contract/package.json` carries an `overrides` block pinning
+> `@midnight-ntwrk/onchain-runtime-v3`. Without it the SDK installs two incompatible WASM runtimes and
+> **every circuit call fails** with `expected instance of StateValue` — deployment succeeds, so the
+> failure lands later than you would expect. Copy the override into any package that combines
+> `compact-runtime` with Midnight.js. Details in [docs/08-local-setup.md](docs/08-local-setup.md).
 
 ## Toolchain
 

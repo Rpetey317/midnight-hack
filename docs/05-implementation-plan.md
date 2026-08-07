@@ -12,7 +12,7 @@ ranks priorities differently from the original plan — see [Priority inversion]
 |---|---|
 | `docs/` | ✅ Realigned to the Master Doc |
 | `app/` | ✅ Minimal `hello-world` scaffold (SDK 4.1.1), deps installed |
-| `contract/` | ✅ **Schema v2, 87 tests green.** Identity binding, both policies, compliance records. Not deployed. |
+| `contract/` | ✅ **Schema v2, 87 tests green, real keys, deployed to local devnet.** Full attest → prove → read round trip works. |
 | `collector/` | ⬜ |
 | `anchor/`, `cli/` | ⬜ |
 | `ui/` (vendor + buyer) | ⬜ |
@@ -66,8 +66,8 @@ and `/buyer` routes is faster for a hackathon. **Take the single app.**
 ```
 <repo-root>/
 ├── app/                       # scaffolded hello-world — starting point
-├── contract/                  # Track A ✅ (needs v2 migration)
-│   └── src/{audit_registry.compact,encoding.ts,witnesses.ts,test/}
+├── contract/                  # Track A ✅ v2, tested, deployed to devnet
+│   └── src/{audit_registry.compact,encoding.ts,witnesses.ts,test/,devnet/}
 ├── collector/                 # Track B — checks → canonical evidence
 ├── attestor/                  # Track B — normalize + sign  (§9)
 ├── anchor/                    # Track C — Sigstore verify + attest(leaf)
@@ -82,7 +82,7 @@ and `/buyer` routes is faster for a hackathon. **Take the single app.**
 
 | Track | Deliverable | Blocked by |
 |---|---|---|
-| **A — Contract** | Schema v2 migration, both §20 policies, compliance records, deploy to testnet | — |
+| **A — Contract** | ✅ Schema v2, both §20 policies, compliance records, real keys, devnet deploy | — |
 | **B — Collector + attestor** | Checks → canonical v2 evidence → signed bundle. **Fixture first, live CI second.** | A's v2 struct |
 | **C — Anchor + CLI** | Sigstore verification, `attest(leaf)` submission, CLI proof path | A's generated types |
 | **D — Vendor + buyer views** | Two routes, Lace wallet, in-browser proving, the asymmetry contrast | A's generated types |
@@ -93,19 +93,23 @@ Track A publishes generated TypeScript types **first**, compiling with `--skip-z
 minutes for real proving keys). C and D build against those types immediately. Real keys get generated
 once, later, **after** the v2 migration — the struct shape and tree depth are both baked into the key.
 
-### Track A — migration done; deploy remains
+### Track A — done through devnet deploy
 
 Steps 1–5 of the old checklist are complete (2026-08-07): `Evidence` v2, `Policy` v2,
 `ComplianceRecord`, `proveCompliance` with vendor/product/artifact binding, `records` + `history`, both
 §20 policies, and 87 tests including rewritten privacy assertions. Details in
 [04-contract-spec.md](04-contract-spec.md).
 
-What remains:
+Step 6 is done too: **real proving keys generated** (~45s) and the contract **deployed to a local
+devnet** with both policies registered. `npm run devnet:demo` runs the whole protocol with real ZK
+proofs and prints the two-policy contrast. Setup on a fresh machine:
+[08-local-setup.md](08-local-setup.md), verified end to end against a wiped chain.
 
-1. **Generate real proving keys** (`npm run compile:keys`) — minutes, not seconds. Now safe: the struct
-   is settled, and both depth 16 and the struct shape are baked into the key.
-2. **Deploy.** Register both policies, record the contract address.
-3. **Pre-anchor demo data** so the pitch never depends on a live round trip.
+What remains for Track A:
+
+1. **Public testnet deploy** (preview/preprod) if the demo needs it — only the local devnet has been
+   exercised. The CLI is devnet-only by design; `app/README.md` documents the multi-network flow.
+2. **Pre-anchor demo data** so the pitch never depends on a live round trip.
 
 Three things changed relative to the earlier plan, worth knowing before building against it:
 

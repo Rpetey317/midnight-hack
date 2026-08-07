@@ -13,18 +13,38 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf src/managed"
+    "clean": "rm -rf src/managed",
+    "devnet:up": "cd ../app && docker compose up -d --wait",
+    "devnet:down": "cd ../app && docker compose down",
+    "devnet:reset": "cd ../app && docker compose down -v && docker compose up -d --wait",
+    "devnet:deploy": "tsx src/devnet/deploy.ts",
+    "devnet:demo": "tsx src/devnet/demo.ts"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "0.16.0"
   },
   "devDependencies": {
+    "@midnight-ntwrk/midnight-js-contracts": "4.1.1",
+    "@midnight-ntwrk/midnight-js-http-client-proof-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-level-private-state-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-network-id": "4.1.1",
+    "@midnight-ntwrk/midnight-js-node-zk-config-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-protocol": "4.1.1",
+    "@midnight-ntwrk/midnight-js-types": "4.1.1",
+    "@midnight-ntwrk/wallet-sdk": "1.2.0",
     "@types/node": "^22.0.0",
+    "@types/ws": "^8.18.1",
+    "rxjs": "^7.8.2",
     "tsx": "^4.23.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "ws": "^8.21.3"
   },
   "engines": {
     "node": ">=22.0.0"
+  },
+  "overrides": {
+    "@midnight-ntwrk/onchain-runtime-v3": "3.0.0"
   }
 }

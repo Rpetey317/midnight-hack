@@ -1,15 +1,21 @@
 # 04 — Contract Specification
 
-> **Status: BUILT AND TESTED on schema v2.** `contract/src/audit_registry.compact` compiles with
-> `compact compile --skip-zk` (compiler v0.31.1, dev tools v0.5.1), typechecks clean, and **87
-> simulator tests pass**. Runtime semantics are VERIFIED, not assumed.
+> **Status: BUILT, TESTED, AND RUNNING ON-CHAIN.** Schema v2.
+>
+> - Compiles with compiler v0.31.1 / dev tools v0.5.1, typechecks clean, **87 simulator tests pass**
+> - **Real proving keys generated** (`npm run compile:keys`, ~45s) — `proveCompliance.prover` is ~10 MB
+> - **Deployed to a local devnet**, both buyer policies registered, and a full
+>   attest → proveCompliance → read-record round trip runs with real ZK proofs
 >
 > ```bash
-> cd contract && npm install && npm run compile && npm test
+> cd contract && npm install && npm run compile:keys && npm run devnet:up
+> npm run devnet:deploy && npm run devnet:demo
 > ```
 >
-> Still UNVERIFIED: real proving-key generation (`npm run compile:keys`) and on-chain behaviour. The
-> simulator executes the same compiled circuit logic but does not produce or check a PLONK proof.
+> Setup on a fresh machine: [08-local-setup.md](08-local-setup.md). That document was verified by
+> executing it end to end against a wiped chain.
+>
+> Still UNVERIFIED: public testnet (preview/preprod). Only the local devnet has been exercised.
 >
 > The v1→v2 migration and its rationale are in [07-alignment-delta.md](07-alignment-delta.md).
 
@@ -344,13 +350,48 @@ Two more toolchain traps surfaced while writing them, both now in
 `Iterator` rather than an `IterableIterator`, and a Merkle digest is **big-endian** as a
 `MerkleTreeDigest.field` but **little-endian** in the transcript.
 
+## Deployment
+
+Verified on a local devnet, 2026-08-07. Full instructions: [08-local-setup.md](08-local-setup.md).
+
+| Circuit | Proving key |
+|---|---|
+| `proveCompliance` | ~10 MB |
+| `attest` | ~2.8 MB |
+| `registerPolicy` | ~2.8 MB |
+
+Key generation takes ~45s for all three. **Regenerate whenever the contract changes** — tree depth 16
+and the `Evidence` struct shape are both baked in.
+
+Policy ids are deterministic (`stringIdOf` of the slug), so they are identical across deployments:
+
+```
+bank-v1        8eb066f1ff82c34bf459108e1854b511a5327f6a1181a72b7bcb14922a695cc6
+enterprise-v1  65bb1b975c97115919de8beba5b451602ab917c4813e6cff1ac4bcdaf274c3e5
+```
+
+### The dependency trap that blocks every circuit call
+
+**This will hit Tracks C and D.** `@midnight-ntwrk/midnight-js-protocol@4.1.1` pins
+`onchain-runtime-v3` to exactly **3.0.0**, while `@midnight-ntwrk/compact-runtime@0.16.0` declares
+`^3.0.0`, which floats to **3.1.0**. npm installs both, each with its own WASM instance, and a
+`StateValue` built by one fails `instanceof` inside the other:
+
+```
+Unexpected error executing scoped transaction '<unnamed>':
+  Error: expected instance of StateValue
+```
+
+Deployment succeeds — it never crosses the boundary — and the **first circuit call** dies. The fix is
+an `overrides` block pinning a single version; `contract/package.json` carries it. `app/` has the same
+duplication and needs the same fix.
+
 ## Open items
 
+- **UNVERIFIED:** public testnet. Only the local devnet has been exercised.
 - **UNVERIFIED:** `blockTimeGte` / `blockTimeLt` for wall-clock freshness enforcement. Recording
   `validUntil` and letting the reader judge needs no new primitive and is the shipped path.
-- **UNVERIFIED:** real proving-key generation and on-chain execution. Nothing deployed yet. Generate
-  keys **now that v2 is settled** — depth 16 and the struct shape are both baked into the key.
-- The anchor secret is fixed at deployment with no rotation path. Fine for the hackathon; a real
-  deployment wants rotation or a multi-sig anchor.
+- The anchor secret is fixed at deployment with no rotation path, and the devnet scripts hardcode a
+  demo value. Fine for the hackathon; a real deployment wants rotation or a multi-sig anchor.
 - `history` grows without bound. Fine at demo scale; a real deployment wants pruning or an
   indexer-derived timeline.
