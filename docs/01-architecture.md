@@ -168,6 +168,22 @@ So the predicate carries `{ leaf, repo, sha, schema }` and nothing else. `leaf` 
 commitment; without the salt it reveals nothing. Evidence and salt travel to the vendor as a private
 artifact and enter only the local ZK proof.
 
+### Where provenance is actually verified
+
+Worth being precise, because two components look like they do the same thing and only one of them is
+load-bearing.
+
+The **collector** sets `buildProvenanceVerified` by asking GitHub whether an attestation *exists* for
+the artifact digest (`gh api repos/{o}/{r}/attestations/sha256:{digest}`). That is a presence check.
+It does not validate a Sigstore bundle and it does not compare the OIDC subject repo against the
+predicate repo.
+
+The **anchor** does. That comparison is the security-critical one — without it, repo A can attest for
+repo B and the whole trust chain is decorative — and it runs off-chain in Node with
+`@sigstore/verify` against our own predicate, before `attest(leaf)` is submitted. The collector's
+report records the distinction in its `source` field so nobody reads more into the boolean than it
+carries.
+
 ## What is public and what is private
 
 Master Doc §37. This table is the product — get it right and the pitch writes itself.
@@ -217,9 +233,9 @@ commitment L. That is a stronger position than any assurance vendor occupies tod
 
 | Component | Runs where | Responsibility |
 |---|---|---|
-| `collector` | Vendor's GitHub Actions | Run checks, emit canonical evidence, compute commitment |
-| `.github/workflows/attest.yml` | Vendor's GitHub Actions | Invoke collector, sign via `actions/attest`, upload private artifact |
-| `attestor` | Vendor CI or trusted service | Validate CI inputs, normalize evidence, sign (§9) |
+| `collector` | Vendor's GitHub Actions | Run checks, emit a private report. ✅ Built |
+| `.github/workflows/attest.yml` | Vendor's GitHub Actions | Invoke collector, sign via `actions/attest`, upload private artifact. ✅ Written, not green |
+| `attestor` | Vendor CI or trusted service | Validate CI inputs, normalize evidence, sign (§9), compute the commitment. ✅ Built |
 | `anchor` | Operator's server / laptop | Verify Sigstore bundle, check OIDC↔repo binding, submit `attest(leaf)` |
 | `contract` | Midnight | Anchor tree, policy registry, compliance records, nullifiers |
 | `ui/vendor` | Browser | Private evidence panel, policy selector, local proving |

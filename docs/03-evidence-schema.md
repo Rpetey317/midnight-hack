@@ -273,6 +273,40 @@ Neither mentions coverage. Both are evaluated over the **same** evidence bundle,
 include a case that passes one and fails the other in each direction — that contrast is the demo's
 strongest beat (§17, §28) and it is covered by tests.
 
+## The signed bundle — Track B's output, Tracks C and D's input
+
+`@zkuat/attestor` emits two documents per attestation, and their difference is the privacy design.
+
+| File | Audience | Contents |
+|---|---|---|
+| `bundle.json` | the vendor only, mode 0600 | evidence, **salt**, leaf, DSSE signature |
+| `predicate.json` | the world, via Sigstore → Rekor | `{ leaf, repo, sha, schema }` and nothing else |
+
+The attestor signs a **statement** — the canonical evidence *plus* the leaf — rather than the bare
+evidence, so one evidence document is bound to one commitment and neither is swappable under the same
+signature. ed25519 DSSE, `node:crypto`, no dependency.
+
+The salt sits **outside** the signed payload. Signing it would make it a natural thing to quote when
+presenting a signature, and it is the one value whose publication unblinds the commitment. The binding
+that matters — `evidence + salt → leaf → tree` — is enforced in-circuit by `proveCompliance`.
+
+```typescript
+import { loadBundle, bundleToPrivateState } from '@zkuat/attestor';
+
+const bundle = loadBundle('demo/fixtures/bank-only/bundle.json');
+const { evidence, salt, leaf } = bundleToPrivateState(bundle);   // verifies, then decodes
+```
+
+`bundleToPrivateState` returns exactly the fields `AuditPrivateState` needs, leaving `path` for the
+caller to read off the chain after anchoring. It verifies first: signature, statement against the
+signed payload, and the leaf re-derived through `pureCircuits.leafOf`. Skipping that turns a bad
+bundle into a `path/leaf mismatch` minutes into proof generation.
+
+**Track C must pass `trustedKeyIds`.** Without it, `verifyBundle` checks the signature against the key
+the bundle *carries* — internal consistency, and nothing about who signed.
+
+Full format: [`../attestor/README.md`](../attestor/README.md).
+
 ## Salt
 
 32 cryptographically random bytes, fresh per attestation, generated in CI. Unchanged in v2.
@@ -292,7 +326,9 @@ outstanding proofs do not break when new evidence is anchored.
 
 - [x] **Track A (contract)** — `Evidence` v2, `Policy` v2, `ComplianceRecord`, identity binding,
       `stringIdOf`; encoding in `contract/src/encoding.ts`; 87 tests green (2026-08-07)
-- [ ] Track B (collector + attestor) — emits v2 canonically; imports `@zkuat/contract`
+- [x] **Track B (collector + attestor)** — `@zkuat/collector` measures, `@zkuat/attestor` normalizes
+      and signs; both import `@zkuat/contract` and call `pureCircuits.leafOf`. Four signed fixtures
+      committed under `demo/fixtures/`, 138 + 27 tests green (2026-08-07). Bundle format below.
 - [ ] Track C (anchor/CLI) — imports `@zkuat/contract`, no reimplementation
 - [ ] Track D (vendor + buyer views) — imports `@zkuat/contract`, no reimplementation
 

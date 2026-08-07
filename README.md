@@ -60,9 +60,27 @@ Fastest path for a new team member:
 | `docs/` | ✅ Realigned to `Master-Doc.md` (2026-08-07) |
 | `app/` | ✅ Minimal `hello-world` scaffold (SDK 4.1.1), deps installed |
 | `contract/` | ✅ **v2, 87 tests, real keys, deployed to local devnet.** Full attest → prove → read round trip. |
-| `collector/`, `attestor/` | ⬜ |
+| `collector/`, `attestor/` | ✅ **11 checks, DSSE-signed bundles, 165 tests.** Four signed fixtures anchored and proven on the devnet with real ZK proofs. |
+| `demo/fixtures/` | ✅ Committed, verifying, and consumable by `--bundle` |
+| `.github/workflows/attest.yml` | ✅ Written; not green (the repo is private, where artifact attestations are plan-gated). Nothing depends on it. |
 | `anchor/`, `cli/` | ⬜ |
 | `ui/` (vendor + buyer) | ⬜ |
+
+Try the whole thing without a chain:
+
+```bash
+cd attestor && npm install && npm run verify -- \
+  ../demo/fixtures/bank-only/bundle.json --trust ../demo/keys/zkuat-attestor-v1.pub.json
+```
+
+Then with real ZK proofs — the same signed bundle against two buyer policies:
+
+```bash
+cd contract && npm run devnet:up && npm run devnet:deploy
+npm run devnet:prove -- --bundle ../demo/fixtures/bank-only/bundle.json --policy bank-v1        # PASS
+npm run devnet:prove -- --bundle ../demo/fixtures/bank-only/bundle.json --policy enterprise-v1  # FAIL
+npm run devnet:inspect
+```
 
 ### Docs and code are aligned
 
@@ -122,12 +140,12 @@ Verified in this environment on 2026-08-07:
 | Docker | 29.4.2 |
 | `gh` | 2.45.0 — see caveats below |
 
-Two verified environment gotchas that block Track B/C if unaddressed:
+One environment gotcha still open, and one now closed:
 
-- **`gh` is not authenticated.** `gh auth status` reports no logged-in hosts, so every `gh api` call
-  fails. Run `! gh auth login`.
-- **`gh attestation` does not exist at 2.45.0** — the subcommand landed in 2.49.0. Use
-  `@sigstore/verify` in Node rather than shelling out, or install a current `gh`.
+- ~~`gh` is not authenticated.~~ **Resolved** — the collector's `gh api` checks work.
+- **`gh attestation` does not exist at 2.45.0** — the subcommand landed in 2.49.0. The collector
+  routes around it with the REST endpoint `gh api repos/{o}/{r}/attestations/sha256:{digest}`, which
+  works on 2.45. Track C should use `@sigstore/verify` in Node rather than upgrading `gh`.
 
 No proof server is running locally (`:6300` is closed). `app/` brings one up via
 `docker compose`.

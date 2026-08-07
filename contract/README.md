@@ -16,7 +16,23 @@ npm run typecheck
 ```
 
 `npm run compile` must run before `npm test` — the tests import the compiler's generated output from
-`src/managed/`, which is gitignored.
+`src/managed/`.
+
+### ⚠️ The generated contract JS is committed — re-commit it when the contract changes
+
+`src/managed/audit_registry/contract/` (`index.js` + `index.d.ts`, 140 KB) and `compiler/` are
+**tracked in git**. Proving keys and ZKIR are not. Every other track imports `pureCircuits` through
+`@zkuat/contract`, and a fresh clone, a GitHub Actions runner, and Track D's browser build have no
+Compact toolchain to regenerate them with.
+
+So after any edit to `audit_registry.compact`:
+
+```bash
+npm run compile && git add src/managed/audit_registry && npm test
+```
+
+Skipping this leaves Tracks B, C, and D building against a stale encoding — which fails as a
+commitment mismatch three components downstream, not as a compile error here.
 
 ### Run it on a real chain
 
@@ -87,7 +103,7 @@ drift as the project's highest risk.
 | `src/test/fixtures.ts` | Deterministic test data, including the two-policy contrast bundles |
 | `src/test/audit_registry.test.ts` | 87 tests |
 | `src/devnet/` | Devnet config, wallet/provider wiring, `deploy.ts`, `demo.ts` |
-| `src/managed/` | Compiler output — gitignored, regenerate with `npm run compile` |
+| `src/managed/` | Compiler output. `contract/` and `compiler/` are **committed**; `keys/` and `zkir/` are gitignored |
 
 ## Circuits
 

@@ -32,6 +32,11 @@ import {
   type CanonicalEvidence,
 } from '../encoding.js';
 import { witnesses, type AuditPrivateState } from '../witnesses.js';
+// Track B, by relative source path rather than as a package dependency: the
+// attestor already depends on @zkuat/contract, and adding the reverse edge to
+// package.json would make the two mutually dependent and force a reinstall of
+// the tree whose `overrides` block is what keeps devnet working at all.
+import { bundleToPrivateState, loadBundle, unhex32 } from '../../../attestor/src/index.js';
 import { ANCHOR_SECRET, GENESIS_SEED, PRIVATE_STATE_ID, STATE_FILE, ZK_CONFIG_PATH } from './config.js';
 import { createProviders, createWallet, ensureDust, waitForProofServer, withDustRetry } from './wallet.js';
 
@@ -42,6 +47,22 @@ const HELP = `
 Attest and prove one evidence bundle against one policy.
 
   npm run devnet:prove -- [flags]
+
+Use a real signed bundle from Track B (recommended)
+  --bundle <path>          a signed evidence bundle from @zkuat/attestor.
+                           Verifies the DSSE signature and re-derives the leaf,
+                           then attests and proves it. Every flag below that
+                           describes evidence is ignored — the evidence is
+                           whatever the attestor signed, which is the point.
+
+      npm run devnet:prove -- --bundle ../demo/fixtures/bank-only/bundle.json --policy bank-v1
+      npm run devnet:prove -- --bundle ../demo/fixtures/bank-only/bundle.json --policy enterprise-v1
+
+  A bundle carries a fixed salt, so proving the same bundle against the same
+  policy twice hits the replay guard ("already proven"). That is correct. To
+  rehearse again, refresh the fixtures (new timestamp, new leaf, new nullifier):
+
+      cd ../attestor && npm run fixtures:refresh
 
 Identity (these go into the signed evidence)
   --policy <slug>          bank-v1 | enterprise-v1        (default bank-v1)
@@ -151,9 +172,31 @@ if (!(policySlug in POLICIES)) {
 }
 const policyIdBytes = POLICIES[policySlug as keyof typeof POLICIES];
 
-const VENDOR = str('vendor', 'acme-software');
-const PRODUCT = str('product', 'payment-engine');
-const ARTIFACT = str('artifact', `sha256:${'8f739ab'.padEnd(64, '0')}`);
+/**
+ * A signed bundle from Track B, when one was given.
+ *
+ * `bundleToPrivateState` verifies before returning: DSSE signature, statement
+ * against the signed payload, and the leaf re-derived through the contract's
+ * own `pureCircuits.leafOf`. A bundle that fails any of those errors here
+ * rather than as "path/leaf mismatch" minutes into proof generation.
+ */
+const BUNDLE = args.has('bundle')
+  ? (() => {
+      const file = str('bundle', '');
+      const loaded = loadBundle(file);
+      bundleToPrivateState(loaded); // throws with a named reason
+      return { file, ...loaded };
+    })()
+  : null;
+
+const BUNDLE_EVIDENCE = BUNDLE?.statement.evidence;
+
+const VENDOR = str('vendor', BUNDLE_EVIDENCE?.vendor ?? 'acme-software');
+const PRODUCT = str('product', BUNDLE_EVIDENCE?.product ?? 'payment-engine');
+const ARTIFACT = str(
+  'artifact',
+  BUNDLE_EVIDENCE?.artifactDigest ?? `sha256:${'8f739ab'.padEnd(64, '0')}`,
+);
 
 // What we assert publicly. Defaults to matching the evidence; override one of
 // these to exercise the identity binding, which is what stops a prover filing a
@@ -164,7 +207,15 @@ const CLAIM_ARTIFACT = str('claim-artifact', ARTIFACT);
 
 const now = Math.floor(Date.now() / 1000);
 
-const canonical: CanonicalEvidence = {
+/**
+ * The evidence to attest and prove.
+ *
+ * With `--bundle`, it is whatever the attestor signed — untouched, because
+ * editing it would break the commitment the signature covers. Without one, it
+ * is assembled from flags, which is the manual-testing path: change one fact,
+ * re-run, watch the verdict move.
+ */
+const canonical: CanonicalEvidence = BUNDLE_EVIDENCE ?? {
   schema: EVIDENCE_SCHEMA,
   vendor: VENDOR,
   product: PRODUCT,
@@ -192,6 +243,15 @@ async function main() {
   const { contractAddress } = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
 
   console.log('\n─── Private evidence (stays on this machine) ─────────────\n');
+  if (BUNDLE) {
+    console.log(`  source             ${BUNDLE.file}`);
+    console.log(
+      `  ✓ signature        verified under keyid ${BUNDLE.attestorPublicKey.keyid.slice(0, 16)}…`,
+    );
+    console.log('  ✓ leaf             re-derived via pureCircuits.leafOf');
+    if (BUNDLE.demo) console.log('  ⚠ demo bundle      synthetic evidence, salt in cleartext');
+    console.log('');
+  }
   console.log(`  vendor / product   ${VENDOR} / ${PRODUCT}`);
   console.log(`  criticals ${canonical.vulns.criticals}   highs ${canonical.vulns.highs}   kev ${canonical.vulns.kev}`);
   console.log(`  forbiddenDeps ${canonical.deps.forbidden}   vulnDeps ${canonical.deps.vulnerable}`);
@@ -243,11 +303,17 @@ async function main() {
     initialPrivateState: anchorState,
   });
 
-  // A fresh salt per run, so each invocation produces a distinct leaf and a
-  // distinct nullifier — otherwise re-running the same evidence would hit
-  // "already proven".
-  const salt = new Uint8Array(32);
-  crypto.getRandomValues(salt);
+  // A bundle's salt is fixed — it is half of the commitment the attestor signed,
+  // so re-salting would invalidate the leaf. Otherwise a fresh salt per run, so
+  // each invocation produces a distinct leaf and a distinct nullifier rather
+  // than hitting "already proven" on the second go.
+  let salt: Uint8Array;
+  if (BUNDLE) {
+    salt = unhex32(BUNDLE.salt, 'bundle.salt');
+  } else {
+    salt = new Uint8Array(32);
+    crypto.getRandomValues(salt);
+  }
 
   const leaf = pureCircuits.leafOf(evidence, salt);
   console.log('─── Attest ───────────────────────────────────────────────\n');

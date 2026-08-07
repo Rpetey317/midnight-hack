@@ -1,0 +1,37 @@
+{
+  "_comment": [
+    "Baseline for every demo fixture. Scenario files patch named checks on top.",
+    "SYNTHETIC — these numbers are chosen to drive the demo beats in",
+    "docs/06-demo-script.md, not measured from a real scan. Every generated",
+    "report carries provenance.synthetic = true, and that marker travels into",
+    "the signed statement.",
+    "",
+    "Identity matches contract/src/devnet/demo.ts so a fixture and the devnet",
+    "demo describe the same vendor and product."
+  ],
+  "subject": {
+    "vendor": "acme-software",
+    "product": "payment-engine",
+    "attestor": "zkuat-attestor-v1",
+    "repo": "acme-software/payment-engine",
+    "commit": "9f2a1b3c4d5e6f708192a3b4c5d6e7f809a1b2c3",
+    "validDays": 29
+  },
+  "collector": {
+    "name": "zkuat-collector",
+    "version": "0.1.0"
+  },
+  "checks": {
+    "artifactDigest": "sha256:8f739ab000000000000000000000000000000000000000000000000000000000",
+    "criticals": 0,
+    "highs": 3,
+    "kev": 0,
+    "forbiddenDeps": 0,
+    "vulnDeps": 4,
+    "mfaRequired": true,
+    "branchProtected": true,
+    "buildProvenanceVerified": true,
+    "ciGreen": true,
+    "coverage": 8734
+  }
+}

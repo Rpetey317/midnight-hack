@@ -1,0 +1,76 @@
+{
+  "_type": "zkuat.collector-report.v1",
+  "provenance": {
+    "collector": "zkuat-collector",
+    "collectorVersion": "0.1.0",
+    "configHash": "8cc3eeb463fc0fedeb952d1bc893cb18bd1ea2fdbdf87266f9dac58dd2e87d3e",
+    "collectedAt": 1786060800,
+    "synthetic": true,
+    "scenario": "enterprise-only"
+  },
+  "subject": {
+    "vendor": "acme-software",
+    "product": "payment-engine",
+    "attestor": "zkuat-attestor-v1",
+    "repo": "acme-software/payment-engine",
+    "commit": "9f2a1b3c4d5e6f708192a3b4c5d6e7f809a1b2c3",
+    "validDays": 29
+  },
+  "checks": {
+    "artifactDigest": {
+      "value": "sha256:2b8fa6042b8fa6042b8fa6042b8fa6042b8fa6042b8fa6042b8fa6042b8fa604",
+      "status": "measured",
+      "source": "demo scenario \"enterprise-only\" — synthetic, not measured"
+    },
+    "criticals": {
+      "value": 0,
+      "status": "measured",
+      "source": "demo scenario \"enterprise-only\" — synthetic, not measured"
+    },
+    "highs": {
+      "value": 6,
+      "status": "measured",
+      "source": "demo scenario \"enterprise-only\" — synthetic, not measured"
+    },
+    "kev": {
+      "value": 0,
+      "status": "measured",
+      "source": "demo scenario \"enterprise-only\" — synthetic, not measured"
+    },
+    "forbiddenDeps": {
+      "value": 0,
+      "status": "measured",
+      "source": "demo scenario \"enterprise-only\" — synthetic, not measured"
+    },
+    "vulnDeps": {
+      "value": 4,
+      "status": "measured",
+      "source": "demo scenario \"enterprise-only\" — synthetic, not measured"
+    },
+    "mfaRequired": {
+      "value": true,
+      "status": "measured",
+      "source": "demo scenario \"enterprise-only\" — synthetic, not measured"
+    },
+    "branchProtected": {
+      "value": true,
+      "status": "measured",
+      "source": "demo scenario \"enterprise-only\" — synthetic, not measured"
+    },
+    "buildProvenanceVerified": {
+      "value": true,
+      "status": "measured",
+      "source": "demo scenario \"enterprise-only\" — synthetic, not measured"
+    },
+    "ciGreen": {
+      "value": true,
+      "status": "measured",
+      "source": "demo scenario \"enterprise-only\" — synthetic, not measured"
+    },
+    "coverage": {
+      "value": 8734,
+      "status": "measured",
+      "source": "demo scenario \"enterprise-only\" — synthetic, not measured"
+    }
+  }
+}

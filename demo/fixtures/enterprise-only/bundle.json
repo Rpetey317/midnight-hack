@@ -1,0 +1,63 @@
+{
+  "_type": "zkuat.bundle.v1",
+  "demo": true,
+  "salt": "5300000000000000000000000000000000000000000000000000000000000000",
+  "leaf": "110f374a394187014c78337bccb8681ecfe39e71e00cbd55bd9b5377ac8f23b4",
+  "statement": {
+    "_type": "zkuat.attestation.v1",
+    "schema": "zkuat.evidence.v2",
+    "evidence": {
+      "schema": "zkuat.evidence.v2",
+      "vendor": "acme-software",
+      "product": "payment-engine",
+      "artifactDigest": "2b8fa6042b8fa6042b8fa6042b8fa6042b8fa6042b8fa6042b8fa6042b8fa604",
+      "commit": "9f2a1b3c4d5e6f708192a3b4c5d6e7f809a1b2c3",
+      "attestor": "zkuat-attestor-v1",
+      "generatedAt": 1786060800,
+      "validUntil": 1788566400,
+      "vulns": {
+        "criticals": 0,
+        "highs": 6,
+        "kev": 0
+      },
+      "deps": {
+        "forbidden": 0,
+        "vulnerable": 4
+      },
+      "config": {
+        "mfaRequired": true,
+        "branchProtected": true,
+        "buildProvenanceVerified": true,
+        "ciGreen": true
+      },
+      "coverage": 8734
+    },
+    "leaf": "110f374a394187014c78337bccb8681ecfe39e71e00cbd55bd9b5377ac8f23b4",
+    "attestor": "zkuat-attestor-v1",
+    "attestedAt": 1786060800,
+    "collector": {
+      "name": "zkuat-collector",
+      "version": "0.1.0",
+      "configHash": "8cc3eeb463fc0fedeb952d1bc893cb18bd1ea2fdbdf87266f9dac58dd2e87d3e",
+      "synthetic": true,
+      "scenario": "enterprise-only"
+    }
+  },
+  "envelope": {
+    "payloadType": "application/vnd.zkuat.statement+json",
+    "payload": "eyJfdHlwZSI6InprdWF0LmF0dGVzdGF0aW9uLnYxIiwiYXR0ZXN0ZWRBdCI6MTc4NjA2MDgwMCwiYXR0ZXN0b3IiOiJ6a3VhdC1hdHRlc3Rvci12MSIsImNvbGxlY3RvciI6eyJjb25maWdIYXNoIjoiOGNjM2VlYjQ2M2ZjMGZlZGViOTUyZDFiYzg5M2NiMThiZDFlYTJmZGJkZjg3MjY2ZjlkYWM1OGRkMmU4N2QzZSIsIm5hbWUiOiJ6a3VhdC1jb2xsZWN0b3IiLCJzY2VuYXJpbyI6ImVudGVycHJpc2Utb25seSIsInN5bnRoZXRpYyI6dHJ1ZSwidmVyc2lvbiI6IjAuMS4wIn0sImV2aWRlbmNlIjp7ImFydGlmYWN0RGlnZXN0IjoiMmI4ZmE2MDQyYjhmYTYwNDJiOGZhNjA0MmI4ZmE2MDQyYjhmYTYwNDJiOGZhNjA0MmI4ZmE2MDQyYjhmYTYwNCIsImF0dGVzdG9yIjoiemt1YXQtYXR0ZXN0b3ItdjEiLCJjb21taXQiOiI5ZjJhMWIzYzRkNWU2ZjcwODE5MmEzYjRjNWQ2ZTdmODA5YTFiMmMzIiwiY29uZmlnIjp7ImJyYW5jaFByb3RlY3RlZCI6dHJ1ZSwiYnVpbGRQcm92ZW5hbmNlVmVyaWZpZWQiOnRydWUsImNpR3JlZW4iOnRydWUsIm1mYVJlcXVpcmVkIjp0cnVlfSwiY292ZXJhZ2UiOjg3MzQsImRlcHMiOnsiZm9yYmlkZGVuIjowLCJ2dWxuZXJhYmxlIjo0fSwiZ2VuZXJhdGVkQXQiOjE3ODYwNjA4MDAsInByb2R1Y3QiOiJwYXltZW50LWVuZ2luZSIsInNjaGVtYSI6InprdWF0LmV2aWRlbmNlLnYyIiwidmFsaWRVbnRpbCI6MTc4ODU2NjQwMCwidmVuZG9yIjoiYWNtZS1zb2Z0d2FyZSIsInZ1bG5zIjp7ImNyaXRpY2FscyI6MCwiaGlnaHMiOjYsImtldiI6MH19LCJsZWFmIjoiMTEwZjM3NGEzOTQxODcwMTRjNzgzMzdiY2NiODY4MWVjZmUzOWU3MWUwMGNiZDU1YmQ5YjUzNzdhYzhmMjNiNCIsInNjaGVtYSI6InprdWF0LmV2aWRlbmNlLnYyIn0=",
+    "signatures": [
+      {
+        "keyid": "b19e0659001c81e2f3b2c08fe5df8b811e72ce756a248634165c1d5b614554dd",
+        "sig": "GbEViugyHTdh6j2M5J48CGQYBDAARWUHN9fEJB7kAiPFZNel/SxTxgxc8bPJvMKoviN4pJMnz8coKrfon0/nCg=="
+      }
+    ]
+  },
+  "attestorPublicKey": {
+    "alg": "ed25519",
+    "attestor": "zkuat-attestor-v1",
+    "keyid": "b19e0659001c81e2f3b2c08fe5df8b811e72ce756a248634165c1d5b614554dd",
+    "spki": "MCowBQYDK2VwAyEA1ubn7LvAWHzAFrdXzYCK367Fr44Qd3VEM7vnndqDqOA="
+  },
+  "sigstore": null
+}

@@ -1,0 +1,6 @@
+{
+  "alg": "ed25519",
+  "attestor": "zkuat-attestor-v1",
+  "keyid": "b19e0659001c81e2f3b2c08fe5df8b811e72ce756a248634165c1d5b614554dd",
+  "spki": "MCowBQYDK2VwAyEA1ubn7LvAWHzAFrdXzYCK367Fr44Qd3VEM7vnndqDqOA="
+}

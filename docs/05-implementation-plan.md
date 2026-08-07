@@ -13,11 +13,13 @@ ranks priorities differently from the original plan — see [Priority inversion]
 | `docs/` | ✅ Realigned to the Master Doc |
 | `app/` | ✅ Minimal `hello-world` scaffold (SDK 4.1.1), deps installed |
 | `contract/` | ✅ **Schema v2, 87 tests green, real keys, deployed to local devnet.** Full attest → prove → read round trip works. |
-| `collector/` | ⬜ |
+| `collector/`, `attestor/` | ✅ **11 checks, DSSE signing, 165 tests green.** Four signed fixtures anchored and proven on the devnet. |
+| `demo/fixtures/` | ✅ Committed and verifying |
+| `.github/workflows/attest.yml` | ✅ Written, not green (private repo — attestations plan-gated). Nothing depends on it. |
 | `anchor/`, `cli/` | ⬜ |
 | `ui/` (vendor + buyer) | ⬜ |
 
-**Tracks B, C, and D are unblocked.** `@zkuat/contract` exports the v2 encoding, both policies, and the
+**Tracks C and D are unblocked twice over** — by A's generated types and now by B's signed bundles. `@zkuat/contract` exports the v2 encoding, both policies, and the
 pure circuits that make the leaf, nullifier, and record key. Import them; do not reimplement.
 
 ## Priority inversion
@@ -121,23 +123,71 @@ Three things changed relative to the earlier plan, worth knowing before building
 - **The buyer view is not blocked on anything.** `records` and `history` both expose
   `[Symbol.iterator]` in the generated ledger reader — the open question about iteration is closed.
 
-### Track B — Collector + attestor
+### Track B — done: fixtures, collector, attestor, workflow
 
-> **Two verified environment blockers — fix these first, they take minutes now and an hour at 23:00.**
+> **Environment status, re-checked 2026-08-07 evening:**
 >
-> **VERIFIED** 2026-08-07:
+> 1. ~~**`gh` is not authenticated.**~~ **RESOLVED.** `gh auth status` → logged in as `Rpetey317`.
+>    Every `gh api` check in the collector works.
+> 2. **`gh attestation` still does not exist in the installed version.** `gh` is 2.45.0 (Ubuntu apt);
+>    the subcommand landed in **2.49.0**. Any step that shells out to `gh attestation verify` —
+>    including Track C's fallback — **does not work as-is.**
 >
-> 1. **`gh` is not authenticated.** `gh auth status` → *"You are not logged into any GitHub hosts."*
->    Every `gh api` call fails until someone runs `gh auth login`. Do it in the terminal with
->    `! gh auth login` so the interactive flow lands in this session.
-> 2. **`gh attestation` does not exist in the installed version.** `gh` is 2.45.0 (Ubuntu apt);
->    `gh attestation --help` → *`unknown command "attestation" for "gh"`*. The subcommand landed in
->    **2.49.0**. Any plan step that shells out to `gh attestation verify` — including Track C's
->    fallback — **does not work as-is.**
+> The collector routes around (2) with the REST endpoint
+> `gh api repos/{o}/{r}/attestations/sha256:{digest}`, which works on 2.45 and 404s cleanly. Track C
+> should use `@sigstore/verify` rather than upgrading `gh`: one fewer moving part, and it is what
+> `anchor/` needs regardless.
 >
-> Fix by installing current `gh` from GitHub's own apt repo (or `sudo snap install gh`, which ships
-> 2.86), **or** skip it entirely and use `@sigstore/verify` in Node, which is the primary
-> recommendation anyway. Prefer the library: one fewer moving part, and it is what `anchor/` needs regardless.
+> Also verified this session: the repo `Rpetey317/midnight-hack` is **private**, so GitHub artifact
+> attestations are plan-gated and `actions/attest` may never go green here. Planned for — see
+> [Track B status](#track-b--done-fixtures-collector-attestor-workflow).
+
+**Done, 2026-08-07 evening.** `collector/`, `attestor/`, `demo/fixtures/`, and
+`.github/workflows/attest.yml` all exist. 138 attestor tests and 27 collector tests green.
+
+**Tracks C and D are unblocked.** Four signed bundles are committed and verified end to end against
+the local devnet with real ZK proofs. The whole surface is two calls:
+
+```typescript
+import { loadBundle, bundleToPrivateState } from '@zkuat/attestor';
+const { evidence, salt, leaf } = bundleToPrivateState(loadBundle('demo/fixtures/bank-only/bundle.json'));
+```
+
+Track C additionally wants `buildPredicate` / `assertNoEvidenceLeak`, and **must** pass
+`trustedKeyIds` to `verifyBundle`. Details: [`../attestor/README.md`](../attestor/README.md).
+
+| Fixture | bank-v1 | enterprise-v1 | Confirmed on-chain |
+|---|---|---|---|
+| `passes-both` | ✓ PASS | ✓ PASS | ✅ |
+| `bank-only` | ✓ PASS | ✗ FAIL | ✅ **beat 5** |
+| `enterprise-only` | ✗ FAIL | ✓ PASS | ✅ |
+| `fails-both` | ✗ FAIL | ✗ FAIL | ✅ **beat 6** |
+
+**Install order matters: `npm --prefix contract install` first.** `@zkuat/contract` is a `file:`
+dependency, so npm symlinks it without installing *its* dependencies, and Node then resolves the
+symlink to its real path and looks for `@midnight-ntwrk/compact-runtime` inside `contract/`. A
+`postinstall` check in both packages says this out loud; without it the failure is a runtime
+`ERR_MODULE_NOT_FOUND` several commands after the mistake. **Tracks C and D will hit this** — it is
+invisible on any machine where Track A has ever run `npm install`, and only shows up on a fresh clone.
+
+Four things the rest of the team needs to know:
+
+1. **`contract/src/managed/audit_registry/contract/` is now committed** (140 KB of generated JS and
+   `.d.ts`; keys and ZKIR stay ignored). Without it a fresh clone, a CI runner, and Track D's browser
+   build cannot import `pureCircuits`. **Track A must re-commit it after any `.compact` change** —
+   the attestor's fixture tests fail loudly if it drifts.
+2. **`npm run devnet:prove -- --bundle <path>`** now takes a signed bundle, verifies it, and runs the
+   full attest → prove → record round trip. That is the integration checkpoint, and it passes.
+3. **Run `cd attestor && npm run fixtures:refresh` before the pitch.** Committed fixtures carry a
+   pinned `generatedAt`, so they eventually render as EXPIRED in the buyer view. Refreshing also
+   yields new leaves and nullifiers, which is how to rehearse more than once without hitting the
+   replay guard.
+
+The live workflow is written but **not green and not depended on** — §39 ranks CI tenth, and the repo
+is private, where artifact attestations are plan-gated. The demo path uses committed fixtures.
+
+<details>
+<summary>Original plan for this track, kept for the check table</summary>
 
 **Produce a signed v2 fixture in the first hour.** Everything downstream unblocks on the existence of a
 valid signed evidence bundle, and nothing downstream cares whether a workflow or a human produced it.
@@ -161,6 +211,8 @@ and evidence+salt as a **private** artifact.
 
 The predicate carries the leaf only. Putting evidence there publishes findings to Rekor — see
 [02-threat-model.md](02-threat-model.md).
+
+</details>
 
 ### Track C — Anchor + CLI
 

@@ -214,7 +214,11 @@ nobody wrote an assertion for is caught automatically.
 - [x] Salt never published anywhere
 - [x] `proveCompliance` publishes **only** the intended set: vendor, product, artifact digest, policy
       id/version, verdict, timestamps, nullifier, record key
-- [ ] Evidence bundle is private, not attached to the public attestation predicate — *Track B*
+- [x] Evidence bundle is private, not attached to the public attestation predicate — *Track B*.
+      Mechanized as `assertNoEvidenceLeak()` in `attestor/src/predicate.ts`: the predicate's key set
+      must be exactly `{leaf, repo, sha, schema}`, and no private evidence field name or value may
+      appear in any of them. Allowlist-shaped, so a new `Evidence` field is guarded without anyone
+      editing it. `.github/workflows/attest.yml` runs it as a gate before `actions/attest`.
 - [ ] The buyer view renders no private value, including in error states and tooltips — *Track D*
 
 ### Check ledger state, not just the transcript

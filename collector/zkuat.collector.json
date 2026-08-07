@@ -1,0 +1,35 @@
+{
+  "_comment": [
+    "Worked example: measures THIS repository's contract package.",
+    "Keys starting with _ are stripped before the config is hashed, so comments",
+    "do not perturb provenance.configHash.",
+    "",
+    "Two facts about this environment, both honest and both visible in the",
+    "report the collector produces:",
+    "  - the repo is owned by a user account, not an organisation, so",
+    "    mfaRequired has no source and is stubbed;",
+    "  - no GitHub Actions run has touched HEAD, so ciGreen falls back to",
+    "    treatNoChecksAsGreen.",
+    "",
+    "The forbidden-package list is a DEMO INPUT (§16). Keep it small and",
+    "visible — a buyer's real prohibited list would be supplied by the buyer."
+  ],
+
+  "vendor": "acme-software",
+  "product": "payment-engine",
+  "attestor": "zkuat-attestor-v1",
+  "repo": "Rpetey317/midnight-hack",
+
+  "projectDir": "../contract",
+  "artifactPath": "../contract/src/managed/audit_registry/contract/index.js",
+  "validDays": 29,
+
+  "forbiddenPackages": ["left-pad", "event-stream", "flatmap-stream", "colors@1.4.44-liberty-2"],
+
+  "treatNoChecksAsGreen": false,
+
+  "stubs": {
+    "mfaRequired": true,
+    "coverage": 8734
+  }
+}

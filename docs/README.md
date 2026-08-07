@@ -60,6 +60,13 @@ Midnight's stack moves fast and recalled knowledge about it is unreliable, so cl
 of 2026-08-07 on schema v2: identity binding, both buyer policies, compliance records and timeline, and
 the historic-root property that validates the core design.
 
+`collector/` + `attestor/` — 11 supply-chain checks with a labelled degradation path for each, canonical
+JSON, ed25519 DSSE signing, and the predicate leak guard. **165 tests green.** Four signed fixtures in
+`demo/fixtures/` were anchored and proven on the local devnet with real ZK proofs, producing exactly the
+verdict matrix the demo script depends on. Package READMEs:
+[`../attestor/README.md`](../attestor/README.md), [`../collector/README.md`](../collector/README.md),
+[`../demo/README.md`](../demo/README.md).
+
 **Real proving keys are generated and the contract is deployed to a local devnet.** A full
 attest → proveCompliance → read-record round trip runs with real ZK proofs, including the two-policy
 contrast. Only the local devnet has been exercised; public testnet remains UNVERIFIED.

@@ -1,0 +1,39 @@
+{
+  "name": "@zkuat/attestor",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "zkuat attestor — normalizes collector output to canonical v2 evidence, signs it, and emits the private bundle plus the public attestation predicate",
+  "license": "Apache-2.0",
+  "main": "src/index.ts",
+  "bin": {
+    "zkuat-attestor-keygen": "src/cli/keygen.ts",
+    "zkuat-attest": "src/cli/attest.ts",
+    "zkuat-verify-bundle": "src/cli/verify.ts"
+  },
+  "scripts": {
+    "postinstall": "node scripts/check-contract-deps.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "keygen": "tsx src/cli/keygen.ts",
+    "attest": "tsx src/cli/attest.ts",
+    "verify": "tsx src/cli/verify.ts",
+    "fixtures": "tsx src/cli/fixtures.ts",
+    "fixtures:refresh": "tsx src/cli/fixtures.ts --now"
+  },
+  "dependencies": {
+    "@zkuat/contract": "file:../contract"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.23.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "overrides": {
+    "@midnight-ntwrk/onchain-runtime-v3": "3.0.0"
+  }
+}
