@@ -18,7 +18,9 @@
     "devnet:down": "cd ../app && docker compose down",
     "devnet:reset": "cd ../app && docker compose down -v && docker compose up -d --wait",
     "devnet:deploy": "tsx src/devnet/deploy.ts",
-    "devnet:demo": "tsx src/devnet/demo.ts"
+    "devnet:demo": "tsx src/devnet/demo.ts",
+    "devnet:inspect": "tsx src/devnet/inspect.ts",
+    "devnet:prove": "tsx src/devnet/prove.ts"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "0.16.0"

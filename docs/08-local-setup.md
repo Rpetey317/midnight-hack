@@ -13,7 +13,7 @@
 ```
 midnight-project/
 ├── contract/        ← everything below runs from here
-│   └── src/devnet/  ← deploy + demo scripts
+│   └── src/devnet/  ← deploy, demo, inspect, prove
 └── app/             ← owns docker-compose.yml (the devnet). Nothing else needed from it.
 ```
 
@@ -210,7 +210,119 @@ Re-running is safe: the fixture stamps `generatedAt` with the current time, so
 each run produces a fresh leaf and a fresh nullifier. It overwrites the current
 records and appends two timeline entries.
 
-## 8. Verify the whole thing from scratch
+## 8. Testing it manually
+
+`devnet:demo` replays one fixed scenario. These two tools let you drive it yourself.
+
+### `npm run devnet:inspect` — the buyer's view
+
+Read-only. No wallet, no sync, no transaction — a single GraphQL query, back in about a second. Run it
+at any point to see **exactly what an outside observer can learn**: registered policies and their
+thresholds, current compliance records, the timeline, and the attestation/nullifier counts.
+
+Use it as the before/after around every experiment below.
+
+### `npm run devnet:prove` — drive your own evidence
+
+Attests a fresh evidence bundle you describe on the command line, then proves it against one policy.
+Each invocation is a complete round trip with a real ZK proof.
+
+```bash
+npm run devnet:prove -- --help          # full flag list
+```
+
+A fresh random salt is generated per run, so re-running the same facts is always safe — you get a new
+leaf and a new nullifier rather than `already proven`.
+
+#### Experiments worth running, in order
+
+**1. The happy path.** Passes both policies.
+
+```bash
+npm run devnet:prove -- --policy bank-v1
+npm run devnet:prove -- --policy enterprise-v1
+```
+
+**2. The two-policy contrast — the demo's core claim.** *One* set of facts, two buyers, two verdicts.
+
+```bash
+npm run devnet:prove -- --policy bank-v1        --forbidden-deps 1   # → PASS
+npm run devnet:prove -- --policy enterprise-v1  --forbidden-deps 1   # → FAIL
+```
+
+The bank policy does not check forbidden dependencies; the enterprise policy caps them at zero. Now
+the mirror image — six highs, which the bank caps at five and the enterprise ignores entirely:
+
+```bash
+npm run devnet:prove -- --policy bank-v1        --highs 6   # → FAIL
+npm run devnet:prove -- --policy enterprise-v1  --highs 6   # → PASS
+```
+
+**3. Every predicate, one at a time.** Each of these flips exactly one fact:
+
+```bash
+npm run devnet:prove -- --criticals 1                          # both policies: FAIL
+npm run devnet:prove -- --kev 1                                # bank: FAIL
+npm run devnet:prove -- --no-provenance                        # both: FAIL
+npm run devnet:prove -- --policy enterprise-v1 --no-branch-protected   # FAIL
+```
+
+**4. Failure is recorded, not hidden.** A `FAIL` still writes a public record with
+`compliant: false` — that is what gives the buyer NOT COMPLIANT as distinct from NO CURRENT PROOF.
+
+```bash
+npm run devnet:prove -- --criticals 1
+npm run devnet:inspect        # the record now reads ✗ NOT COMPLIANT
+```
+
+**5. Circuit rejections, which are different from `FAIL`.** These fire an `assert` *before* the
+predicate is evaluated, so **no record is written at all** and the tool prints `⛔ REJECTED`:
+
+```bash
+npm run devnet:prove -- --valid-days 400              # "validity window exceeds policy"
+npm run devnet:prove -- --claim-vendor globex-corp    # "vendor mismatch"
+npm run devnet:prove -- --claim-product other-thing   # "product mismatch"
+```
+
+The `--claim-*` flags are the point here. `--vendor` changes the identity in **both** the evidence and
+the public input, so they stay consistent and it simply passes — that is not a test of anything.
+`--claim-vendor` changes only what is asserted *publicly*, leaving the evidence signed for the real
+vendor, which is exactly the attack the binding exists to stop: filing a record under a name the
+attestor never signed. The tool prints the deliberate mismatch before submitting so it is obvious what
+is being exercised.
+
+Confirm with `devnet:inspect` that nothing changed.
+
+**6. Continuous compliance.** Prove the same artifact and policy twice. The current record is
+*replaced* by the fresher one, while the timeline keeps both entries:
+
+```bash
+npm run devnet:prove -- --policy bank-v1
+npm run devnet:inspect                    # note "Current records" vs "Timeline" counts
+npm run devnet:prove -- --policy bank-v1
+npm run devnet:inspect                    # records unchanged in count; timeline grew
+```
+
+**7. Independent artifacts.** A different digest is a different record key:
+
+```bash
+npm run devnet:prove -- --artifact $(printf 'ab%.0s' {1..32})
+npm run devnet:inspect                    # two artifacts now tracked separately
+```
+
+#### What to look for
+
+| Claim | How you confirm it manually |
+|---|---|
+| Findings stay private | `devnet:inspect` never shows a count, a dependency fact, or a config boolean |
+| Evidence is reusable | Same facts, two policies, two independent verdicts (experiment 2) |
+| The protocol can say no | Experiment 3 — a policy that always passes proves nothing |
+| Identity is bound, not asserted | Experiment 5 — `--claim-vendor globex-corp` is rejected outright |
+| Proofs are time-bound | Records carry evidence date and expiry; `--valid-days 400` is rejected |
+
+Reset to the canonical demo state at any time with `npm run devnet:demo`.
+
+## 9. Verify the whole thing from scratch
 
 ```bash
 cd contract
@@ -273,4 +385,6 @@ docker compose logs -f proof-server  # proof generation
 | `npm run devnet:up` / `:down` | Start / stop the devnet |
 | `npm run devnet:reset` | Destroy volumes and restart clean |
 | `npm run devnet:deploy` | Deploy + register both policies |
-| `npm run devnet:demo` | Full attest → prove → read round trip |
+| `npm run devnet:demo` | Full attest → prove → read round trip (the canned scenario) |
+| `npm run devnet:inspect` | Read-only public ledger view — instant, no wallet |
+| `npm run devnet:prove -- --help` | Attest + prove your own evidence bundle |
