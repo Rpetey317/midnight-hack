@@ -14,11 +14,25 @@ A valid `proveCompliance` proof establishes, in zero knowledge:
    the on-chain `attestations` tree (at some historic root) — i.e. **an approved attestor signed `E`**.
 2. `E.artifactDigest` equals the **public** artifact digest in the proof (§10). The claim is about
    specific artifact bytes, not a human-controlled version label.
-3. `E` satisfies the public thresholds of policy `P` at version `v`.
-4. The nullifier for `(leaf, P)` has not been used before.
+3. `E.vendorId` and `E.productId` equal the public vendor and product in the proof. The record's
+   subject is signed by the attestor, not chosen by the prover — see below.
+4. `E.attestorId` is accepted by `P`, and `E`'s validity window is no longer than `P` grants.
+5. `E` satisfies the public thresholds of policy `P` at version `v`.
+6. The nullifier for `(leaf, P)` has not been used before.
 
 It discloses: vendor id, product id, artifact digest, policy id and version, the verdict boolean, the
 evidence timestamp, the expiry, and the nullifier. Nothing else (§37).
+
+### Why point 3 exists — public is not the same as trustworthy
+
+Master Doc §21 binds only the artifact digest. That is not enough once records are enumerable. If
+`vendorId` and `productId` were merely public circuit inputs, a prover holding valid evidence for their
+*own* artifact could file the resulting record under **any vendor name** — and a buyer enumerating
+`records` would see it. The sharp version is filing a fabricated *failing* record against a competitor.
+
+So all three identity fields live in the `Evidence` struct, where the attestor signs them, and the
+circuit asserts each against its public input. Two struct fields and two asserts. There is a test named
+for the competitor-forgery case.
 
 ## What it does not prove
 
@@ -90,11 +104,13 @@ Real, and we say so out loud.
 The nullifier is over `(leaf, policyId)`, and `leaf` includes the salt. Re-running CI on the *same
 commit* with a *fresh salt* produces a different leaf, a different nullifier, and a second valid proof.
 
-- **Impact:** duplicate compliance records for one underlying evidence set. It does **not** let a
-  non-compliant artifact prove compliance.
-- **Severity dropped under the current framing.** Continuous compliance (§11) *wants* repeated proofs
-  as evidence is refreshed, so "new evidence → new leaf → new record" is the intended behaviour. The
-  only real defect is that two records can describe the same measurement.
+- **Impact:** duplicate *timeline* entries for one underlying measurement. It does **not** let a
+  non-compliant artifact prove compliance, and it does **not** inflate any count — `records` is keyed
+  on `(artifactDigest, policyId)`, so a re-proof replaces the current entry rather than adding one.
+  Only `history` accumulates.
+- **Severity dropped sharply under the current framing.** Continuous compliance (§11) *wants* repeated
+  proofs as evidence is refreshed, so "new evidence → new leaf → new record" is the intended
+  behaviour. The residual defect is cosmetic: two timeline entries can describe the same measurement.
 - **Mitigation now:** the anchor sees repo and commit in the attestation predicate, so it enforces one
   anchored attestation per `(repo, commit)` off-chain.
 - **Proper fix, now cheaper.** The old design rejected a nullifier over `(repoId, commitId, policyId)`
@@ -112,11 +128,28 @@ wall-clock time to show **COMPLIANT / EXPIRED / NO CURRENT PROOF** (§36). That 
 
 - **Impact:** a vendor can submit a proof from expired evidence. The record will show as expired to any
   correct reader, so this is a display-integrity issue for naive clients rather than a forgeable claim.
-- **Path to enforcement (UNVERIFIED):** `blockTimeGte` / `blockTimeLt` appear in the `compact-patterns`
-  state-management reference and would allow `assert(blockTimeLt(disclose(ev.validUntil)))`. Not
-  executed in this project — verify with `/midnight-verify:verify` before relying on it. Note the
-  reference's own warning that the deadline must come from ledger state or a public input, never from an
-  unchecked witness, or a prover spoofs it.
+- **Partially enforced already.** `proveCompliance` asserts
+  `ev.validUntil <= ev.generatedAt + p.maxAgeSeconds`, which bounds how long an attestor may declare
+  evidence valid for. That needs no block-time primitive and closes the "attestor grants a ten-year
+  window against a thirty-day policy" hole. What remains unenforced is *now* — the chain cannot tell
+  that `validUntil` has already passed.
+- **Path to full enforcement (UNVERIFIED):** `blockTimeGte` / `blockTimeLt` appear in the
+  `compact-patterns` state-management reference and would allow
+  `assert(blockTimeLt(disclose(ev.validUntil)))`. Not executed in this project — verify with
+  `/midnight-verify:verify` before relying on it. Note the reference's own warning that the deadline
+  must come from ledger state or a public input, never from an unchecked witness, or a prover spoofs it.
+
+### Gap 2b — Record overwrite is last-writer-wins
+
+`records` is keyed on `(artifactDigest, policyId)` and `insert` replaces. Anyone holding attested
+evidence that binds to that vendor, product, and artifact can overwrite the current entry — including
+with an *older, failing* bundle.
+
+- **Impact:** in practice only the vendor can do this, since only they hold the salt and bundle, and
+  they have no motive to downgrade their own record. The identity binding (point 3 above) is what stops
+  anyone else. So this is a self-harm vector, not an attack surface.
+- **Fix if it ever matters:** refuse to overwrite a record whose `provenAt` is newer than the incoming
+  one. One comparison against existing ledger state; cut for time, not for difficulty.
 
 ### Gap 3 — Metadata leakage through timing and tree size
 
@@ -171,14 +204,27 @@ Master Doc §30–§37, condensed. Full versions in the demo script.
 
 ## Privacy checklist for review
 
-Confirm each against a real transaction before demo. The v1 contract mechanizes most of these as
-assertions in `contract/src/test/` — keep that as the schema evolves.
+The contract half is mechanized in `contract/src/test/` — two allowlist tests collect every 32-byte
+value on a public surface and assert the set is a subset of what is public by design, so a new field
+nobody wrote an assertion for is caught automatically.
 
-- [ ] No finding counts, CVE identifiers, or dependency names in any transcript
-- [ ] No MFA statistics or repository configuration detail in any transcript
-- [ ] Leaf preimage absent from the anchoring transcript (`insert()` applies `leaf_hash()`)
-- [ ] Salt never published anywhere
-- [ ] `proveCompliance` discloses **only** the intended public set: vendor, product, artifact digest,
-      policy id/version, verdict, timestamps, nullifier
-- [ ] Evidence artifact is a private CI artifact, not attached to the public attestation predicate
-- [ ] The buyer view renders no private value, including in error states and tooltips
+- [x] No finding counts, CVE identifiers, or dependency facts on any public surface
+- [x] No repository configuration detail on any public surface
+- [x] Leaf preimage absent from the attesting transcript (`insert()` applies `leaf_hash()`)
+- [x] Salt never published anywhere
+- [x] `proveCompliance` publishes **only** the intended set: vendor, product, artifact digest, policy
+      id/version, verdict, timestamps, nullifier, record key
+- [ ] Evidence bundle is private, not attached to the public attestation predicate — *Track B*
+- [ ] The buyer view renders no private value, including in error states and tooltips — *Track D*
+
+### Check ledger state, not just the transcript
+
+**The transcript is not the privacy boundary.** Verified by deliberately leaking a private evidence
+field into a `ComplianceRecord`: the value appeared in *none* of `proofData.publicTranscript`,
+`.input`, `.output`, or `.privateTranscriptOutputs` — while sitting readable in `ledger.records`
+forever.
+
+A privacy test that greps the transcript therefore passes while you publish exactly what you meant to
+hide. The real surface is the resulting public ledger state, and it is strictly larger. Both allowlist
+tests exist for this reason; the ledger-state one is load-bearing. **Anyone reviewing a new circuit
+should check state, not transcripts.**

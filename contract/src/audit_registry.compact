@@ -1,13 +1,21 @@
-// zkaudit — ZK audit attestation registry.
+// zkuat — privacy-preserving continuous software assurance.
 //
-// A repo's own CI produces evidence, commits to it under a random salt, and has
-// GitHub sign that commitment via Sigstore. An off-chain anchor verifies the
-// signature and inserts the commitment here. The repo owner then proves locally
-// that the anchored evidence satisfies a published policy, disclosing only the
-// verdict.
+// A vendor's CI produces security evidence about a build artifact. An attestor
+// normalizes and signs it; an off-chain anchor verifies that signature and inserts
+// a blinded commitment here. The vendor then proves locally that the attested
+// evidence satisfies a buyer's published policy, disclosing only:
 //
-// Design docs: ../docs/04-contract-spec.md (circuits), ../docs/03-evidence-schema.md
-// (encoding), ../docs/02-threat-model.md (what this does and does not prove).
+//   who (vendor, product), what (artifact digest), which policy, and pass/fail.
+//
+// The findings themselves — vulnerability counts, dependency facts, repository
+// configuration — never leave the vendor's machine.
+//
+// We hide the findings, not the vendor. A procurement record that did not say
+// which vendor's which artifact is compliant would be useless to a buyer.
+//
+// Design docs: ../../docs/04-contract-spec.md (circuits),
+// ../../docs/03-evidence-schema.md (encoding), ../../docs/02-threat-model.md
+// (what this does and does not prove), ../../Master-Doc.md (the product).
 
 pragma language_version >= 0.23;
 
@@ -18,57 +26,117 @@ import CompactStandardLibrary;
 // Field order is load-bearing: it determines the commitment. Reordering or
 // inserting a field mid-struct changes every leaf and invalidates every
 // outstanding proof. Append-only, and appending requires re-anchoring.
-// See ../docs/03-evidence-schema.md.
+// Schema v2 — see ../../docs/03-evidence-schema.md.
 
 struct Evidence {
-  repoId:     Bytes<32>;   // repoIdOf(padded "owner/name")
-  commitId:   Bytes<32>;   // git SHA, 20 bytes left-aligned, zero-padded right
-  issuedAt:   Uint<64>;    // unix seconds
-  ciGreen:    Boolean;     // Actions conclusion on HEAD == success
-  criticals:  Uint<32>;    // critical severity findings
-  highs:      Uint<32>;    // high severity findings
-  vulnDeps:   Uint<32>;    // dependencies with known vulns
-  coverage:   Uint<32>;    // percent * 100  (8734 == 87.34%)
+  // ── identity ──
+  // vendorId/productId are bound here, not merely passed as public inputs, so a
+  // prover cannot label a record with somebody else's name. The attestor signs
+  // these along with everything else.
+  vendorId:                Bytes<32>;   // stringIdOf(vendor slug)
+  productId:               Bytes<32>;   // stringIdOf(product slug)
+  artifactDigest:          Bytes<32>;   // sha256 of the built artifact
+  commitId:                Bytes<32>;   // git SHA, 20 bytes left-aligned, zero-padded
+  attestorId:              Bytes<32>;   // stringIdOf(attestor slug)
+
+  // ── time ──
+  generatedAt:             Uint<64>;    // unix seconds
+  validUntil:              Uint<64>;    // unix seconds
+
+  // ── vulnerability facts ──
+  criticals:               Uint<32>;
+  highs:                   Uint<32>;
+  kev:                     Uint<32>;    // CISA Known Exploited Vulnerabilities
+
+  // ── dependency facts ──
+  forbiddenDeps:           Uint<32>;    // matches on the buyer's prohibited list
+  vulnDeps:                Uint<32>;    // dependencies carrying known vulns
+
+  // ── configuration facts ──
+  mfaRequired:             Boolean;
+  branchProtected:         Boolean;
+  buildProvenanceVerified: Boolean;
+  ciGreen:                 Boolean;
+
+  // ── weak signal: a demo predicate, never a flagship threshold ──
+  coverage:                Uint<32>;    // percent * 100  (8734 == 87.34%)
 }
 
+// Public in ledger state so buyers can read exactly what a record means.
+// `version` and `issuer` give the policy a stable, unforgeable identity: a vendor
+// may choose to prove against ACME v3, but cannot silently modify ACME v3.
 struct Policy {
-  maxCriticals:   Uint<32>;
-  maxHighs:       Uint<32>;
-  maxVulnDeps:    Uint<32>;
-  minCoverage:    Uint<32>;
-  requireCiGreen: Boolean;
+  version:                 Uint<32>;
+  issuer:                  Bytes<32>;   // stringIdOf(issuing organisation)
+  maxCriticals:            Uint<32>;
+  maxHighs:                Uint<32>;
+  maxKev:                  Uint<32>;
+  maxForbiddenDeps:        Uint<32>;
+  requireMfa:              Boolean;
+  requireBranchProtection: Boolean;
+  requireBuildProvenance:  Boolean;
+  requiredAttestor:        Bytes<32>;   // all-zero == any attestor accepted
+  maxAgeSeconds:           Uint<64>;    // longest validity window the policy allows
+}
+
+// Entirely public. No private evidence goes here.
+struct ComplianceRecord {
+  vendorId:       Bytes<32>;
+  productId:      Bytes<32>;
+  artifactDigest: Bytes<32>;
+  policyId:       Bytes<32>;
+  policyVersion:  Uint<32>;
+  provenAt:       Uint<64>;
+  validUntil:     Uint<64>;
+  compliant:      Boolean;
 }
 
 // ─── Ledger ────────────────────────────────────────────────────────────────────
 
 // HistoricMerkleTree, not MerkleTree. A plain MerkleTree invalidates every
-// outstanding proof on each insert — the moment a second repo anchors, the first
-// repo's proof dies. checkRoot() here accepts any historic root.
-// Depth 16 = 65,536 attestations.
-export ledger attestations:   HistoricMerkleTree<16, Bytes<32>>;
+// outstanding proof on each insert — the moment a second vendor anchors, the
+// first vendor's proof dies. checkRoot() here accepts any historic root, which
+// is what continuous compliance depends on. Depth 16 = 65,536 attestations.
+//
+// The tree is also how we get authenticated evidence without verifying the
+// attestor's signature in-circuit, and insert()'s leaf_hash() keeps the evidence
+// commitment off the transcript — so nobody can build a leaf→artifact
+// correlation table linking an on-chain proof to its attestation bundle.
+export ledger attestations: HistoricMerkleTree<16, Bytes<32>>;
 
-// Public thresholds, so a verifier can read what a badge actually means.
-export ledger policies:       Map<Bytes<32>, Policy>;
+// Buyer-published policies, readable by anyone.
+export ledger policies:     Map<Bytes<32>, Policy>;
 
-// Nullifiers. These are already-public values; privacy comes from the nullifier
-// being unguessable (it derives from the salt-blinded leaf), not from hiding the set.
-export ledger claimed:        Set<Bytes<32>>;
+// Nullifiers. Already-public values, so a Set is right; privacy comes from the
+// nullifier being unguessable, not from hiding the set.
+export ledger claimed:      Set<Bytes<32>>;
 
-// Public badge tally per policy — the demo's visible on-chain effect.
-export ledger compliantCount: Map<Bytes<32>, Counter>;
+// Current compliance status, keyed by recordKeyOf(artifactDigest, policyId) —
+// exactly the buyer's query. A later proof for the same pair replaces the entry,
+// which is the desired continuous-compliance behaviour.
+//
+// Note this Map iterates in the generated TypeScript (its value is a plain
+// struct), so the buyer dashboard needs no separate index. A Map whose value is
+// itself a ledger ADT — Map<_, Counter> — does not iterate. That difference is
+// why there is no compliantCount here: `records` subsumes it and gives an exact
+// count, whereas a counter would double-count re-proofs of the same artifact.
+export ledger records:      Map<Bytes<32>, ComplianceRecord>;
+
+// Append-only timeline for the buyer's history view. Also iterates.
+export ledger history:      List<ComplianceRecord>;
 
 // The anchor operator's identity, fixed at deployment. `sealed` gives
 // compiler-enforced immutability, so no runtime reassignment check is needed.
-export sealed ledger anchor:  Bytes<32>;
+export sealed ledger anchor: Bytes<32>;
 
 // ─── Witnesses ─────────────────────────────────────────────────────────────────
 
-// The anchor's secret key. Only attest/registerPolicy reach for it; a repo owner
-// calling claimBadge never invokes this witness.
+// The anchor's secret. Only attest/registerPolicy reach for it; a vendor calling
+// proveCompliance never invokes this witness and needs no secret at all.
 witness localSecret(): Bytes<32>;
 
-// The prover's private evidence, its salt, and its Merkle path. None of these
-// ever leave the prover's machine.
+// The vendor's private evidence, its salt, and its Merkle path. None of these
+// ever leave the vendor's machine.
 witness getEvidence(): Evidence;
 witness getSalt(): Bytes<32>;
 witness getPath(): MerkleTreePath<16, Bytes<32>>;
@@ -76,15 +144,15 @@ witness getPath(): MerkleTreePath<16, Bytes<32>>;
 // ─── Shared derivations ────────────────────────────────────────────────────────
 //
 // These are `pure`, so the compiler emits them into the generated `pureCircuits`
-// object and they are callable from TypeScript with no context and no transaction.
-// The collector, anchor, CLI, and dApp all call these rather than reimplementing
-// the encoding — which makes the schema drift that ../docs/03-evidence-schema.md
-// flags as the project's highest risk structurally impossible rather than merely
-// discouraged.
+// object and they are callable from TypeScript with no context and no
+// transaction. The collector, attestor, anchor, CLI, and both UIs call these
+// rather than reimplementing the encoding — which makes the schema drift that
+// ../../docs/03-evidence-schema.md flags as the project's highest risk
+// structurally impossible rather than merely discouraged.
 //
-// claimBadge below calls leafOf/nullifierOf rather than inlining the expressions.
-// That identity is the whole point: what TypeScript computes is, byte for byte,
-// what the circuit checks.
+// proveCompliance below calls leafOf/nullifierOf rather than inlining the
+// expressions. That identity is the whole point: what TypeScript computes is,
+// byte for byte, what the circuit checks.
 
 export pure circuit leafOf(ev: Evidence, salt: Bytes<32>): Bytes<32> {
   return persistentCommit<Evidence>(ev, salt);
@@ -92,15 +160,24 @@ export pure circuit leafOf(ev: Evidence, salt: Bytes<32>): Bytes<32> {
 
 export pure circuit nullifierOf(leaf: Bytes<32>, policyId: Bytes<32>): Bytes<32> {
   return persistentHash<Vector<3, Bytes<32>>>([
-    pad(32, "zkaudit:claim:nul:"), leaf, policyId
+    pad(32, "zkuat:proof:nul:"), leaf, policyId
   ]);
 }
 
-// "owner/name", lowercased, UTF-8, zero-padded right to 64 bytes.
-// Bytes<N> is fixed-width in Compact, so the width has to be pinned somewhere;
-// pinning it here keeps every track honest.
-export pure circuit repoIdOf(repo: Bytes<64>): Bytes<32> {
-  return persistentHash<Bytes<64>>(repo);
+// The buyer's lookup key. Pure, so the buyer UI computes it off-chain and reads
+// `records` directly.
+export pure circuit recordKeyOf(artifactDigest: Bytes<32>, policyId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([
+    pad(32, "zkuat:record:key:"), artifactDigest, policyId
+  ]);
+}
+
+// Any identifier that starts life as a string: policy ids, attestor ids, vendor
+// ids, product ids, issuer names. Bytes<N> is fixed-width in Compact, so the
+// padding has to be pinned somewhere — it is pinned at 64 bytes, zero-padded
+// right, and the TypeScript encoder throws rather than truncating.
+export pure circuit stringIdOf(s: Bytes<64>): Bytes<32> {
+  return persistentHash<Bytes<64>>(s);
 }
 
 // Identity is derived from a witness secret, NOT from ownPublicKey(). The latter
@@ -108,7 +185,7 @@ export pure circuit repoIdOf(repo: Bytes<64>): Bytes<32> {
 // is bypassable for authorization. Its only safe use is routing tokens to a caller.
 export pure circuit anchorIdOf(sk: Bytes<32>): Bytes<32> {
   return persistentHash<Vector<2, Bytes<32>>>([
-    pad(32, "zkaudit:anchor:pk:"), sk
+    pad(32, "zkuat:anchor:pk:"), sk
   ]);
 }
 
@@ -133,65 +210,113 @@ circuit requireAnchor(): [] {
 // transcript test in src/test/ checks what actually lands there.
 //
 // Use insert(), never insertHash(): insertHash publishes the hash you hand it.
-// Correspondingly claimBadge uses merkleTreePathRoot (which hashes the leaf),
-// not merkleTreePathRootNoLeafHash.
+// Correspondingly proveCompliance uses merkleTreePathRoot (which hashes the
+// leaf), not merkleTreePathRootNoLeafHash.
 export circuit attest(leaf: Bytes<32>): [] {
   requireAnchor();
   attestations.insert(disclose(leaf));
 }
 
-// Anchor-only.
+// Anchor-only. Buyers publish thresholds through the anchor so that policy
+// identity is stable: the same policyId always means the same requirements at a
+// given version.
 export circuit registerPolicy(policyId: Bytes<32>, policy: Policy): [] {
   requireAnchor();
   policies.insert(disclose(policyId), disclose(policy));
-
-  // A Map<_, Counter> entry does not exist until inserted, so claimBadge's
-  // lookup().increment() would throw on the first successful claim without this.
-  // Guarded, so re-registering a policy never wipes an existing tally.
-  if (!compliantCount.member(disclose(policyId))) {
-    compliantCount.insert(disclose(policyId), default<Counter>);
-  }
 }
 
-// Called by the repo owner, on their own machine. Everything private stays private:
-// the only things disclosed are the nullifier, the policy id, and the verdict.
-export circuit claimBadge(policyId: Bytes<32>): Boolean {
+// Called by the vendor, on their own machine.
+//
+// Public: vendor, product, artifact digest, policy, evidence dates, verdict.
+// Private: every vulnerability count, every dependency fact, every configuration
+// boolean, the commit, the attestor, the salt, the leaf, and the path siblings.
+export circuit proveCompliance(
+  vendorId:       Bytes<32>,
+  productId:      Bytes<32>,
+  artifactDigest: Bytes<32>,
+  policyId:       Bytes<32>
+): Boolean {
   const ev   = getEvidence();
   const salt = getSalt();
   const leaf = leafOf(ev, salt);
 
-  // Bind the witness-supplied path to OUR computed commitment. Without this a
-  // prover could supply a path for somebody else's anchored leaf and claim on it.
-  // Disclosing the comparison reveals a boolean that is always true for honest
-  // provers — it says nothing about the evidence.
+  // 1. Authenticated? Bind the witness-supplied path to OUR computed commitment,
+  //    then bind that to the tree. Without the first assert a prover could supply
+  //    a path for somebody else's anchored leaf and prove against it.
   const path = getPath();
   assert(disclose(path.leaf == leaf), "path/leaf mismatch");
-
-  // The root is a public historic root; which leaf produced it stays hidden.
   const digest = merkleTreePathRoot<16, Bytes<32>>(path);
-  assert(attestations.checkRoot(disclose(digest)), "not anchored");
+  assert(attestations.checkRoot(disclose(digest)), "not attested");
 
-  // Derived from the salt-blinded leaf, so unguessable. It has to be public —
-  // it is the replay guard.
+  // 2. About THIS vendor's THIS product's THIS artifact?
+  //
+  //    The artifact binding is what stops the proof meaning "*some* attested
+  //    artifact passes". The vendor and product bindings are what stop a prover
+  //    writing a record under somebody else's name — without them, a buyer
+  //    filtering `records` by vendor would see forged entries. All three compare
+  //    a private evidence field against a public input, so only the boolean
+  //    leaks, and for an honest prover it is always true.
+  assert(disclose(ev.vendorId       == vendorId),       "vendor mismatch");
+  assert(disclose(ev.productId      == productId),      "product mismatch");
+  assert(disclose(ev.artifactDigest == artifactDigest), "artifact mismatch");
+
+  // 3. Not replayed? The nullifier is over (leaf, policyId), so the same evidence
+  //    cannot be proven twice against the same policy — but fresh evidence yields
+  //    a new leaf and a new proof, which is exactly what continuous compliance
+  //    needs. The same evidence against a *different* policy is also permitted.
   const nul = disclose(nullifierOf(leaf, policyId));
-  assert(!claimed.member(nul), "already claimed");
+  assert(!claimed.member(nul), "already proven");
   claimed.insert(nul);
 
-  // The critical line. disclose() wraps the *comparison*, never the operands:
-  // writing disclose(ev.criticals) would publish the finding count and defeat
-  // the entire protocol.
   const p = policies.lookup(disclose(policyId));
+
+  // 4. Measured by an acceptable attestor? All-zero means "any".
+  assert(disclose(p.requiredAttestor == default<Bytes<32>>
+                  || ev.attestorId == p.requiredAttestor), "attestor not accepted");
+
+  // 5. Did the attestor grant a longer validity window than the policy allows?
+  //    This is freshness enforcement that needs no block-time primitive: it
+  //    bounds validUntil relative to generatedAt, both of which are committed.
+  //    It does NOT check the evidence against wall-clock now — the record carries
+  //    validUntil and the reader judges expiry.
+  assert(disclose(ev.validUntil <= ev.generatedAt + p.maxAgeSeconds),
+         "validity window exceeds policy");
+
+  // 6. The predicate.
+  //
+  //    disclose() wraps the *conjunction*, never the operands. Writing
+  //    disclose(ev.criticals) would publish the finding count and defeat the
+  //    entire protocol — and disclosing each requirement separately would leak
+  //    which specific control failed. The buyer's per-requirement checklist
+  //    renders from `ok` alone: for a passing record every line is ✓ by
+  //    definition. Do not add per-requirement disclosure without deciding that
+  //    leaking the failure reason is acceptable.
   const ok = disclose(
-    ev.criticals <= p.maxCriticals && ev.highs <= p.maxHighs &&
-    ev.vulnDeps  <= p.maxVulnDeps  && ev.coverage >= p.minCoverage &&
-    (!p.requireCiGreen || ev.ciGreen)
+    ev.criticals     <= p.maxCriticals     &&
+    ev.highs         <= p.maxHighs         &&
+    ev.kev           <= p.maxKev           &&
+    ev.forbiddenDeps <= p.maxForbiddenDeps &&
+    (!p.requireMfa              || ev.mfaRequired)     &&
+    (!p.requireBranchProtection || ev.branchProtected) &&
+    (!p.requireBuildProvenance  || ev.buildProvenanceVerified)
   );
 
-  // Non-compliance is a legitimate outcome, not an error: the circuit returns
-  // false rather than reverting. Safe by invariant — policies.lookup above
-  // already fails for an unregistered policy, and registerPolicy always seeds
-  // the counter alongside the policy.
-  if (ok) { compliantCount.lookup(disclose(policyId)).increment(1); }
+  // 7. The public, time-bound record. Written whether or not the predicate passed,
+  //    carrying the verdict — so a buyer distinguishes NOT COMPLIANT from
+  //    NO CURRENT PROOF, and the negative case is demonstrable on-chain.
+  const rec = ComplianceRecord {
+    vendorId:       disclose(vendorId),
+    productId:      disclose(productId),
+    artifactDigest: disclose(artifactDigest),
+    policyId:       disclose(policyId),
+    policyVersion:  p.version,
+    provenAt:       disclose(ev.generatedAt),
+    validUntil:     disclose(ev.validUntil),
+    compliant:      ok
+  };
+
+  records.insert(recordKeyOf(disclose(artifactDigest), disclose(policyId)), rec);
+  history.pushFront(rec);
 
   return ok;
 }

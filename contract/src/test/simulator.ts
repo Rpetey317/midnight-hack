@@ -1,5 +1,5 @@
 /**
- * In-memory simulator for the zkaudit registry.
+ * In-memory simulator for the zkuat compliance registry.
  *
  * There is no published simulator package for Compact — `@openzeppelin-compact/
  * contracts-simulator` does not exist on npm — so this threads `CircuitContext`
@@ -22,7 +22,7 @@ import {
   ledger,
   type Ledger,
 } from '../managed/audit_registry/contract/index.js';
-import type { AuditPath, Policy } from '../types.js';
+import type { AuditPath, ComplianceRecord, Policy } from '../types.js';
 import { emptyPrivateState, witnesses, type AuditPrivateState } from '../witnesses.js';
 
 /**
@@ -36,7 +36,7 @@ import { emptyPrivateState, witnesses, type AuditPrivateState } from '../witness
  */
 const CALLER_COIN_PUBLIC_KEY = '00'.repeat(32);
 
-export class AuditRegistrySimulator {
+export class ComplianceRegistrySimulator {
   private readonly contract: Contract<AuditPrivateState>;
   private context: CircuitContext<AuditPrivateState>;
 
@@ -90,8 +90,12 @@ export class AuditRegistrySimulator {
     return this;
   }
 
-  /** Loads a repo owner's proving inputs. */
-  asProver(evidence: AuditPrivateState['evidence'], salt: Uint8Array, path: AuditPath | null): this {
+  /** Loads a vendor's proving inputs. */
+  asProver(
+    evidence: AuditPrivateState['evidence'],
+    salt: Uint8Array,
+    path: AuditPath | null,
+  ): this {
     return this.withPrivateState({ evidence, salt, path });
   }
 
@@ -109,8 +113,19 @@ export class AuditRegistrySimulator {
     this.lastProofData = result.proofData;
   }
 
-  claimBadge(policyId: Uint8Array): boolean {
-    const result = this.contract.impureCircuits.claimBadge(this.context, policyId);
+  proveCompliance(
+    vendorId: Uint8Array,
+    productId: Uint8Array,
+    artifactDigest: Uint8Array,
+    policyId: Uint8Array,
+  ): boolean {
+    const result = this.contract.impureCircuits.proveCompliance(
+      this.context,
+      vendorId,
+      productId,
+      artifactDigest,
+      policyId,
+    );
     this.context = result.context;
     this.lastProofData = result.proofData;
     return result.result;
@@ -119,7 +134,7 @@ export class AuditRegistrySimulator {
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
   /**
-   * Inclusion path for an anchored leaf, as of right now.
+   * Inclusion path for an attested leaf, as of right now.
    *
    * `findPathForLeaf` is an O(n) scan and returns undefined when the leaf is
    * absent; throwing here turns that into a clear test failure rather than a
@@ -134,15 +149,88 @@ export class AuditRegistrySimulator {
     return path;
   }
 
-  /** Badge tally for a policy. Returns 0 for a policy with no successful claims. */
-  tally(policyId: Uint8Array): bigint {
-    const counts = this.ledger.compliantCount;
-    return counts.member(policyId) ? counts.lookup(policyId).read() : 0n;
+  /** The buyer's primary query: current status for an artifact under a policy. */
+  record(key: Uint8Array): ComplianceRecord | undefined {
+    const records = this.ledger.records;
+    return records.member(key) ? records.lookup(key) : undefined;
+  }
+
+  /** Every current record. Exercises the Map iterator the buyer dashboard needs. */
+  allRecords(): ComplianceRecord[] {
+    return [...this.ledger.records].map(([, record]) => record);
+  }
+
+  /** The append-only timeline, newest first (`pushFront`). */
+  timeline(): ComplianceRecord[] {
+    return [...this.ledger.history];
+  }
+
+  /** Collects every distinct 32-byte value reachable from an arbitrary structure. */
+  private static collectHashes(root: unknown): Set<string> {
+    const found = new Set<string>();
+    const walk = (node: unknown): void => {
+      if (typeof node === 'string') {
+        if (/^[0-9a-f]{64}$/.test(node)) found.add(node);
+        return;
+      }
+      if (node instanceof Uint8Array) {
+        if (node.length === 32) found.add(Buffer.from(node).toString('hex'));
+        return;
+      }
+      if (Array.isArray(node)) {
+        for (const child of node) walk(child);
+        return;
+      }
+      if (node && typeof node === 'object') {
+        for (const child of Object.values(node)) walk(child);
+      }
+    };
+    walk(root);
+    return found;
+  }
+
+  /**
+   * Every distinct 32-byte value appearing anywhere in the last call's proof
+   * data — inputs, outputs, and the public transcript.
+   *
+   * Useful, but **not sufficient on its own** as a privacy oracle: see
+   * `publicStateHashes`.
+   */
+  transcriptHashes(): Set<string> {
+    const pd = this.lastProofData;
+    return ComplianceRegistrySimulator.collectHashes([
+      pd?.input,
+      pd?.output,
+      pd?.publicTranscript,
+    ]);
+  }
+
+  /**
+   * Every distinct 32-byte value readable from public ledger state.
+   *
+   * **This is the real privacy boundary, and it is strictly larger than the
+   * transcript.** A value written into a ledger struct is readable by anyone
+   * afterwards, but does not necessarily appear anywhere in `proofData` — not in
+   * `input`, `output`, `publicTranscript`, or even `privateTranscriptOutputs`.
+   * Verified by deliberately leaking a private field into a `ComplianceRecord`:
+   * the transcript looked clean while the value sat in plain sight in `records`.
+   *
+   * So a privacy test that only inspects the transcript can pass while private
+   * data is being published to the chain. Check both.
+   */
+  publicStateHashes(): Set<string> {
+    return ComplianceRegistrySimulator.collectHashes([
+      this.allRecords(),
+      this.timeline(),
+      [...this.ledger.policies].map(([key, policy]) => [key, policy]),
+      [...this.ledger.claimed],
+      this.ledger.anchor,
+    ]);
   }
 
   /**
    * The public transcript of the last circuit call, serialized for substring
-   * search. Used to assert that private values never reach the ledger.
+   * search. Complements `transcriptHashes` for non-32-byte values.
    */
   publicTranscriptJson(): string {
     return JSON.stringify(this.lastProofData?.publicTranscript ?? [], (_key, value) =>

@@ -132,27 +132,49 @@ public" about the one ledger operation that hides its argument. The disclosure a
 about ledger writes and does not special-case `insert`. A developer who trusts the annotation concludes
 their privacy design is broken and redesigns around a non-problem.
 
-**2. No published simulator package.** `@openzeppelin-compact/contracts-simulator`, referenced by
+**2. `proofData` is not a sufficient privacy oracle. This one can bite hard.**
+
+We wrote a test asserting that no private value reaches `proofData.publicTranscript`, then deliberately
+leaked a private evidence field into a public ledger struct to confirm the test would catch it.
+**It did not.** The leaked value appeared in *none* of `publicTranscript`, `input`, `output`, or
+`privateTranscriptOutputs` — while sitting in plain sight in ledger state, readable by anyone forever.
+
+The transcript records ledger *operations*; a value can reach state without appearing as a literal
+anywhere in the proof data. So the natural way to write a privacy test — inspect the transcript —
+passes while you publish exactly what you meant to hide. The real boundary is the resulting public
+ledger state, and it is strictly larger than the transcript.
+
+Worth signposting in the docs, because the failure is silent and the wrong intuition ("the transcript
+is what goes on chain") is a very reasonable one to hold.
+
+**3. No published simulator package.** `@openzeppelin-compact/contracts-simulator`, referenced by
 tooling docs, 404s on npm. Hand-threading `CircuitContext` over `compact-runtime` works and is about 100
 lines — but you have to discover that yourself.
 
-**3. Structs are emitted as anonymous inline object types**, not named exports, so TypeScript consumers
+**4. Structs are emitted as anonymous inline object types**, not named exports, so TypeScript consumers
 cannot `import type { Evidence }`. We recover them with `Parameters<PureCircuits['leafOf']>[0]`, which
 works but is not obvious.
 
-**4. Generated TypeScript uses snake_case `goes_left`** while the Compact docs write `goesLeft` — a
+**5. Generated TypeScript uses snake_case `goes_left`** while the Compact docs write `goesLeft` — a
 silent-failure trap when constructing Merkle paths by hand. Related: `checkRoot` takes
 `{ field: bigint }`, not a bare `bigint`, and `sibling` is a `{ field: bigint }` wrapper.
 
-**5. `Map` exposes no iterator in the generated ledger reader** while `MerkleTree` exposes `history()`.
-That asymmetry shapes application design — a public registry you cannot enumerate has to be queried by
-computed key — and it is not signposted anywhere.
+**6. A Merkle digest has two byte orders depending on where you read it.** The same root is a
+big-endian bigint as `MerkleTreeDigest.field` read from the ledger, and **little-endian** in the
+transaction transcript. Comparing one against the other by hex string silently never matches.
 
-**6. `Map<K, Counter>` entries do not exist until inserted**, so `lookup().increment()` throws on first
+**7. `Map` iteration depends on the value type, which is not signposted.** `Map<K, SomeStruct>` gets a
+`[Symbol.iterator]` in the generated ledger reader; `Map<K, Counter>` does not, because an ADT
+reference cannot be materialized into a tuple. Sensible in hindsight, invisible beforehand — and it
+silently decides whether your frontend can enumerate a public registry or has to query it by computed
+key. Relatedly, `merkleTree.history()` returns a bare `Iterator`, not an `IterableIterator`, so
+`for...of` and spread both fail on it.
+
+**8. `Map<K, Counter>` entries do not exist until inserted**, so `lookup().increment()` throws on first
 use. Easy to miss, and it fails at runtime on the first successful transaction rather than at compile
 time — the worst possible moment.
 
-**7. `create-mn-app` v0.5.0 dropped the `counter` template** while much documentation still references
+**9. `create-mn-app` v0.5.0 dropped the `counter` template** while much documentation still references
 it; the current set is `hello-world`, `battleship`, `bboard`, `leaderboard`.
 
 Specific, reproducible feedback scores better than "the docs could be better."

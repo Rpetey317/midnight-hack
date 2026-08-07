@@ -1,14 +1,40 @@
 # 07 — Alignment Delta (Master Doc → as-built)
 
 > **Purpose.** [`Master-Doc.md`](../Master-Doc.md) is the source of truth for this project. Track A was
-> built against an earlier framing. This document is the register of every place they disagree, what
-> has to change, and what survives untouched.
+> built against an earlier framing. This document is the register of every place they disagreed, what
+> had to change, and what survived untouched.
 >
-> **Docs in `docs/` have been realigned to the Master Doc.** Code has **not** — that is deliberate and
-> deferred. So `docs/` now describes the target, and this file is the map from target back to what is
-> actually running.
+> **Status: the contract half of this register is closed.** `contract/` migrated to schema v2 on
+> 2026-08-07 — 87 tests green. Items 1–8, 10, and 12 are resolved in code. Items 9 and 11 are
+> scope/pitch decisions for the team, not code. See the [resolution table](#resolution-status).
 >
-> Read this before touching `contract/`.
+> The rationale below is kept because it is the *why* behind the current design, and because several
+> entries are pitch material.
+
+## Resolution status
+
+| # | Divergence | Resolved? |
+|---|---|---|
+| 1 | Anonymity is not a goal; artifact/vendor/product are public | ✅ v2 circuit; identity is public and **bound in evidence** |
+| 2 | Evidence schema grows | ✅ `zkuat.evidence.v2`, 17 fields |
+| 3 | Artifact-digest binding | ✅ plus vendor and product binding |
+| 4 | Compliance records / history | ✅ `records` Map + `history` List, both iterable |
+| 5 | `coverage` demoted | ✅ kept as a field, absent from both policies |
+| 6 | Two policies | ✅ `POLICY_BANK_V1` + `POLICY_ENTERPRISE_V1`, both tested against one bundle |
+| 7 | Policy issuer/version metadata | ✅ `Policy.version` + `Policy.issuer`; record stamped with version at proof time |
+| 8 | Expiration modelled | ✅ `validUntil` in evidence and record; `maxAgeSeconds` enforced against `generatedAt`. Wall-clock enforcement still deferred. |
+| 9 | UI priority inverts | ⬜ **Team decision, not code.** See §9. |
+| 10 | Attestor identity | ✅ `Evidence.attestorId` + `Policy.requiredAttestor` + assert |
+| 11 | Standards grounding | ⬜ Docs/pitch only. See §11. |
+| 12 | Terminology | ✅ `proveCompliance`, `stringIdOf`, `zkuat:*` separators |
+
+Two decisions were taken during implementation that go **beyond** this register:
+
+- **`vendorId`/`productId` are bound in the evidence struct**, not merely passed as public inputs.
+  Master Doc §21 binds only the artifact digest, which would let a prover file a record under any
+  vendor name — including a fabricated failing record against a competitor. See §1 below.
+- **`compliantCount` was dropped** rather than kept as an optional tally. `records` iterates, so an
+  exact compliant count is a filter; a counter would double-count re-proofs of the same artifact.
 
 ## The one-paragraph summary
 
@@ -37,7 +63,7 @@ The cryptographic machinery is almost entirely reusable. The **privacy boundary 
 | 11 | No standards grounding (OSPS Baseline, NIST SSDF) | Low — §2/§6 credibility | Docs only |
 | 12 | Terminology: repo/badge/claim vs vendor/artifact/compliance | Low but pervasive | Renames |
 
-## 1 — Anonymity inverts (the critical one)
+## 1 — Anonymity inverts (the critical one) ✅
 
 Track A's docs claimed the verifier learns *"an attested repo satisfies Policy X"* and **"not even
 which repo you are."** Master Doc §37 says the opposite:
@@ -73,7 +99,19 @@ proofs valid as new evidence is anchored, which continuous compliance (§11) dep
 
 Say this precisely in the pitch. "We hide the findings, not the vendor" is the honest and stronger claim.
 
-## 2 — Evidence schema v1 → v2
+### Public identity has to be *bound*, not just published
+
+Making identity public is not the same as making it trustworthy, and this is where the implementation
+goes beyond Master Doc §21. If `vendorId` and `productId` are only public circuit inputs, nothing ties
+them to the attested facts: a prover with valid evidence for their own artifact can file the resulting
+record under **any vendor name**, and a buyer enumerating `records` sees it. The nastiest version is
+filing a fabricated *failing* record against a competitor.
+
+So v2 puts all three identity fields in the `Evidence` struct — where the attestor signs them — and
+`proveCompliance` asserts each against its public input. Two struct fields and two asserts. There is a
+test named for the competitor-forgery case specifically.
+
+## 2 — Evidence schema v1 → v2 ✅
 
 `docs/03-evidence-schema.md` marks v1 **FROZEN**, and it is implemented and tested. The Master Doc
 needs fields it does not have.
@@ -139,7 +177,7 @@ struct Evidence {
 `schemaVersion` stays **outside** the struct: v1 already gates it at the encoding boundary via
 `EVIDENCE_SCHEMA` string rejection, which fails loudly and costs no circuit constraints. Keep that.
 
-## 3 — Artifact-digest binding
+## 3 — Artifact-digest binding ✅
 
 Master Doc §10 and §21 are unambiguous — the digest is a **public circuit input** and the circuit
 asserts the private evidence matches it:
@@ -152,7 +190,7 @@ Without this the proof says "*some* attested artifact passes", which is precisel
 version we are moving away from. This is one assert and one parameter, and it is the highest
 value-per-line change in the register.
 
-## 4 — Compliance records and history
+## 4 — Compliance records and history ✅
 
 §12 names the registry as the reason a blockchain is justified at all; §43 gives the record shape;
 §25/§27 want a queryable timeline. v1 has only `compliantCount: Map<Bytes<32>, Counter>` — a tally,
@@ -189,7 +227,7 @@ export ledger history: List<ComplianceRecord>;
 
 Do not design the buyer view around iteration until someone has confirmed it exists.
 
-## 5 — Coverage demoted
+## 5 — Coverage demoted ✅
 
 Master Doc §18: *"Avoid making `coverage >= 80%` the flagship security requirement. Coverage is fine
 as a technical demo predicate but a weak representation of software security."*
@@ -197,7 +235,7 @@ as a technical demo predicate but a weak representation of software security."*
 v1's only policy is `production-ready` with `minCoverage: 7000` as a core threshold. Replace with the
 §20 policies, which are built from vulnerability and provenance facts.
 
-## 6 — Two policies, and it is not a cut item
+## 6 — Two policies, and it is not a cut item ✅
 
 Old cut list ranked "multiple policies → ship only `production-ready`" as **cut item 3**. Master Doc
 §39 ranks *"second policy over the same evidence"* as **the single most valuable addition after the
@@ -217,7 +255,7 @@ POLICY_ENTERPRISE_V1  criticals == 0, forbiddenDeps == 0, branchProtected, build
 
 Both must pass against the *same* evidence bundle. That contrast is the demo's strongest beat.
 
-## 7 — Policy identity and metadata
+## 7 — Policy identity and metadata ✅
 
 §5 requires a policy to be unforgeable and versioned: *"a vendor may select 'I want to prove against
 ACME Policy v3', but it cannot silently modify ACME Policy v3."* §42 lists issuer, version, and
@@ -243,7 +281,7 @@ Policy ids stay `policyId(slug)` through the existing `repoIdOf` padding circuit
 fine, only the struct grows. Note `repoIdOf` is now a misleading name; it is a generic
 64-byte-padded-string hasher. Rename to `stringIdOf` when touching the contract.
 
-## 8 — Expiration
+## 8 — Expiration ✅ (partially)
 
 §11 and §36 want three distinguishable states: **COMPLIANT / EXPIRED / NO CURRENT PROOF**.
 
@@ -264,7 +302,7 @@ assert(blockTimeLt(disclose(ev.validUntil)), "evidence expired");
 `/midnight-verify:verify` before writing it into a circuit. Note the reference's own warning: the
 deadline must come from ledger or public input, never from an unchecked witness, or a prover spoofs it.
 
-## 9 — UI priority inverts
+## 9 — UI priority inverts ⬜
 
 | | Old plan | Master Doc §39 |
 |---|---|---|
@@ -287,7 +325,7 @@ proof-path fallback, but the two views are deliverables, not polish. The honest 
 
 This is a genuine scope decision, not a doc edit. Flagged for the team, not resolved here.
 
-## 10 — Attestor identity
+## 10 — Attestor identity ✅
 
 §35 wants policies to pin an approved attestor, scanner version, and vuln-DB version, so a badge means
 "measured by X at version Y". v1 has a single sealed `anchor` identity and no attestor concept in the
@@ -296,7 +334,7 @@ evidence at all.
 Minimum: `attestorId` in `Evidence`, `requiredAttestor` in `Policy`, one assert. §35's multi-attestor
 future (`Scanner A AND Scanner B AND CI provenance`) is explicitly post-hackathon.
 
-## 11 — Standards grounding
+## 11 — Standards grounding ⬜
 
 Master Doc §2 and §6 anchor the pitch in **OpenSSF OSPS Baseline** (published version **2026.02.19**,
 versioned controls by maturity level) and **NIST SSDF** (the producer/acquirer relationship). The old
@@ -306,7 +344,7 @@ docs cite neither.
 compliance."** Claim *"machine-verifiable controls derived from recognized software-security
 frameworks."* §38's not-a-list exists to keep the pitch defensible under a hostile question.
 
-## 12 — Terminology map
+## 12 — Terminology map ✅
 
 Pervasive and mechanical. Apply when touching code.
 
@@ -322,19 +360,14 @@ Pervasive and mechanical. Apply when touching code.
 | `repoIdOf` | `stringIdOf` (it is a generic padded-string hasher) |
 | `production-ready` | `POLICY_BANK_V1`, `POLICY_ENTERPRISE_V1` |
 
-### Naming collision worth catching now
+### Naming collision — caught in time
 
-The contract hardcodes `zkaudit` in its **domain separators**:
+The contract hardcodes the project slug in its **domain separators**, which are commitment inputs.
+Renaming the project after anchoring changes every nullifier and invalidates every record.
 
-```compact
-pad(32, "zkaudit:claim:nul:")
-pad(32, "zkaudit:anchor:pk:")
-```
-
-Domain separators are commitment inputs. Renaming the project after anchoring changes every nullifier
-and invalidates every record. **Settle the name before the first real anchor**, or accept `zkaudit` as
-a permanent internal identifier independent of the product name. The `<PROJECT>` placeholder in docs
-is still unresolved.
+**Resolved: the name is `zkuat`.** Separators are now `zkuat:proof:nul:`, `zkuat:record:key:`, and
+`zkuat:anchor:pk:`, and the package is `@zkuat/contract`. Nothing has been anchored, so this was free
+to change; it is not free after the first real anchor.
 
 ## What survives untouched
 
@@ -350,21 +383,28 @@ Worth stating, because it is most of the work:
   behaviour, and Gap 1's severity drops accordingly — re-proving fresh evidence for the same commit is
   now a *feature*.
 - **Anchor access control via witness secret, not `ownPublicKey()`.** Correct and non-obvious.
-- **The simulator harness** and the privacy-transcript assertions. Both survive a struct change with
-  fixture edits only.
-- **The whole DX feedback list.** Independent of framing, and judged.
+- **The simulator harness.** Survived the struct change with signature edits only.
+- **The whole DX feedback list.** Independent of framing, and judged. It grew during the migration —
+  see [06-demo-script.md](06-demo-script.md).
 
-## Recommended order of work
+One thing did **not** survive as-is: **the privacy assertions.** The old ones inspected only
+`proofData.publicTranscript`, and v2 proved that surface incomplete — a value written into a
+`ComplianceRecord` is readable by anyone yet appears nowhere in `proofData`. The tests now assert
+against public **ledger state** as well, and the ledger-state one is the load-bearing check. Details in
+[04-contract-spec.md](04-contract-spec.md#the-privacy-tests-and-a-trap-worth-knowing-about).
 
-Ordered by (Master Doc priority × cheapness). Items 1–3 are hours; 4–5 are the demo.
+## Order of work
 
-1. **Evidence v2 struct + artifact-digest binding.** One struct, one param, one assert. Unblocks
-   everything and must precede any real anchoring or key generation.
-2. **`Policy` v2 + register both §20 policies.** No new circuit logic; delivers §39's top add-on.
-3. **`ComplianceRecord` + `records` map.** Answers the buyer's actual query and justifies the chain.
-4. **Vendor view** — private evidence panel, explicitly labelled *"PRIVATE — not written to
+Contract items are done. What remains is the demo.
+
+1. ~~Evidence v2 struct + artifact-digest binding~~ ✅
+2. ~~`Policy` v2 + both §20 policies~~ ✅
+3. ~~`ComplianceRecord` + `records` map~~ ✅ (plus `history`)
+4. **Real proving keys + testnet deploy.** Now unblocked — the struct is settled, and depth 16 and the
+   struct shape are both baked into the key.
+5. **Vendor view** — private evidence panel, explicitly labelled *"PRIVATE — not written to
    Midnight"*, policy selector, generate-proof.
-5. **Buyer view** — result, requirement checklist, timeline, and the three freshness states.
+6. **Buyer view** — result, requirement checklist, timeline, and the freshness states.
 
 Deferred without regret: in-circuit `blockTimeGte` enforcement, multi-attestor, real OSPS control
-mapping, policy composition, `List`-based history if iteration turns out not to exist.
+mapping, policy composition.

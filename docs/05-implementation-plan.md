@@ -12,10 +12,13 @@ ranks priorities differently from the original plan — see [Priority inversion]
 |---|---|
 | `docs/` | ✅ Realigned to the Master Doc |
 | `app/` | ✅ Minimal `hello-world` scaffold (SDK 4.1.1), deps installed |
-| `contract/` | ✅ Built, 50 tests green — **but on schema v1.** Needs the v2 migration. Not deployed. |
+| `contract/` | ✅ **Schema v2, 87 tests green.** Identity binding, both policies, compliance records. Not deployed. |
 | `collector/` | ⬜ |
 | `anchor/`, `cli/` | ⬜ |
 | `ui/` (vendor + buyer) | ⬜ |
+
+**Tracks B, C, and D are unblocked.** `@zkuat/contract` exports the v2 encoding, both policies, and the
+pure circuits that make the leaf, nullifier, and record key. Import them; do not reimplement.
 
 ## Priority inversion
 
@@ -90,20 +93,29 @@ Track A publishes generated TypeScript types **first**, compiling with `--skip-z
 minutes for real proving keys). C and D build against those types immediately. Real keys get generated
 once, later, **after** the v2 migration — the struct shape and tree depth are both baked into the key.
 
-### Track A — v2 migration, then deploy
+### Track A — migration done; deploy remains
 
-Migration checklist is in [04-contract-spec.md](04-contract-spec.md#migration-checklist). In order:
+Steps 1–5 of the old checklist are complete (2026-08-07): `Evidence` v2, `Policy` v2,
+`ComplianceRecord`, `proveCompliance` with vendor/product/artifact binding, `records` + `history`, both
+§20 policies, and 87 tests including rewritten privacy assertions. Details in
+[04-contract-spec.md](04-contract-spec.md).
 
-1. `Evidence` v2, `Policy` v2, `ComplianceRecord`. Bump `EVIDENCE_SCHEMA` to `zkaudit.evidence.v2`.
-2. `claimBadge` → `proveCompliance` with four public inputs; add the **artifact-digest assert** (§39 #3).
-3. `records` map + `recordKeyOf` pure circuit.
-4. Register **both** §20 policies.
-5. Fixtures and tests: the seven criteria still apply, plus artifact-digest mismatch must fail, and the
-   privacy assertions must be re-run — **the public set grew, so the old "absent from transcript"
-   assertions no longer cover the new fields.**
-6. Generate real keys. Deploy. Record the address.
+What remains:
 
-The struct change is mechanical; the risk is forgetting step 5.
+1. **Generate real proving keys** (`npm run compile:keys`) — minutes, not seconds. Now safe: the struct
+   is settled, and both depth 16 and the struct shape are baked into the key.
+2. **Deploy.** Register both policies, record the contract address.
+3. **Pre-anchor demo data** so the pitch never depends on a live round trip.
+
+Three things changed relative to the earlier plan, worth knowing before building against it:
+
+- **Identity is bound in the evidence**, not just passed as a public input — `vendorId` and
+  `productId` are struct fields the attestor signs, and the circuit asserts all three identity fields.
+  Track B's canonical JSON therefore carries `vendor` and `product`.
+- **`compliantCount` no longer exists.** `records` iterates, so an exact compliant count is a filter
+  over it; a counter would double-count re-proofs of the same artifact.
+- **The buyer view is not blocked on anything.** `records` and `history` both expose
+  `[Symbol.iterator]` in the generated ledger reader — the open question about iteration is closed.
 
 ### Track B — Collector + attestor
 
@@ -229,7 +241,7 @@ the buyer result-only view. Those four are what distinguish this from "hide a CI
 | Proving key generation slow | Medium | `--skip-zk` during dev; generate real keys once, **after** v2 |
 | Testnet funding / DUST | Medium | Get a funded wallet **now**, not at 23:00 |
 | `Map`/`List` iteration absent | Medium | Buyer timeline falls back to point lookups — decide early |
-| Renaming the project after anchoring | Medium | Domain separators are commitment inputs. Settle the name or keep `zkaudit` internally. |
+| ~~Renaming the project after anchoring~~ | Closed | Name settled as `zkuat` before anything was anchored. Domain separators are commitment inputs; changing them now would invalidate every record. |
 | **`gh` unauthenticated + too old for `attestation`** | **Certain (verified)** | `gh auth login`; use `@sigstore/verify` instead of `gh attestation verify`. See Track B. |
 
 Testnet funding is the classic silent killer — it blocks nothing until it blocks everything at 23:00.

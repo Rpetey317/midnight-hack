@@ -1,17 +1,19 @@
 /**
- * zkaudit contract package — the integration surface for every other track.
+ * zkuat contract package — the integration surface for every other track.
  *
- * Tracks B (collector), C (anchor/CLI), and D (dApp) import from here. In
- * particular they call `pureCircuits.leafOf` and `pureCircuits.nullifierOf`
- * rather than reimplementing the commitment scheme: those are compiled from the
- * same Compact source `claimBadge` runs, so what TypeScript computes is byte for
- * byte what the circuit checks.
+ * Tracks B (collector/attestor), C (anchor/CLI), and D (vendor + buyer views)
+ * import from here. In particular they call `pureCircuits.leafOf`,
+ * `nullifierOf`, and `recordKeyOf` rather than reimplementing the commitment
+ * scheme: those are compiled from the same Compact source `proveCompliance`
+ * runs, so what TypeScript computes is byte for byte what the circuit checks.
  *
- *     import { encodeEvidence, pureCircuits, policyId } from '@zkaudit/contract';
+ *     import {
+ *       encodeEvidence, pureCircuits, POLICY_BANK_ID, recordKey,
+ *     } from '@zkuat/contract';
  *
  *     const evidence = encodeEvidence(canonicalJson);
- *     const leaf     = pureCircuits.leafOf(evidence, salt);
- *     const nul      = pureCircuits.nullifierOf(leaf, policyId('production-ready'));
+ *     const leaf     = pureCircuits.leafOf(evidence, salt);        // anchor this
+ *     const key      = recordKey(canonicalJson.artifactDigest, 'bank-v1');
  *
  * See ../../docs/03-evidence-schema.md for the encoding rules and
  * ../../docs/04-contract-spec.md for the circuits.
@@ -34,24 +36,45 @@ export type {
 } from './managed/audit_registry/contract/index.js';
 
 // Types derived from the compiler's own output.
-export type { AuditPath, Evidence, Ledger, Policy, Witnesses } from './types.js';
+export type {
+  AuditPath,
+  ComplianceRecord,
+  Evidence,
+  Ledger,
+  Policy,
+  Witnesses,
+} from './types.js';
 
 // Witness implementations and the private state they read.
 export { emptyPrivateState, witnesses, type AuditPrivateState } from './witnesses.js';
 
-// Canonical JSON → Evidence encoding. The single implementation; do not
-// reimplement it downstream.
+// Canonical JSON → Evidence encoding, identifier derivation, and the two shipped
+// policies. The single implementation; do not reimplement it downstream.
 export {
+  attestorId,
+  encodeArtifactDigest,
   encodeCommit,
   encodeEvidence,
-  encodeRepo,
+  issuerId,
+  padString,
   policyId,
-  repoId,
+  productId,
+  recordKey,
+  stringId,
+  vendorId,
+  ANY_ATTESTOR,
   EVIDENCE_SCHEMA,
   HASH_BYTES,
   MAX_COVERAGE,
   MAX_U32,
-  PRODUCTION_READY_SLUG,
-  REPO_BYTES,
+  MAX_U64,
+  POLICY_BANK_ID,
+  POLICY_BANK_SLUG,
+  POLICY_BANK_V1,
+  POLICY_ENTERPRISE_ID,
+  POLICY_ENTERPRISE_SLUG,
+  POLICY_ENTERPRISE_V1,
+  STRING_ID_BYTES,
+  THIRTY_DAYS_SECONDS,
   type CanonicalEvidence,
 } from './encoding.js';

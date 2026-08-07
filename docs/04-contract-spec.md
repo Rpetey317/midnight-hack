@@ -1,22 +1,21 @@
 # 04 — Contract Specification
 
-> **Two states in this document.**
->
-> - **[As-built](#as-built-v1)** — `contract/src/audit_registry.compact`. Compiles, typechecks, 50
->   simulator tests pass. Accurate as of 2026-08-07.
-> - **[Target](#target-v2)** — what [`Master-Doc.md`](../Master-Doc.md) requires. Not implemented.
->
-> The delta and its rationale live in [07-alignment-delta.md](07-alignment-delta.md). Read that before
-> editing the contract.
+> **Status: BUILT AND TESTED on schema v2.** `contract/src/audit_registry.compact` compiles with
+> `compact compile --skip-zk` (compiler v0.31.1, dev tools v0.5.1), typechecks clean, and **87
+> simulator tests pass**. Runtime semantics are VERIFIED, not assumed.
 >
 > ```bash
 > cd contract && npm install && npm run compile && npm test
 > ```
+>
+> Still UNVERIFIED: real proving-key generation (`npm run compile:keys`) and on-chain behaviour. The
+> simulator executes the same compiled circuit logic but does not produce or check a PLONK proof.
+>
+> The v1→v2 migration and its rationale are in [07-alignment-delta.md](07-alignment-delta.md).
 
 ## Resolved design unknowns
 
-Four things could have silently broken this design. All four were probed and **all four work** — and
-all four remain valid for v2:
+Everything below was probed by compiling and executing, not reasoned about. All nine work.
 
 | # | Unknown | Result |
 |---|---|---|
@@ -24,71 +23,97 @@ all four remain valid for v2:
 | 2 | Field access `path.leaf` on the stdlib `MerkleTreePath` struct | ✅ works |
 | 3 | `Map.lookup()` returning a struct, used in comparisons | ✅ works |
 | 4 | Conditional ledger write (`if (ok) { ... }`) inside a circuit | ✅ works |
+| 5 | **17-field** mixed struct as a `persistentCommit<T>` argument | ✅ works — struct size is not a constraint |
+| 6 | `Map<Bytes<32>, ComplianceRecord>` — struct value, `insert`/`lookup`, **and an iterator** | ✅ works |
+| 7 | `List<ComplianceRecord>` ledger ADT with `pushFront`, **iterator**, and `head()` | ✅ works |
+| 8 | Struct-literal construction in-circuit mixing public params, ledger reads, and disclosed witness values | ✅ works |
+| 9 | `Uint<64> + Uint<64>` compared against a `Uint<64>` — width inference | ✅ works |
 
-Unknown 2 mattered most — the fallback would have been reconstructing the path struct in-circuit from
-witness siblings, which is fiddlier. It is unnecessary.
+Unknown 2 mattered most in v1 — the fallback would have been reconstructing the path struct in-circuit
+from witness siblings. Unknowns 6 and 7 mattered most in v2: they are what unblocked the buyer views.
 
-Unknown 1 is what makes the v2 struct growth safe: a 15-field mixed struct commits the same way an
-8-field one does. Only the leaf value changes, not the technique.
+### Map and List iteration — the question that was gating the buyer view
 
----
+Earlier revisions of this document flagged iteration as UNVERIFIED and said it gated the buyer
+timeline. It does not. The rule, read off the generated `index.d.ts`:
 
-# As-built (v1)
+| Ledger field | Type | Iterator |
+|---|---|---|
+| `policies`, `records` | `Map<Bytes<32>, «struct»>` | ✅ `[Symbol.iterator]` yielding `[key, value]` |
+| `claimed` | `Set<Bytes<32>>` | ✅ `[Symbol.iterator]` |
+| `history` | `List<«struct»>` | ✅ `[Symbol.iterator]`, plus `head()` and `length()` |
+| *(v1)* `compliantCount` | `Map<Bytes<32>, Counter>` | ❌ none |
 
-**Status: BUILT AND TESTED.** Compiles with `compact compile --skip-zk` (compiler v0.31.1, dev tools
-v0.5.1), typechecks clean, and **50 simulator tests pass** — including test 7, the historic-root
-property that validates the core design. Runtime semantics are VERIFIED, not assumed.
+**A `Map` iterates when its value is a plain struct, and does not when the value is itself a ledger
+ADT** — you cannot materialize a `Counter` reference into an iterator tuple. So the buyer dashboard can
+enumerate `records` directly and needs no client-side index, and the timeline can enumerate `history`.
 
-Still UNVERIFIED: real proving-key generation (`npm run compile:keys`) and on-chain behaviour. The
-simulator executes the same compiled circuit logic but does not produce or check a PLONK proof.
+`attestations.history()` is the odd one out: it returns a bare `Iterator`, **not** an
+`IterableIterator`, so it cannot be spread or used with `for...of`. Drain it with `.next()`.
 
 ## Ledger state
 
 ```compact
-export ledger attestations:    HistoricMerkleTree<16, Bytes<32>>;
-export ledger policies:        Map<Bytes<32>, Policy>;
-export ledger claimed:         Set<Bytes<32>>;
-export ledger compliantCount:  Map<Bytes<32>, Counter>;
-export sealed ledger anchor:   Bytes<32>;
+export ledger attestations: HistoricMerkleTree<16, Bytes<32>>;
+export ledger policies:     Map<Bytes<32>, Policy>;
+export ledger claimed:      Set<Bytes<32>>;
+export ledger records:      Map<Bytes<32>, ComplianceRecord>;
+export ledger history:      List<ComplianceRecord>;
+export sealed ledger anchor: Bytes<32>;
 ```
 
-| Field | Type | Rationale |
-|---|---|---|
-| `attestations` | `HistoricMerkleTree<16, Bytes<32>>` | **Load-bearing.** Plain `MerkleTree` invalidates every outstanding proof on each insert — the moment a second vendor anchors, the first vendor's proof dies. `checkRoot()` accepts any historic root. Depth 16 = 65,536 attestations. |
-| `policies` | `Map` | Public thresholds so buyers know what a record means. |
-| `claimed` | `Set` | Nullifiers are already-public values; a `Set` is right. Privacy comes from the nullifier being unguessable, not from hiding the set. |
-| `compliantCount` | `Map<_, Counter>` | Public tally per policy. **Insufficient for the Master Doc** — see [Target](#target-v2). |
-| `anchor` | `sealed` | Compiler-enforced immutability, no runtime access-control checks needed. |
+| Field | Rationale |
+|---|---|
+| `attestations` | **Load-bearing.** A plain `MerkleTree` invalidates every outstanding proof on each insert — the moment a second vendor attests, the first vendor's proof dies. `checkRoot()` accepts any historic root, which continuous compliance depends on. Depth 16 = 65,536 attestations. |
+| `policies` | Public thresholds so buyers know what a record means. |
+| `claimed` | Nullifiers are already-public values; a `Set` is right. Privacy comes from the nullifier being unguessable, not from hiding the set. |
+| `records` | Current status keyed by `recordKeyOf(artifactDigest, policyId)` — exactly the buyer's query. A later proof for the same pair replaces the entry. |
+| `history` | Append-only timeline (`pushFront`, so newest first). |
+| `anchor` | `sealed` gives compiler-enforced immutability, no runtime access-control checks needed. |
+
+**`compliantCount` was dropped in v2.** `records` subsumes it and gives an exact count by iteration,
+whereas a `Map<_, Counter>` would double-count re-proofs of the same artifact — a headline number that
+looks wrong on stage is worse than no headline number. Its removal also removes the seeding trap
+described below, which is worth remembering for any future counter.
+
+### The `Map<_, Counter>` seeding trap
+
+Kept here because it will bite anyone who adds a per-policy tally back. A `Map<_, Counter>` entry does
+not exist until inserted, so `compliantCount.lookup(id).increment(1)` throws on the **first** successful
+proof. In v1 this was fixed by seeding in `registerPolicy`, guarded so re-registration did not wipe an
+existing tally:
+
+```compact
+if (!compliantCount.member(disclose(policyId))) {
+  compliantCount.insert(disclose(policyId), default<Counter>);
+}
+```
 
 ### Privacy property of `insert()`
 
-`MerkleTree.insert()` / `HistoricMerkleTree.insert()` apply `leaf_hash()` (a `persistent_hash`) before
-storing. **Only the hash enters the transaction transcript** — this is the only ledger operation that
-hides its data argument. So even the blinded commitment never appears publicly.
+`HistoricMerkleTree.insert()` applies `leaf_hash()` (a `persistent_hash`) before storing. **Only the
+hash enters the transaction transcript** — this is the only ledger operation that hides its data
+argument, and it is why nobody can build a leaf→artifact correlation table linking an on-chain proof
+back to its attestation bundle.
 
-**VERIFIED** 2026-08-07 by inspecting a real transcript, not by reading docs. The test
-`does not publish the leaf preimage when anchoring` anchors a known leaf and asserts its bytes are
-absent from `proofData.publicTranscript`. They are.
+**VERIFIED** by inspecting a real transcript. The test `does not publish the leaf preimage when
+attesting` attests a known leaf and asserts its bytes are absent. They are.
 
-**But the compiler still demands `disclose()` on the argument.** Writing `attestations.insert(leaf)`
-bare is rejected:
+**But the compiler still demands `disclose()` on the argument.** `attestations.insert(leaf)` bare is
+rejected:
 
 ```
 potential witness-value disclosure must be declared but is not:
-  witness value potentially disclosed:
-    the value of parameter leaf of exported circuit attest
-  nature of the disclosure:
-    ledger operation might disclose the witness value
+  nature of the disclosure: ledger operation might disclose the witness value
 ```
 
-So the annotation and the actual runtime behaviour disagree — `disclose()` reads as "this becomes
-public", on the one operation whose entire selling point is that it doesn't. The disclosure analysis is
-conservative about ledger writes generally and does not special-case `insert`. Worth knowing before
-someone concludes the privacy story is broken and redesigns around a non-problem. **This is good Midnight
-DX feedback** — see [06-demo-script.md](06-demo-script.md).
+So the annotation and the runtime behaviour disagree, on the one operation whose entire selling point is
+that it does not disclose. The analysis is conservative about ledger writes and does not special-case
+`insert`. Worth knowing before someone concludes the privacy story is broken and redesigns around a
+non-problem. **Good Midnight DX feedback** — see [06-demo-script.md](06-demo-script.md).
 
-Use `insert()`, **not** `insertHash()`. `insertHash()` publishes the hash you pass. Correspondingly the
-circuit uses `merkleTreePathRoot<16, Bytes<32>>` (which hashes the leaf), not
+Use `insert()`, **not** `insertHash()`. `insertHash()` publishes the hash you pass. Correspondingly
+`proveCompliance` uses `merkleTreePathRoot<16, Bytes<32>>` (which hashes the leaf), not
 `merkleTreePathRootNoLeafHash`.
 
 ## Circuits
@@ -96,29 +121,31 @@ circuit uses `merkleTreePathRoot<16, Bytes<32>>` (which hashes the leaf), not
 | Circuit | Caller | Effect |
 |---|---|---|
 | `attest(leaf)` | anchor only | `attestations.insert(leaf)` |
-| `registerPolicy(id, policy)` | anchor only | writes public thresholds, seeds the tally |
-| `claimBadge(policyId) -> Boolean` | vendor, locally | membership + nullifier + policy predicate |
-| `leafOf`, `nullifierOf`, `repoIdOf`, `anchorIdOf` | anyone, off-chain | pure derivations |
+| `registerPolicy(id, policy)` | anchor only | publishes thresholds |
+| `proveCompliance(vendorId, productId, artifactDigest, policyId) -> Boolean` | vendor, locally | the whole protocol |
+| `leafOf`, `nullifierOf`, `recordKeyOf`, `stringIdOf`, `anchorIdOf` | anyone, off-chain | pure derivations |
 
 ### Exported pure circuits — the encoding is compiler-guaranteed
 
 ```compact
 export pure circuit leafOf(ev: Evidence, salt: Bytes<32>): Bytes<32>
 export pure circuit nullifierOf(leaf: Bytes<32>, policyId: Bytes<32>): Bytes<32>
-export pure circuit repoIdOf(repo: Bytes<64>): Bytes<32>
+export pure circuit recordKeyOf(artifactDigest: Bytes<32>, policyId: Bytes<32>): Bytes<32>
+export pure circuit stringIdOf(s: Bytes<64>): Bytes<32>
 export pure circuit anchorIdOf(sk: Bytes<32>): Bytes<32>
 ```
 
-**VERIFIED:** `persistentCommit` and `persistentHash` do qualify as pure, and the compiler emits these
-into a `pureCircuits` object callable from TypeScript with **no context and no transaction**.
+**VERIFIED:** `persistentCommit` and `persistentHash` qualify as pure, and the compiler emits these into
+a `pureCircuits` object callable from TypeScript with **no context and no transaction**.
 
-`claimBadge` calls `leafOf`/`nullifierOf` rather than inlining the expressions, so the function Track B
-calls to build a leaf is literally the function the circuit checks it against. This closes the
-schema-drift risk that [03-evidence-schema.md](03-evidence-schema.md) names as the project's highest.
+`proveCompliance` calls `leafOf`/`nullifierOf`/`recordKeyOf` rather than inlining the expressions, so
+the function Track B calls to build a leaf is literally the function the circuit checks it against.
+This closes the schema-drift risk that [03-evidence-schema.md](03-evidence-schema.md) names as the
+project's highest.
 
-`repoIdOf` takes `Bytes<64>` because `Bytes<N>` is fixed-width — the padding had to be pinned somewhere.
-Policy ids use the same circuit and the same padding. **The name is misleading** and should become
-`stringIdOf` in v2; it was never repo-specific.
+Domain separators are `zkuat:proof:nul:`, `zkuat:record:key:`, and `zkuat:anchor:pk:`. **These are
+commitment inputs — renaming the project after anchoring invalidates every nullifier and every record.**
+The name is settled.
 
 ### Anchor access control
 
@@ -134,208 +161,12 @@ constructor() { anchor = disclose(anchorIdOf(localSecret())); }
 circuit requireAnchor(): [] { assert(disclose(anchorIdOf(localSecret()) == anchor), "not anchor"); }
 ```
 
-Whoever deploys becomes the anchor permanently. A vendor calling `claimBadge` never invokes
+Whoever deploys becomes the anchor permanently. A vendor calling `proveCompliance` never invokes
 `localSecret` and needs no secret at all — there is a test for exactly that.
 
-### Counter initialization — a real bug caught during implementation
-
-`compliantCount.lookup(policyId).increment(1)` throws if the key was never inserted, and a
-`Map<_, Counter>` entry does not exist until it is. Without seeding, **the first successful claim would
-fail.** `registerPolicy` seeds it:
-
-```compact
-if (!compliantCount.member(disclose(policyId))) {
-  compliantCount.insert(disclose(policyId), default<Counter>);
-}
-```
-
-Guarded, so re-registering a policy updates thresholds without wiping the tally. `claimBadge`'s lookup
-is then safe by invariant: `policies.lookup` on the line above already fails for an unregistered policy.
-
-**This trap applies identically to any v2 per-policy or per-record counter.** Seed on registration.
-
-## `claimBadge` — as-built source
+## `proveCompliance` — as-built source
 
 The authoritative copy is `contract/src/audit_registry.compact`; this is it with comments stripped.
-
-```compact
-export circuit claimBadge(policyId: Bytes<32>): Boolean {
-  const ev   = getEvidence();
-  const salt = getSalt();
-  const leaf = leafOf(ev, salt);
-
-  // Bind the witness-supplied path to OUR computed commitment.
-  // Without this the prover could supply a path for someone else's leaf.
-  const path = getPath();
-  assert(disclose(path.leaf == leaf), "path/leaf mismatch");
-
-  const digest = merkleTreePathRoot<16, Bytes<32>>(path);
-  assert(attestations.checkRoot(disclose(digest)), "not anchored");
-
-  const nul = disclose(nullifierOf(leaf, policyId));
-  assert(!claimed.member(nul), "already claimed");
-  claimed.insert(nul);
-
-  const p = policies.lookup(disclose(policyId));
-  const ok = disclose(
-    ev.criticals <= p.maxCriticals && ev.highs <= p.maxHighs &&
-    ev.vulnDeps  <= p.maxVulnDeps  && ev.coverage >= p.minCoverage &&
-    (!p.requireCiGreen || ev.ciGreen)
-  );
-
-  if (ok) { compliantCount.lookup(disclose(policyId)).increment(1); }
-  return ok;
-}
-```
-
-### Disclosure decisions — every `disclose()` justified
-
-Compact is private by default; each `disclose()` is a deliberate hole. Reviewers check these.
-
-| Disclosed | Why it's safe |
-|---|---|
-| `path.leaf == leaf` | A boolean, always `true` for honest provers. Reveals no evidence content. |
-| `digest` (Merkle root) | A public historic root. Reveals nothing about *which* leaf. |
-| `nul` | Derived from the salt-blinded leaf, so unguessable. Must be public — it is the replay guard. |
-| `policyId` | Public by design; the buyer must know which policy was checked. |
-| `ok` | **The product.** The one bit we intend to reveal. |
-
-**Never disclosed:** `ev` (any field), `salt`, `leaf`, `path` siblings.
-
-The critical line is the predicate: `disclose(ev.criticals <= p.maxCriticals && ...)` discloses the
-*comparison*, never the operands. Writing `disclose(ev.criticals)` would defeat the entire protocol.
-
-## Generated TypeScript surface
-
-**VERIFIED** — from the compiler's `index.d.ts`:
-
-```typescript
-export type Ledger = {
-  attestations: {
-    isFull(): boolean;
-    checkRoot(rt: { field: bigint }): boolean;
-    root(): MerkleTreeDigest;
-    firstFree(): bigint;
-    pathForLeaf(index: bigint, leaf: Uint8Array): MerkleTreePath<Uint8Array>;
-    findPathForLeaf(leaf: Uint8Array): MerkleTreePath<Uint8Array> | undefined;
-    history(): Iterator<MerkleTreeDigest>;
-  };
-  policies: {
-    isEmpty(): boolean; size(): bigint;
-    member(key: Uint8Array): boolean;
-    lookup(key: Uint8Array): { maxCriticals: bigint, maxHighs: bigint,
-                               maxVulnDeps: bigint, minCoverage: bigint,
-                               requireCiGreen: boolean };
-  };
-  // claimed: Set, compliantCount: Map<_, Counter>
-};
-```
-
-Notes:
-- `findPathForLeaf` is an **O(n) scan** — fine at demo scale, but prefer `pathForLeaf(index, leaf)` if
-  the anchor records the leaf index in its receipt.
-- `findPathForLeaf` returns `undefined` when absent. Handle it; don't let it become a cryptic circuit
-  failure.
-- `checkRoot` takes `{ field: bigint }`, not a bare bigint.
-- `claimBadge` is impure/provable — it always needs a proof and a tx.
-- **`Map` exposes `isEmpty/size/member/lookup` and no iterator**, while `attestations` exposes
-  `history()`. This matters for v2: see the open question under [Target](#target-v2).
-
-## Testing
-
-Simulator tests in `contract/src/test/`, run with `npm test`. **50 passing as of 2026-08-07.**
-
-There is no published simulator package for Compact — `@openzeppelin-compact/contracts-simulator` does
-not exist on npm, despite being referenced by some tooling docs. `src/test/simulator.ts` threads
-`CircuitContext` by hand over `@midnight-ntwrk/compact-runtime`, which is all a simulator is.
-
-Acceptance criteria, all met:
-
-| # | Criterion | Status |
-|---|---|---|
-| 1 | Valid claim on compliant evidence → returns `true`, tally increments | ✅ |
-| 2 | Non-compliant evidence → returns `false`, **does not revert**, tally unchanged. Proving non-compliance is a legitimate outcome, not an error. Covered for criticals, coverage, and CI status separately. | ✅ |
-| 3 | Tampered evidence → fails at `path/leaf mismatch`. All seven fields mutated independently. | ✅ |
-| 4 | Wrong salt → fails at `path/leaf mismatch` | ✅ |
-| 5 | Leaf never anchored → fails at `not anchored` | ✅ |
-| 6 | Replay of the same `(leaf, policy)` → fails at `already claimed` | ✅ |
-| 7 | **Historic root:** anchor leaf A, capture A's path, anchor B and C, *then* claim with A's original path → still succeeds | ✅ |
-
-Test 7 is the one most likely to be skipped and most likely to matter. It passes, and a second variant
-holds the path across 20 further inserts. With a plain `MerkleTree` both fail — which is the point.
-
-Beyond the seven:
-
-| Area | What it covers |
-|---|---|
-| Deployment | Deployer is sealed as anchor; tree, policies, and nullifier set start empty |
-| Pure circuits | The TypeScript-computed leaf is the one `claimBadge` accepts; commitments are blinded and deterministic; nullifiers are domain-separated and differ per policy |
-| Encoding | 64-byte padding, overlong-name rejection, commit SHA left-alignment, schema-version rejection, coverage clamping |
-| Access control | `attest` and `registerPolicy` rejected from a non-anchor; tree untouched after rejection; a vendor claims holding no secret at all |
-| Policy registration | Thresholds readable; tally seeded; re-registration preserves the tally; unregistered policy rejected |
-| **Privacy** | Leaf preimage absent from the anchoring transcript; repo, commit, salt, and leaf absent from the claim transcript; nullifier and policy id present as intended |
-| Known gaps | Fresh-salt re-anchoring permitting a second claim is pinned by a test, so changing it is deliberate rather than accidental |
-
-The privacy tests mechanize the checklist in [02-threat-model.md](02-threat-model.md) — it is checked by
-assertion, not by eye before the demo. **Keep that property through the v2 migration.**
-
----
-
-# Target (v2)
-
-Required by the Master Doc, not implemented. Rationale in
-[07-alignment-delta.md](07-alignment-delta.md).
-
-## Ledger state
-
-```compact
-export ledger attestations: HistoricMerkleTree<16, Bytes<32>>;
-export ledger policies:     Map<Bytes<32>, Policy>;
-export ledger claimed:      Set<Bytes<32>>;
-export sealed ledger anchor: Bytes<32>;
-
-// NEW — §43. Current status, keyed by stringIdOf-style hash(artifactDigest, policyId):
-// exactly the buyer's query.
-export ledger records:      Map<Bytes<32>, ComplianceRecord>;
-
-// NEW — §25, §27. Append-only timeline. See the open question below.
-export ledger history:      List<ComplianceRecord>;
-```
-
-```compact
-struct ComplianceRecord {
-  vendorId:       Bytes<32>;
-  productId:      Bytes<32>;
-  artifactDigest: Bytes<32>;
-  policyId:       Bytes<32>;
-  policyVersion:  Uint<32>;
-  provenAt:       Uint<64>;
-  validUntil:     Uint<64>;
-  compliant:      Boolean;
-}
-```
-
-`compliantCount` becomes optional — `records` subsumes it. Keep it if the demo wants a headline number.
-
-### Open question that gates the buyer history view
-
-**UNVERIFIED — resolve before designing the buyer timeline.** `List<T>` is a valid ledger type with
-`pushFront` / `popFront` / `head` (per the `compact-ledger` skill), but the v1 generated surface above
-shows `Map` with **no iterator**. Whether the generated `Ledger` type exposes iteration over a `List` or
-a `Map` is unconfirmed.
-
-If it does not, two fallbacks, neither requiring a contract change:
-
-1. **Point lookup for current status** — `records[hash(artifactDigest, policyId)]` answers the buyer's
-   primary question (§25's top panel) with no iteration at all.
-2. **Client-side timeline** — the UI keeps the list of known artifact digests (it knows them; they are
-   public) and does one lookup per digest to assemble the history.
-
-Do not build the buyer view around iteration until someone has confirmed it exists.
-
-## `proveCompliance`
-
-Replaces `claimBadge`. Four **public** inputs; everything else private.
 
 ```compact
 export circuit proveCompliance(
@@ -348,13 +179,15 @@ export circuit proveCompliance(
   const salt = getSalt();
   const leaf = leafOf(ev, salt);
 
-  // 1. Authenticated? — bind the witness path to our commitment, then to the tree.
+  // 1. Authenticated?
   const path = getPath();
   assert(disclose(path.leaf == leaf), "path/leaf mismatch");
   const digest = merkleTreePathRoot<16, Bytes<32>>(path);
   assert(attestations.checkRoot(disclose(digest)), "not attested");
 
-  // 2. About THIS artifact? — §10. The highest-value line in the migration.
+  // 2. About THIS vendor's THIS product's THIS artifact?
+  assert(disclose(ev.vendorId       == vendorId),       "vendor mismatch");
+  assert(disclose(ev.productId      == productId),      "product mismatch");
   assert(disclose(ev.artifactDigest == artifactDigest), "artifact mismatch");
 
   // 3. Not replayed?
@@ -364,11 +197,15 @@ export circuit proveCompliance(
 
   const p = policies.lookup(disclose(policyId));
 
-  // 4. Measured by an acceptable attestor? — §35. Zero means "any".
+  // 4. Measured by an acceptable attestor? All-zero means "any".
   assert(disclose(p.requiredAttestor == default<Bytes<32>>
                   || ev.attestorId == p.requiredAttestor), "attestor not accepted");
 
-  // 5. The predicate. disclose() wraps the comparison, never the operands.
+  // 5. Validity window within what the policy grants?
+  assert(disclose(ev.validUntil <= ev.generatedAt + p.maxAgeSeconds),
+         "validity window exceeds policy");
+
+  // 6. The predicate — the conjunction is disclosed, never the operands.
   const ok = disclose(
     ev.criticals     <= p.maxCriticals     &&
     ev.highs         <= p.maxHighs         &&
@@ -379,78 +216,141 @@ export circuit proveCompliance(
     (!p.requireBuildProvenance  || ev.buildProvenanceVerified)
   );
 
-  // 6. Public, time-bound record — §11, §43.
-  const key = recordKeyOf(artifactDigest, policyId);
-  records.insert(disclose(key), ComplianceRecord {
+  // 7. The public, time-bound record.
+  const rec = ComplianceRecord {
     vendorId:       disclose(vendorId),
     productId:      disclose(productId),
     artifactDigest: disclose(artifactDigest),
     policyId:       disclose(policyId),
-    policyVersion:  disclose(p.version),
+    policyVersion:  p.version,
     provenAt:       disclose(ev.generatedAt),
     validUntil:     disclose(ev.validUntil),
     compliant:      ok
-  });
+  };
+
+  records.insert(recordKeyOf(disclose(artifactDigest), disclose(policyId)), rec);
+  history.pushFront(rec);
 
   return ok;
 }
 ```
 
-### New disclosure decisions
+### Design notes
 
-Each addition must be justified as deliberately as the v1 set.
+**Identity is bound in the evidence, not just passed as a public input.** Master Doc §21 binds only the
+artifact digest. Binding vendor and product too costs two struct fields and two asserts and stops a
+prover filing a record under a competitor's name — including a fabricated *failing* record. See
+[03-evidence-schema.md](03-evidence-schema.md) for the reasoning; there is a test for the forgery case.
+
+**The record is written whether or not the predicate passed**, carrying `compliant: ok`. This gives the
+buyer four states — COMPLIANT / NOT COMPLIANT / EXPIRED / NO CURRENT PROOF — and puts the negative demo
+case on-chain where it can be shown. A vendor would not voluntarily submit a failing proof, so in
+practice failing records appear only when someone wants them to.
+
+**Freshness is enforced relative to `generatedAt`, not to now.** Step 5 bounds how long an attestor may
+declare evidence valid for, which is checkable in-circuit with no block-time primitive. Whether evidence
+has *since* expired is the reader's judgement from `validUntil` in the public record. On-chain
+enforcement against wall-clock would need `blockTimeLt`, which remains unverified and deferred.
+
+**`records.insert` is last-writer-wins on `(artifactDigest, policyId)`.** Anyone holding attested
+evidence that binds to that vendor/product/artifact can overwrite the entry — in practice only the
+vendor, since only they hold their salt and bundle. A vendor could in principle overwrite a passing
+record with an older failing one; they have no motive, and the identity binding stops anyone else.
+
+### Disclosure decisions — every `disclose()` justified
+
+Compact is private by default; each `disclose()` is a deliberate hole.
 
 | Disclosed | Why it's safe / intended |
 |---|---|
-| `ev.artifactDigest == artifactDigest` | A boolean. The digest itself is a public input already (§37). |
-| `vendorId`, `productId`, `artifactDigest` | **Public by design** (§37). A procurement record that omitted them would be useless to a buyer. |
-| `p.version` | Reading public ledger state. |
-| `ev.generatedAt`, `ev.validUntil` | Public by design — §1's buyer view shows "Evidence date", §11 requires visible expiry. |
+| `path.leaf == leaf` | A boolean, always `true` for honest provers. Reveals no evidence content. |
+| `digest` (Merkle root) | A public historic root. Reveals nothing about *which* leaf. |
+| identity comparisons | Booleans. The three identity values are public inputs already. |
+| `nul` | Derived from the salt-blinded leaf, so unguessable. Must be public — it is the replay guard. |
+| `vendorId`, `productId`, `artifactDigest`, `policyId` | **Public by design** (§37). A procurement record that omitted them would be useless to a buyer. |
 | attestor comparison | A boolean. Which attestor is *required* is already public in the policy. |
+| validity-window comparison | A boolean. Both operands are private; only the verdict leaks. |
+| `ev.generatedAt`, `ev.validUntil` | Public by design — the buyer view shows evidence date and expiry. |
+| `ok` | **The product.** The one bit the protocol exists to reveal. |
 
-**Still never disclosed:** every vulnerability count, `forbiddenDeps`, `vulnDeps`, `coverage`, all four
-configuration booleans individually, `salt`, `leaf`, `path` siblings, `ev.commitId`, `ev.attestorId`.
+**Never disclosed:** every vulnerability count, `forbiddenDeps`, `vulnDeps`, `coverage`, all four
+configuration booleans individually, `ev.commitId`, `ev.attestorId`, `salt`, `leaf`, `path` siblings.
 
 Note the boolean-composition subtlety: disclosing the **conjunction** is safe, but disclosing each
-requirement separately would leak which specific control failed. §25's buyer view shows a per-requirement
-checklist — for a *passing* record every line is ✓ by definition, so it can be rendered from `ok` alone.
-**Do not add per-requirement disclosure to support the failing case** without deciding that leaking the
-failure reason is acceptable.
+requirement separately would leak which specific control failed. The buyer's per-requirement checklist
+renders from `ok` alone — for a passing record every line is ✓ by definition. **Do not add
+per-requirement disclosure to support the failing case** without deciding that leaking the failure
+reason is acceptable.
 
-### New helper
+## Testing
 
-```compact
-export pure circuit recordKeyOf(artifactDigest: Bytes<32>, policyId: Bytes<32>): Bytes<32> {
-  return persistentHash<Vector<3, Bytes<32>>>([
-    pad(32, "zkaudit:record:key:"), artifactDigest, policyId
-  ]);
-}
-```
+Simulator tests in `contract/src/test/`, run with `npm test`. **87 passing as of 2026-08-07.**
 
-Pure, so the buyer UI computes the same key off-chain to do its lookup.
+There is no published simulator package for Compact — `@openzeppelin-compact/contracts-simulator` does
+not exist on npm, despite being referenced by some tooling docs. `src/test/simulator.ts` threads
+`CircuitContext` by hand over `@midnight-ntwrk/compact-runtime`, which is all a simulator is.
 
-## Migration checklist
+Acceptance criteria, all met:
 
-Ordered. Items 1–3 are the contract; 4 is the fixtures; 5 is the guard against regression.
+| # | Criterion | Status |
+|---|---|---|
+| 1 | Valid proof on compliant evidence → returns `true`, record written, nullifier burned | ✅ |
+| 2 | Non-compliant evidence → returns `false`, **does not revert**, record marked non-compliant. Covered for criticals, KEV, highs, and provenance separately. | ✅ |
+| 3 | Tampered evidence → fails at `path/leaf mismatch`. **All 17 fields mutated independently**, with a meta-test asserting the case list covers every struct key. | ✅ |
+| 4 | Wrong salt → fails at `path/leaf mismatch` | ✅ |
+| 5 | Leaf never attested → fails at `not attested` | ✅ |
+| 6 | Replay of the same `(evidence, policy)` → fails at `already proven` | ✅ |
+| 7 | **Historic root:** attest A, capture A's path, attest B and C, then prove with A's original path → still succeeds | ✅ |
 
-1. `Evidence` v2 struct, `Policy` v2 struct, `ComplianceRecord`. Bump `EVIDENCE_SCHEMA` to `…v2`.
-2. Rename `repoIdOf` → `stringIdOf`, `claimBadge` → `proveCompliance`. Add `recordKeyOf`.
-3. Add the artifact-digest binding, the attestor check, and the record write. Add `records`.
-4. Update `encoding.ts` and `fixtures.ts` for the new fields; register both §20 policies.
-5. Extend the test suite: the seven criteria still apply, plus **artifact-digest mismatch must fail**,
-   the record must be written with correct values, and the privacy assertions must be re-run against
-   the new transcript — the public set grew, so the "absent from transcript" list changed and the old
-   assertions will not catch a mistake in the new fields.
+Test 7 is the one most likely to be skipped and most likely to matter. It passes, and a second variant
+holds the path across 20 further inserts. With a plain `MerkleTree` both fail — which is the point.
+
+Beyond the seven:
+
+| Area | What it covers |
+|---|---|
+| Identity binding | vendor / product / artifact mismatch each fail with their own message; the competitor-forgery case leaves no record |
+| Attestor | zero `requiredAttestor` accepts any; a pinned attestor accepts the match and rejects others |
+| Validity window | evidence granted a longer window than the policy allows is rejected |
+| Record | all 8 fields correct; buyer-computable key; replaced by a fresher proof; one entry per `(artifact, policy)`; iterates; timeline newest-first |
+| **Two policies** | the same bundle satisfies both; a bundle that passes BANK and fails ENTERPRISE, **and one that does the reverse** |
+| Continuous compliance | fresh evidence for the same artifact and policy is permitted; the same evidence against a different policy is permitted |
+| Policy identity | issuer and version published; the record is stamped with the version in force at proof time; updating thresholds does not disturb existing records |
+| Access control | `attest`/`registerPolicy` rejected from a non-anchor; tree untouched after rejection; a vendor proves holding no secret at all |
+| Encoding | `sha256:` prefix, digest length, commit alignment, v1-schema rejection, `validUntil <= generatedAt` rejection, coverage clamping, record-key agreement with the circuit |
+| **Privacy** | see below |
+
+### The privacy tests, and a trap worth knowing about
+
+The privacy assertions mechanize the checklist in [02-threat-model.md](02-threat-model.md). Two
+allowlist tests collect every 32-byte value on a public surface and assert the set is a subset of what
+is public by design — so a field nobody remembered to write an assertion for is caught automatically,
+which substring searches cannot do.
+
+**The surfaces are not equivalent, and the important one is ledger state.** This was verified the hard
+way: deliberately leaking `ev.commitId` into a `ComplianceRecord` produced a transcript that looked
+completely clean —
+
+- not in `proofData.publicTranscript`
+- not in `proofData.input` or `proofData.output`
+- not even in `proofData.privateTranscriptOutputs`
+
+— while the value sat in plain sight in `ledger.records`, readable by anyone forever. **A privacy test
+that inspects only the transcript can pass while private data is being published to the chain.** Both
+allowlist tests exist for this reason, and the ledger-state one is load-bearing.
+
+Two more toolchain traps surfaced while writing them, both now in
+[03-evidence-schema.md](03-evidence-schema.md)'s trip-up table: `attestations.history()` returns a bare
+`Iterator` rather than an `IterableIterator`, and a Merkle digest is **big-endian** as a
+`MerkleTreeDigest.field` but **little-endian** in the transcript.
 
 ## Open items
 
-- **UNVERIFIED:** `List`/`Map` iteration in the generated TypeScript ledger reader. Gates the buyer
-  timeline; see above.
-- **UNVERIFIED:** `blockTimeGte` / `blockTimeLt` for on-chain freshness enforcement. Recording
-  `validUntil` and letting the reader judge needs no new primitive and is the MVP path.
+- **UNVERIFIED:** `blockTimeGte` / `blockTimeLt` for wall-clock freshness enforcement. Recording
+  `validUntil` and letting the reader judge needs no new primitive and is the shipped path.
 - **UNVERIFIED:** real proving-key generation and on-chain execution. Nothing deployed yet. Generate
-  keys **after** the v2 migration — depth 16 and the struct shape are both baked into the key.
+  keys **now that v2 is settled** — depth 16 and the struct shape are both baked into the key.
 - The anchor secret is fixed at deployment with no rotation path. Fine for the hackathon; a real
   deployment wants rotation or a multi-sig anchor.
-- Project name unresolved. `zkaudit` is hardcoded in domain separators, which are commitment inputs —
-  renaming after anchoring invalidates every record. Settle it before the first real anchor.
+- `history` grows without bound. Fine at demo scale; a real deployment wants pruning or an
+  indexer-derived timeline.

@@ -1,9 +1,6 @@
-# `<PROJECT>` — Privacy-Preserving Software Assurance
+# zkuat — Privacy-Preserving Software Assurance
 
 *Hack Buenos Aires 2026 · Midnight Network*
-
-> **Name not yet decided.** Docs use the placeholder `<PROJECT>`. The code uses `zkaudit`, including in
-> commitment domain separators — see [Naming](#naming) before renaming anything.
 
 ## What this is
 
@@ -62,22 +59,23 @@ Fastest path for a new team member:
 |---|---|
 | `docs/` | ✅ Realigned to `Master-Doc.md` (2026-08-07) |
 | `app/` | ✅ Minimal `hello-world` scaffold (SDK 4.1.1), deps installed |
-| `contract/` | ⚠️ Built, 50 tests green — **on schema v1.** Needs the v2 migration. Not deployed. |
+| `contract/` | ✅ **Schema v2, 87 tests green.** Identity binding, both policies, compliance records. Not deployed. |
 | `collector/`, `attestor/` | ⬜ |
 | `anchor/`, `cli/` | ⬜ |
 | `ui/` (vendor + buyer) | ⬜ |
 
-### ⚠️ Docs and code currently disagree
+### Docs and code are aligned
 
-`contract/` was built against an earlier framing — an *anonymous repo-badge* protocol. The Master Doc
-specifies an *identified artifact-assurance* protocol. Most of the cryptography carries over, but the
-evidence schema is missing fields the Master Doc treats as mandatory, above all `artifactDigest`.
+`contract/` was originally built against an earlier framing — an *anonymous repo-badge* protocol — and
+migrated to the Master Doc's *identified artifact-assurance* model on 2026-08-07. Schema v2 carries the
+mandatory `artifactDigest`, and vendor and product identity are bound in the evidence rather than merely
+asserted by the prover.
 
-**[docs/07-alignment-delta.md](docs/07-alignment-delta.md) is the register of every gap.** Read it before
-touching `contract/`.
+**[docs/07-alignment-delta.md](docs/07-alignment-delta.md) records every gap and its resolution.** The
+two still open are scope decisions, not code: UI priority and standards grounding.
 
-The migration must land **before** real proving-key generation or demo anchoring: a struct change re-keys
-every leaf, so it is cheap now and expensive later.
+Next: real proving keys and a testnet deploy. Both are now safe to do — a struct change re-keys every
+leaf, and the struct is settled.
 
 ## Integration surface
 
@@ -86,11 +84,12 @@ from the same Compact source the circuit runs — so the leaf you build cannot d
 circuit checks.
 
 ```typescript
-import { encodeEvidence, pureCircuits, policyId } from '@zkaudit/contract';
+import { encodeEvidence, pureCircuits, recordKey, POLICY_BANK_ID } from '@zkuat/contract';
 
 const evidence = encodeEvidence(canonicalJson);
-const leaf     = pureCircuits.leafOf(evidence, salt);
-const nul      = pureCircuits.nullifierOf(leaf, policyId('bank-v1'));
+const leaf     = pureCircuits.leafOf(evidence, salt);          // the attestor anchors this
+const nul      = pureCircuits.nullifierOf(leaf, POLICY_BANK_ID);
+const key      = recordKey(canonicalJson.artifactDigest, 'bank-v1');  // the buyer's lookup
 ```
 
 Do not reimplement any of that. See [docs/03-evidence-schema.md](docs/03-evidence-schema.md).
@@ -137,17 +136,16 @@ Full reasoning and residual assumptions in [docs/02-threat-model.md](docs/02-thr
 
 ## Naming
 
-The project name is unresolved. Note before renaming: the contract hardcodes `zkaudit` in its **domain
-separators**, and domain separators are commitment inputs.
+Settled: **zkuat**. It is baked into the contract's domain separators, which are commitment inputs:
 
 ```compact
-pad(32, "zkaudit:claim:nul:")
-pad(32, "zkaudit:anchor:pk:")
+pad(32, "zkuat:proof:nul:")
+pad(32, "zkuat:record:key:")
+pad(32, "zkuat:anchor:pk:")
 ```
 
-Renaming after the first real anchor changes every nullifier and invalidates every compliance record.
-Either settle the name before anchoring, or keep `zkaudit` as a permanent internal identifier that has
-nothing to do with the product name.
+Renaming after the first real anchor would change every nullifier and invalidate every compliance
+record. Nothing has been anchored yet, so this was free to settle; it is not free afterwards.
 
 ## Licence
 
