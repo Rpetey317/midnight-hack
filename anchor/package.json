@@ -1,0 +1,37 @@
+{
+  "name": "@zkuat/anchor",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "zkuat anchor — the trust boundary. Verifies an evidence bundle against a trusted attestor key set, verifies the Sigstore attestation and its repo binding, enforces one anchor per (repo, commit), and submits attest(leaf) to Midnight.",
+  "license": "Apache-2.0",
+  "main": "src/index.ts",
+  "bin": {
+    "zkuat-anchor": "src/cli.ts"
+  },
+  "scripts": {
+    "postinstall": "node scripts/check-contract-deps.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "anchor": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@sigstore/bundle": "^5.0.0",
+    "@sigstore/tuf": "^5.0.0",
+    "@sigstore/verify": "4.1.2",
+    "@zkuat/attestor": "file:../attestor"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.23.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "comment:midnight-sdk": "There is deliberately no @midnight-ntwrk/* dependency here. The SDK loads a WASM module, and two copies of it in one process means two class registries: an object minted by one fails every instanceof check in the other, which surfaces as `expected instance of StateValue` on the first circuit call. contract/src/devnet/sdk.ts re-exports the handful of symbols this package needs, so they resolve inside contract/node_modules and there is exactly one instance. Do not add @midnight-ntwrk packages here.",
+  "overrides": {
+    "@midnight-ntwrk/onchain-runtime-v3": "3.0.0"
+  }
+}

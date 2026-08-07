@@ -1,0 +1,32 @@
+{
+  "name": "@zkuat/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "zkuat CLI — anchor, prove, status. The fallback proof path: everything the browser demo does, from a terminal.",
+  "license": "Apache-2.0",
+  "main": "src/main.ts",
+  "bin": {
+    "zkuat": "src/main.ts"
+  },
+  "scripts": {
+    "postinstall": "node scripts/check-contract-deps.mjs",
+    "typecheck": "tsc --noEmit",
+    "zkuat": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@zkuat/anchor": "file:../anchor",
+    "@zkuat/attestor": "file:../attestor"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.23.1",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "comment:midnight-sdk": "No @midnight-ntwrk/* dependency here, for the same reason as in anchor/: a second copy of the SDK's WASM module means a second class registry, and the first circuit call dies with `expected instance of StateValue`. Everything on-chain goes through @zkuat/anchor, which reaches the SDK through contract/src/devnet/sdk.ts.",
+  "overrides": {
+    "@midnight-ntwrk/onchain-runtime-v3": "3.0.0"
+  }
+}

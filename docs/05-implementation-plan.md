@@ -16,10 +16,10 @@ ranks priorities differently from the original plan — see [Priority inversion]
 | `collector/`, `attestor/` | ✅ **11 checks, DSSE signing, 165 tests green.** Four signed fixtures anchored and proven on the devnet. |
 | `demo/fixtures/` | ✅ Committed and verifying |
 | `.github/workflows/attest.yml` | ✅ Written, not green (private repo — attestations plan-gated). Nothing depends on it. |
-| `anchor/`, `cli/` | ⬜ |
+| `anchor/`, `cli/` | ✅ **Trust boundary + `anchor`/`prove`/`status`, 12 tests.** Two fixtures anchored and proven end to end on the devnet. Sigstore path written, comparator tested, never run against a real Fulcio cert. |
 | `ui/` (vendor + buyer) | ⬜ |
 
-**Tracks C and D are unblocked twice over** — by A's generated types and now by B's signed bundles. `@zkuat/contract` exports the v2 encoding, both policies, and the
+**Track C is done; Track D is unblocked twice over** — by A's generated types and now by B's signed bundles. `@zkuat/contract` exports the v2 encoding, both policies, and the
 pure circuits that make the leaf, nullifier, and record key. Import them; do not reimplement.
 
 ## Priority inversion
@@ -214,19 +214,48 @@ The predicate carries the leaf only. Putting evidence there publishes findings t
 
 </details>
 
-### Track C — Anchor + CLI
+### Track C — done: anchor + CLI
 
-Verify with **`@sigstore/verify` (4.1.2)**. The `gh attestation verify` fallback the old plan suggested
-is **not available** — see the Track B blockers above; the installed `gh` predates that subcommand. Do
-not budget time on it without upgrading `gh` first.
+**Done, 2026-08-07 evening.** `anchor/` and `cli/` exist; 12 anchor tests green; two fixtures anchored
+and proven end to end against the local devnet with real ZK proofs. Details in
+[`../anchor/README.md`](../anchor/README.md) and [`../cli/README.md`](../cli/README.md).
 
-**The security-critical check is that the OIDC subject repo matches the predicate repo** — without it,
-repo A can attest for repo B and the whole trust chain is decorative.
+`anchor/` is the trust boundary — the only component deciding whether a leaf deserves to be on chain.
+Four checks in cost order: trusted attestor keyid → predicate leaks nothing → Sigstore repo binding →
+one anchor per `(repo, commit)`. Then `attest(leaf)`. It stays deliberately small, because
+"auditable in an afternoon" is the stated mitigation for [02-threat-model.md](02-threat-model.md) §3.
 
-CLI: `anchor`, `prove --policy bank-v1 --artifact <digest>`, `status --artifact <digest>`.
+`cli/` is `zkuat anchor | prove | status`. Exit codes **0 PASS · 1 FAIL · 2 circuit rejected** — the
+difference between 1 and 2 matters, because a `false` record is a legitimate published outcome while a
+rejected call writes nothing.
 
-The anchor's receipt should record the **leaf index** so the prover can use `pathForLeaf(index, leaf)`
-instead of the O(n) `findPathForLeaf`.
+The receipt records the **leaf index**, read as `firstFree()` immediately before the insert and then
+confirmed with `pathForLeaf`. That is the first use of `pathForLeaf` in the project; verified against a
+nonzero index, so it is not passing by luck at zero. A failed confirmation records `-1` and the prover
+falls back to `findPathForLeaf`.
+
+Three things the rest of the team needs to know:
+
+1. **No package outside `contract/` may depend on `@midnight-ntwrk/*`.** A second copy of the SDK's
+   WASM module means a second class registry, and the first circuit call dies with `expected instance
+   of StateValue` — the same failure the `overrides` block guards against, but across `node_modules`
+   trees, where an override cannot reach. `anchor/` and `cli/` reach the SDK through the new
+   `contract/src/devnet/sdk.ts`, which re-exports the handful of symbols they need so the specifiers
+   resolve from `contract/node_modules`. **Track D will hit this in the browser build too.**
+   Check with `find node_modules -name onchain-runtime-v3` — it must print nothing outside `contract/`.
+2. **Install order is now four deep:** `contract → attestor → anchor → cli`. Each `postinstall`
+   guard names the ones below it.
+3. **All four fixtures share one commit**, so the one-anchor-per-`(repo, commit)` rule rejects the
+   second and later ones under the same `--repo`. Give each a distinct `--repo`, or pass `--force`.
+
+**Sigstore, honestly.** `@sigstore/verify` 4.1.2 is wired — signature → Fulcio → Rekor — plus a
+leaf-binding check so a genuine attestation for a *different* artifact cannot authorise anchoring.
+The repo comparator and the v1/v2 certificate-extension decoding are unit-tested. But the repo is
+private, `actions/attest` has never gone green, and every fixture carries `"sigstore": null`, so the
+full-chain path **has never run against a real Fulcio certificate**. An unsigned bundle requires
+`--allow-unsigned` and prints `⚠ repo binding NOT CHECKED`; it is never silently accepted.
+
+`gh attestation verify` remains unavailable — `gh` is 2.45.0, the subcommand landed in 2.49.0.
 
 ### Track D — Vendor + buyer views
 
@@ -309,9 +338,14 @@ Testnet funding is the classic silent killer — it blocks nothing until it bloc
 - [ ] Compliance record written with correct vendor, product, artifact, policy version, timestamps
 - [ ] Contract deployed to testnet, address recorded
 - [ ] A signed v2 evidence bundle exists and verifies
-- [ ] Anchor rejects a bundle whose OIDC repo ≠ predicate repo
-- [ ] End-to-end: attest → anchor → prove → buyer reads the record
-- [ ] Negative case demonstrable (non-compliant evidence → `false`, no revert)
+- [ ] Anchor rejects a bundle whose OIDC repo ≠ predicate repo — **partial, deliberately unticked.**
+  The comparator is written and unit-tested (mismatched repo, mismatched commit, absent claim, both
+  certificate-extension encodings); the full chain has never run against a real Fulcio certificate,
+  because the repo is private and every fixture is `sigstore: null`. Not ticked without a certificate.
+- [x] End-to-end: attest → anchor → prove → buyer reads the record — `zkuat anchor` → `prove` →
+  `status`, two fixtures, real ZK proofs, cross-checked against `devnet:inspect`
+- [x] Negative case demonstrable (non-compliant evidence → `false`, no revert) — `bank-only` against
+  `enterprise-v1` exits 1 with a record reading `compliant: false`
 - [ ] Vendor view shows private evidence labelled "PRIVATE — not written to Midnight"
 - [ ] Buyer view shows result and requirement checklist, and **no private value anywhere**
 - [ ] Privacy checklist in [02-threat-model.md](02-threat-model.md) confirmed against a real v2 tx

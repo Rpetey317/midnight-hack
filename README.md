@@ -63,7 +63,7 @@ Fastest path for a new team member:
 | `collector/`, `attestor/` | ✅ **11 checks, DSSE-signed bundles, 165 tests.** Four signed fixtures anchored and proven on the devnet with real ZK proofs. |
 | `demo/fixtures/` | ✅ Committed, verifying, and consumable by `--bundle` |
 | `.github/workflows/attest.yml` | ✅ Written; not green (the repo is private, where artifact attestations are plan-gated). Nothing depends on it. |
-| `anchor/`, `cli/` | ⬜ |
+| `anchor/`, `cli/` | ✅ **Trust boundary + `anchor`/`prove`/`status`, 12 tests.** Two fixtures anchored and proven on the devnet with real ZK proofs; Sigstore repo binding written and unit-tested, never exercised against a real Fulcio cert (the repo is private). |
 | `ui/` (vendor + buyer) | ⬜ |
 
 Try the whole thing without a chain:
@@ -145,7 +145,8 @@ One environment gotcha still open, and one now closed:
 - ~~`gh` is not authenticated.~~ **Resolved** — the collector's `gh api` checks work.
 - **`gh attestation` does not exist at 2.45.0** — the subcommand landed in 2.49.0. The collector
   routes around it with the REST endpoint `gh api repos/{o}/{r}/attestations/sha256:{digest}`, which
-  works on 2.45. Track C should use `@sigstore/verify` in Node rather than upgrading `gh`.
+  works on 2.45. Track C uses `@sigstore/verify` in Node rather than upgrading `gh` — see
+  [anchor/README.md](anchor/README.md) for what that path does and does not currently prove.
 
 No proof server is running locally (`:6300` is closed). `app/` brings one up via
 `docker compose`.

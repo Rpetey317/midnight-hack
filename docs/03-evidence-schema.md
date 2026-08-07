@@ -329,7 +329,7 @@ outstanding proofs do not break when new evidence is anchored.
 - [x] **Track B (collector + attestor)** — `@zkuat/collector` measures, `@zkuat/attestor` normalizes
       and signs; both import `@zkuat/contract` and call `pureCircuits.leafOf`. Four signed fixtures
       committed under `demo/fixtures/`, 138 + 27 tests green (2026-08-07). Bundle format below.
-- [ ] Track C (anchor/CLI) — imports `@zkuat/contract`, no reimplementation
+- [x] Track C (anchor/CLI) — imports `@zkuat/contract`, no reimplementation
 - [ ] Track D (vendor + buyer views) — imports `@zkuat/contract`, no reimplementation
 
 ---
