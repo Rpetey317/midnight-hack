@@ -1,0 +1,29 @@
+{
+  "name": "@zkaudit/contract",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "zkaudit audit-attestation registry — Compact contract, witnesses, and simulator tests",
+  "license": "Apache-2.0",
+  "main": "src/index.ts",
+  "scripts": {
+    "compile": "compact compile --skip-zk src/audit_registry.compact src/managed/audit_registry && npm run postcompile",
+    "compile:keys": "compact compile src/audit_registry.compact src/managed/audit_registry && npm run postcompile",
+    "postcompile": "node scripts/strip-sourcemap.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf src/managed"
+  },
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "0.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.23.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

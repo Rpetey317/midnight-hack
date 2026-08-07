@@ -39,10 +39,30 @@ Fastest path for a new team member:
 |---|---|
 | `docs/` | ✅ Design docs complete |
 | `app/` | ✅ Minimal `hello-world` scaffold (SDK 4.1.1), deps installed |
-| `contract/` | ⬜ Track A — contract source verified to compile, see [04-contract-spec.md](docs/04-contract-spec.md) |
+| `contract/` | ✅ **Track A** — contract, witnesses, encoding, 50 tests green. Not yet deployed. |
 | `collector/` | ⬜ Track B |
 | `anchor/`, `cli/` | ⬜ Track C |
 | `ui/` | ⬜ Track D |
+
+### Tracks B, C, D start here
+
+`contract/` is the integration surface. It exports the commitment and nullifier derivations as
+ordinary TypeScript functions, compiled from the same Compact source the circuit runs — so the leaf
+you build cannot disagree with the leaf the circuit checks.
+
+```typescript
+import { encodeEvidence, pureCircuits, policyId } from '@zkaudit/contract';
+
+const evidence = encodeEvidence(canonicalJson);
+const leaf     = pureCircuits.leafOf(evidence, salt);
+const nul      = pureCircuits.nullifierOf(leaf, policyId('production-ready'));
+```
+
+Do not reimplement any of that. See [docs/03-evidence-schema.md](docs/03-evidence-schema.md).
+
+```bash
+cd contract && npm install && npm run compile && npm test
+```
 
 ## Toolchain
 
@@ -56,7 +76,7 @@ Verified in this environment on 2026-08-07:
 | Midnight JS SDK | 4.1.1 |
 | Node | 22.20.0 |
 
-Missing and needed: **`gh` CLI** (`sudo apt install gh`) for Track B.
+`gh` CLI is **installed** (`/usr/bin/gh`) — an earlier note here said otherwise. Track B is unblocked.
 
 ## Design decision worth knowing up front
 

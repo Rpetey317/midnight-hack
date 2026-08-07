@@ -1,0 +1,197 @@
+// zkaudit — ZK audit attestation registry.
+//
+// A repo's own CI produces evidence, commits to it under a random salt, and has
+// GitHub sign that commitment via Sigstore. An off-chain anchor verifies the
+// signature and inserts the commitment here. The repo owner then proves locally
+// that the anchored evidence satisfies a published policy, disclosing only the
+// verdict.
+//
+// Design docs: ../docs/04-contract-spec.md (circuits), ../docs/03-evidence-schema.md
+// (encoding), ../docs/02-threat-model.md (what this does and does not prove).
+
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// ─── Data ──────────────────────────────────────────────────────────────────────
+//
+// Field order is load-bearing: it determines the commitment. Reordering or
+// inserting a field mid-struct changes every leaf and invalidates every
+// outstanding proof. Append-only, and appending requires re-anchoring.
+// See ../docs/03-evidence-schema.md.
+
+struct Evidence {
+  repoId:     Bytes<32>;   // repoIdOf(padded "owner/name")
+  commitId:   Bytes<32>;   // git SHA, 20 bytes left-aligned, zero-padded right
+  issuedAt:   Uint<64>;    // unix seconds
+  ciGreen:    Boolean;     // Actions conclusion on HEAD == success
+  criticals:  Uint<32>;    // critical severity findings
+  highs:      Uint<32>;    // high severity findings
+  vulnDeps:   Uint<32>;    // dependencies with known vulns
+  coverage:   Uint<32>;    // percent * 100  (8734 == 87.34%)
+}
+
+struct Policy {
+  maxCriticals:   Uint<32>;
+  maxHighs:       Uint<32>;
+  maxVulnDeps:    Uint<32>;
+  minCoverage:    Uint<32>;
+  requireCiGreen: Boolean;
+}
+
+// ─── Ledger ────────────────────────────────────────────────────────────────────
+
+// HistoricMerkleTree, not MerkleTree. A plain MerkleTree invalidates every
+// outstanding proof on each insert — the moment a second repo anchors, the first
+// repo's proof dies. checkRoot() here accepts any historic root.
+// Depth 16 = 65,536 attestations.
+export ledger attestations:   HistoricMerkleTree<16, Bytes<32>>;
+
+// Public thresholds, so a verifier can read what a badge actually means.
+export ledger policies:       Map<Bytes<32>, Policy>;
+
+// Nullifiers. These are already-public values; privacy comes from the nullifier
+// being unguessable (it derives from the salt-blinded leaf), not from hiding the set.
+export ledger claimed:        Set<Bytes<32>>;
+
+// Public badge tally per policy — the demo's visible on-chain effect.
+export ledger compliantCount: Map<Bytes<32>, Counter>;
+
+// The anchor operator's identity, fixed at deployment. `sealed` gives
+// compiler-enforced immutability, so no runtime reassignment check is needed.
+export sealed ledger anchor:  Bytes<32>;
+
+// ─── Witnesses ─────────────────────────────────────────────────────────────────
+
+// The anchor's secret key. Only attest/registerPolicy reach for it; a repo owner
+// calling claimBadge never invokes this witness.
+witness localSecret(): Bytes<32>;
+
+// The prover's private evidence, its salt, and its Merkle path. None of these
+// ever leave the prover's machine.
+witness getEvidence(): Evidence;
+witness getSalt(): Bytes<32>;
+witness getPath(): MerkleTreePath<16, Bytes<32>>;
+
+// ─── Shared derivations ────────────────────────────────────────────────────────
+//
+// These are `pure`, so the compiler emits them into the generated `pureCircuits`
+// object and they are callable from TypeScript with no context and no transaction.
+// The collector, anchor, CLI, and dApp all call these rather than reimplementing
+// the encoding — which makes the schema drift that ../docs/03-evidence-schema.md
+// flags as the project's highest risk structurally impossible rather than merely
+// discouraged.
+//
+// claimBadge below calls leafOf/nullifierOf rather than inlining the expressions.
+// That identity is the whole point: what TypeScript computes is, byte for byte,
+// what the circuit checks.
+
+export pure circuit leafOf(ev: Evidence, salt: Bytes<32>): Bytes<32> {
+  return persistentCommit<Evidence>(ev, salt);
+}
+
+export pure circuit nullifierOf(leaf: Bytes<32>, policyId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([
+    pad(32, "zkaudit:claim:nul:"), leaf, policyId
+  ]);
+}
+
+// "owner/name", lowercased, UTF-8, zero-padded right to 64 bytes.
+// Bytes<N> is fixed-width in Compact, so the width has to be pinned somewhere;
+// pinning it here keeps every track honest.
+export pure circuit repoIdOf(repo: Bytes<64>): Bytes<32> {
+  return persistentHash<Bytes<64>>(repo);
+}
+
+// Identity is derived from a witness secret, NOT from ownPublicKey(). The latter
+// is prover-supplied circuit context — any caller can put any value there, so it
+// is bypassable for authorization. Its only safe use is routing tokens to a caller.
+export pure circuit anchorIdOf(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "zkaudit:anchor:pk:"), sk
+  ]);
+}
+
+// ─── Setup ─────────────────────────────────────────────────────────────────────
+
+constructor() {
+  // Whoever deploys becomes the anchor, permanently.
+  anchor = disclose(anchorIdOf(localSecret()));
+}
+
+circuit requireAnchor(): [] {
+  assert(disclose(anchorIdOf(localSecret()) == anchor), "not anchor");
+}
+
+// ─── Circuits ──────────────────────────────────────────────────────────────────
+
+// Anchor-only. `leaf` needs disclose(): circuit arguments are private by default
+// and the compiler's disclosure analysis treats any ledger operation as a
+// potential disclosure of its argument. Note this is the compiler being
+// conservative about the *annotation*, not proof that the leaf reaches the
+// transcript in the clear — insert() applies leaf_hash() internally. The
+// transcript test in src/test/ checks what actually lands there.
+//
+// Use insert(), never insertHash(): insertHash publishes the hash you hand it.
+// Correspondingly claimBadge uses merkleTreePathRoot (which hashes the leaf),
+// not merkleTreePathRootNoLeafHash.
+export circuit attest(leaf: Bytes<32>): [] {
+  requireAnchor();
+  attestations.insert(disclose(leaf));
+}
+
+// Anchor-only.
+export circuit registerPolicy(policyId: Bytes<32>, policy: Policy): [] {
+  requireAnchor();
+  policies.insert(disclose(policyId), disclose(policy));
+
+  // A Map<_, Counter> entry does not exist until inserted, so claimBadge's
+  // lookup().increment() would throw on the first successful claim without this.
+  // Guarded, so re-registering a policy never wipes an existing tally.
+  if (!compliantCount.member(disclose(policyId))) {
+    compliantCount.insert(disclose(policyId), default<Counter>);
+  }
+}
+
+// Called by the repo owner, on their own machine. Everything private stays private:
+// the only things disclosed are the nullifier, the policy id, and the verdict.
+export circuit claimBadge(policyId: Bytes<32>): Boolean {
+  const ev   = getEvidence();
+  const salt = getSalt();
+  const leaf = leafOf(ev, salt);
+
+  // Bind the witness-supplied path to OUR computed commitment. Without this a
+  // prover could supply a path for somebody else's anchored leaf and claim on it.
+  // Disclosing the comparison reveals a boolean that is always true for honest
+  // provers — it says nothing about the evidence.
+  const path = getPath();
+  assert(disclose(path.leaf == leaf), "path/leaf mismatch");
+
+  // The root is a public historic root; which leaf produced it stays hidden.
+  const digest = merkleTreePathRoot<16, Bytes<32>>(path);
+  assert(attestations.checkRoot(disclose(digest)), "not anchored");
+
+  // Derived from the salt-blinded leaf, so unguessable. It has to be public —
+  // it is the replay guard.
+  const nul = disclose(nullifierOf(leaf, policyId));
+  assert(!claimed.member(nul), "already claimed");
+  claimed.insert(nul);
+
+  // The critical line. disclose() wraps the *comparison*, never the operands:
+  // writing disclose(ev.criticals) would publish the finding count and defeat
+  // the entire protocol.
+  const p = policies.lookup(disclose(policyId));
+  const ok = disclose(
+    ev.criticals <= p.maxCriticals && ev.highs <= p.maxHighs &&
+    ev.vulnDeps  <= p.maxVulnDeps  && ev.coverage >= p.minCoverage &&
+    (!p.requireCiGreen || ev.ciGreen)
+  );
+
+  // Non-compliance is a legitimate outcome, not an error: the circuit returns
+  // false rather than reverting. Safe by invariant — policies.lookup above
+  // already fails for an unregistered policy, and registerPolicy always seeds
+  // the counter alongside the policy.
+  if (ok) { compliantCount.lookup(disclose(policyId)).increment(1); }
+
+  return ok;
+}

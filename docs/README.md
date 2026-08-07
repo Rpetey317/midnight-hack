@@ -15,7 +15,7 @@ Design documentation for our Hack Buenos Aires 2026 project: a **ZK audit attest
 | [00-overview.md](00-overview.md) | Problem, solution, why this needs Midnight | Everyone — read first |
 | [01-architecture.md](01-architecture.md) | Components, data flow, trust boundary | Everyone |
 | [02-threat-model.md](02-threat-model.md) | What we prove, what we assume, known holes | Everyone; pitch material |
-| [03-evidence-schema.md](03-evidence-schema.md) | **The integration contract. Freeze before coding.** | All four tracks |
+| [03-evidence-schema.md](03-evidence-schema.md) | **The integration contract. Frozen and implemented.** | All four tracks |
 | [04-contract-spec.md](04-contract-spec.md) | Ledger state, circuits, disclosure decisions | Track A, C, D |
 | [05-implementation-plan.md](05-implementation-plan.md) | Track assignments, timeline, cut list | Everyone |
 | [06-demo-script.md](06-demo-script.md) | The 2½-minute pitch | Whoever presents |
@@ -27,8 +27,12 @@ Midnight's stack moves fast and recalled knowledge about it is unreliable, so cl
 - **VERIFIED** — mechanically checked in this environment on 2026-08-07. Command and result recorded in the doc.
 - **UNVERIFIED** — reasoned from documentation, not yet executed. Treat as a hypothesis to confirm.
 
-The contract in [04-contract-spec.md](04-contract-spec.md) is VERIFIED to compile. Compiling is not the
-same as behaving correctly — runtime behaviour is still UNVERIFIED until the simulator tests run.
+The contract is now **built and tested** — `contract/`, 50 simulator tests green as of 2026-08-07,
+including the historic-root property that validates the core design. Real proving keys and on-chain
+behaviour remain UNVERIFIED.
+
+The evidence schema in [03-evidence-schema.md](03-evidence-schema.md) is **frozen and implemented**.
+Tracks B, C, and D import `@zkaudit/contract` for the encoding rather than reimplementing it.
 
 ## Hackathon constraints
 

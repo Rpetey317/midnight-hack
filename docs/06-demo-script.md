@@ -71,17 +71,47 @@ That answer wins more credit than pretending the problem doesn't exist. Judges w
 
 ## Midnight DX feedback
 
-Explicitly part of the judging criteria, so prepare two or three concrete notes. Candidates:
+Explicitly part of the judging criteria, so prepare two or three concrete notes. Everything below was
+hit while building Track A, with a reproduction. Lead with the first one — it is the most interesting.
 
-- `create-mn-app` v0.5.0 dropped the `counter` template while much documentation still references it;
-  the current set is `hello-world`, `battleship`, `bboard`, `leaderboard`.
-- Generated TypeScript uses **snake_case** `goes_left` while the Compact docs write `goesLeft` — a
-  silent-failure trap when constructing Merkle paths by hand.
-- `checkRoot` takes `{ field: bigint }` rather than a bare `bigint`; easy to get wrong from the docs.
-- The `insert()` vs `insertHash()` privacy distinction (only `insert` hides the leaf) is a genuinely
-  important property that deserves more prominence.
+**1. `disclose()` is required on `MerkleTree.insert()`, whose whole point is that it doesn't disclose.**
+
+```compact
+export circuit attest(leaf: Bytes<32>): [] { attestations.insert(leaf); }
+```
+```
+potential witness-value disclosure must be declared but is not:
+  nature of the disclosure: ledger operation might disclose the witness value
+```
+
+But `insert()` applies `leaf_hash()` internally, and we confirmed against a real
+`proofData.publicTranscript` that the raw leaf never appears in it. So the annotation says "this
+becomes public" about the one ledger operation that hides its argument. The disclosure analysis is
+conservative about ledger writes and does not special-case `insert`. A developer who trusts the
+annotation concludes their privacy design is broken and redesigns around a non-problem.
+
+**2. No published simulator package.** The `@openzeppelin-compact/contracts-simulator` package that
+tooling docs reference returns 404 on npm. Hand-threading `CircuitContext` over `compact-runtime`
+works fine and is about 100 lines, but you have to discover that yourself.
+
+**3. `Evidence` and `Policy` structs are emitted as anonymous inline object types**, not named
+exports, so TypeScript consumers cannot `import type { Evidence }`. We recover them with
+`Parameters<PureCircuits['leafOf']>[0]`, which works but is not obvious.
+
+**4. Generated TypeScript uses snake_case `goes_left`** while the Compact docs write `goesLeft` — a
+silent-failure trap when constructing Merkle paths by hand. Related: `checkRoot` takes
+`{ field: bigint }`, not a bare `bigint`, and `sibling` is a `{ field: bigint }` wrapper.
+
+**5. `create-mn-app` v0.5.0 dropped the `counter` template** while much documentation still references
+it; the current set is `hello-world`, `battleship`, `bboard`, `leaderboard`.
 
 Specific, reproducible feedback scores better than "the docs could be better."
+
+**Positive note worth making too:** `export pure circuit` is excellent. It let us export the
+commitment and nullifier derivations as ordinary TypeScript functions compiled from the same source
+the circuit runs, which turned our biggest integration risk — four components encoding one struct
+identically — into a compiler guarantee. That pattern deserves to be documented as a first-class
+technique, not just a language feature.
 
 ## Failure drills
 

@@ -1,0 +1,4 @@
+node_modules/
+
+# Compiler output. Regenerate with `npm run compile`.
+src/managed/
