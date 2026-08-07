@@ -159,4 +159,4 @@ record. Nothing has been anchored yet, so this was free to settle; it is not fre
 
 ## Licence
 
-**Apache 2.0** — required to be in place at demo time. Note: the `LICENSE` file is **not yet present**.
+**Apache 2.0** — see [LICENSE](LICENSE).

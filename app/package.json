@@ -4,7 +4,7 @@
   "type": "module",
   "description": "A Midnight Network application created with create-mn-app",
   "author": "",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
     "compile": "compact compile contracts/hello-world.compact contracts/managed/hello-world",
     "build": "npx tsc --noEmit || true",
