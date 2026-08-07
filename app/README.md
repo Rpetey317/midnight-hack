@@ -2,6 +2,11 @@
 
 A Midnight Network smart contract scaffolded with create-mn-app.
 
+> **This is the `hello-world` scaffold, not the project.** It is kept as a working reference for
+> devnet/wallet/deploy wiring. The real contract lives in [`../contract/`](../contract/README.md), and
+> the project's documentation is in [`../docs/`](../docs/README.md). This file is tool-generated and
+> describes the scaffold only.
+
 ## Quick start
 
 Requirements: Node 22, Docker (with Compose v2), and the Compact compiler at the version pinned in `.compact-version` at the create-mn-app repo root (the version this project was scaffolded against).
