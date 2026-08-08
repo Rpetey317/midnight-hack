@@ -14,6 +14,10 @@ jobs:
   audit:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: ui
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,5 +67,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: evidence-${{ inputs.request_id || github.sha }}
-          path: evidence.json
+          path: ui/evidence.json
           retention-days: 1
