@@ -5,23 +5,47 @@ import * as path from 'node:path';
 import { mnemonicToSeedSync, validateMnemonic } from '@scure/bip39';
 import { wordlist as english } from '@scure/bip39/wordlists/english.js';
 
-export type RuntimeNetwork = 'preview' | 'preprod';
+export type RuntimeNetwork = 'local' | 'preview' | 'preprod';
 
-const NETWORKS: Record<RuntimeNetwork, { indexer: string; indexerWS: string; node: string }> = {
+interface NetworkDefaults {
+  /**
+   * The identifier handed to the SDK's `setNetworkId`. It is not always the
+   * configuration name: a local devnet answers to `undeployed`, which is also
+   * what `midnightntwrk/indexer-standalone` is configured with in the
+   * development compose stack.
+   */
+  networkId: string;
+  indexer: string;
+  indexerWS: string;
+  node: string;
+}
+
+const NETWORKS: Record<RuntimeNetwork, NetworkDefaults> = {
+  local: {
+    networkId: 'undeployed',
+    indexer: 'http://127.0.0.1:8088/api/v4/graphql',
+    indexerWS: 'ws://127.0.0.1:8088/api/v4/graphql/ws',
+    node: 'http://127.0.0.1:9944',
+  },
   preview: {
+    networkId: 'preview',
     indexer: 'https://indexer.preview.midnight.network/api/v4/graphql',
     indexerWS: 'wss://indexer.preview.midnight.network/api/v4/graphql/ws',
     node: 'https://rpc.preview.midnight.network',
   },
   preprod: {
+    networkId: 'preprod',
     indexer: 'https://indexer.preprod.midnight.network/api/v4/graphql',
     indexerWS: 'wss://indexer.preprod.midnight.network/api/v4/graphql/ws',
     node: 'https://rpc.preprod.midnight.network',
   },
 };
 
+const NETWORK_NAMES = Object.keys(NETWORKS) as RuntimeNetwork[];
+
 export interface RuntimeConfig {
   network: RuntimeNetwork;
+  networkId: string;
   sponsorSeed: string;
   contractAddress: string | null;
   runtimeUrl: URL;
@@ -41,6 +65,12 @@ export interface LoadConfigOptions {
   env?: NodeJS.ProcessEnv;
   envFile?: string;
   requireContract?: boolean;
+  /**
+   * Read-only commands (`ledger`) query the indexer and touch no wallet, so
+   * they load a configuration with no sponsor seed at all. `sponsorSeed` is an
+   * empty string in that case; anything that spends must not use it.
+   */
+  requireSeed?: boolean;
 }
 
 function parseEnvFile(file: string): Record<string, string> {
@@ -67,11 +97,26 @@ function required(env: Record<string, string | undefined>, key: string): string 
   return value;
 }
 
-function sponsorSeedFromMnemonic(value: string): string {
-  const mnemonic = value.trim().split(/\s+/).join(' ');
+/**
+ * Sponsor wallet seed → hex bytes for `HDWallet.fromSeed`.
+ *
+ * Every deployed network takes a 24-word recovery phrase and nothing else. A
+ * local devnet additionally accepts a raw 32-byte hex seed, because its
+ * genesis accounts are funded by seed rather than by phrase and there is no
+ * phrase that restores them. Keeping the exception scoped to `local` means the
+ * recovery-phrase requirement still holds everywhere a seed is worth stealing.
+ */
+function sponsorSeed(value: string, network: RuntimeNetwork): string {
+  const raw = value.trim();
+  if (network === 'local' && /^(?:0x)?[0-9a-f]{64}$/i.test(raw)) {
+    return raw.replace(/^0x/i, '').toLowerCase();
+  }
+  const mnemonic = raw.split(/\s+/).join(' ');
   if (mnemonic.split(' ').length !== 24 || !validateMnemonic(mnemonic, english)) {
     throw new Error(
-      'zkuat: ZKUAT_SPONSOR_WALLET_SEED must be a valid 24-word English BIP-39 recovery phrase',
+      network === 'local'
+        ? 'zkuat: ZKUAT_SPONSOR_WALLET_SEED must be a valid 24-word English BIP-39 recovery phrase or a 64-character hexadecimal seed'
+        : 'zkuat: ZKUAT_SPONSOR_WALLET_SEED must be a valid 24-word English BIP-39 recovery phrase',
     );
   }
   return Buffer.from(mnemonicToSeedSync(mnemonic)).toString('hex');
@@ -130,12 +175,15 @@ export function loadConfig(options: LoadConfigOptions = {}): RuntimeConfig {
   const env: Record<string, string | undefined> = { ...fileEnv, ...processEnv };
 
   const networkValue = required(env, 'ZKUAT_NETWORK');
-  if (networkValue !== 'preview' && networkValue !== 'preprod') {
-    throw new Error('zkuat: ZKUAT_NETWORK must be preview or preprod');
+  if (!(NETWORK_NAMES as string[]).includes(networkValue)) {
+    throw new Error(`zkuat: ZKUAT_NETWORK must be one of ${NETWORK_NAMES.join(', ')}`);
   }
   const network = networkValue as RuntimeNetwork;
 
-  const sponsorSeed = sponsorSeedFromMnemonic(required(env, 'ZKUAT_SPONSOR_WALLET_SEED'));
+  const seed =
+    options.requireSeed === false
+      ? ''
+      : sponsorSeed(required(env, 'ZKUAT_SPONSOR_WALLET_SEED'), network);
 
   const contractAddress = env.ZKUAT_CONTRACT_ADDRESS?.trim() || null;
   if (options.requireContract !== false && !contractAddress) {
@@ -162,7 +210,8 @@ export function loadConfig(options: LoadConfigOptions = {}): RuntimeConfig {
 
   return {
     network,
-    sponsorSeed,
+    networkId: defaults.networkId,
+    sponsorSeed: seed,
     contractAddress,
     runtimeUrl,
     bindHost:

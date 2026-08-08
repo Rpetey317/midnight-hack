@@ -105,4 +105,82 @@ describe('loadConfig', () => {
       }),
     ).toThrow('24-word English BIP-39 recovery phrase');
   });
+
+  it('rejects an unknown network', () => {
+    expect(() =>
+      loadConfig({ env: { ...baseEnv, ZKUAT_NETWORK: 'mainnet' }, envFile: '/does/not/exist' }),
+    ).toThrow('ZKUAT_NETWORK must be one of local, preview, preprod');
+  });
+
+  it('omits the sponsor seed entirely for read-only commands', () => {
+    const config = loadConfig({
+      env: { ZKUAT_NETWORK: 'preview', ZKUAT_CONTRACT_ADDRESS: 'ab'.repeat(32) },
+      envFile: '/does/not/exist',
+      requireSeed: false,
+    });
+    expect(config.sponsorSeed).toBe('');
+  });
+
+  describe('local devnet', () => {
+    const localEnv = {
+      ZKUAT_NETWORK: 'local',
+      ZKUAT_SPONSOR_WALLET_SEED: `${'0'.repeat(63)}1`,
+      ZKUAT_CONTRACT_ADDRESS: 'ab'.repeat(32),
+    };
+
+    it('resolves the undeployed network id and loopback endpoints', () => {
+      const config = loadConfig({ env: localEnv, envFile: '/does/not/exist' });
+      expect(config.network).toBe('local');
+      // The SDK identifier is not the configuration name: indexer-standalone is
+      // configured with `undeployed` in the development compose stack.
+      expect(config.networkId).toBe('undeployed');
+      expect(config.indexer).toBe('http://127.0.0.1:8088/api/v4/graphql');
+      expect(config.indexerWS).toBe('ws://127.0.0.1:8088/api/v4/graphql/ws');
+      expect(config.node).toBe('http://127.0.0.1:9944');
+    });
+
+    it('accepts a raw 32-byte hexadecimal seed, with or without 0x', () => {
+      const expected = `${'0'.repeat(63)}1`;
+      expect(loadConfig({ env: localEnv, envFile: '/does/not/exist' }).sponsorSeed).toBe(expected);
+      expect(
+        loadConfig({
+          env: { ...localEnv, ZKUAT_SPONSOR_WALLET_SEED: `0X${'0'.repeat(63)}1` },
+          envFile: '/does/not/exist',
+        }).sponsorSeed,
+      ).toBe(expected);
+    });
+
+    it('still accepts a recovery phrase', () => {
+      const config = loadConfig({
+        env: { ...localEnv, ZKUAT_SPONSOR_WALLET_SEED: recoveryPhrase },
+        envFile: '/does/not/exist',
+      });
+      expect(config.sponsorSeed).toHaveLength(128);
+    });
+
+    it('rejects a hexadecimal seed of the wrong length', () => {
+      expect(() =>
+        loadConfig({
+          env: { ...localEnv, ZKUAT_SPONSOR_WALLET_SEED: '0'.repeat(32) },
+          envFile: '/does/not/exist',
+        }),
+      ).toThrow('recovery phrase or a 64-character hexadecimal seed');
+    });
+  });
+
+  // The raw-seed escape hatch exists only because a devnet's genesis accounts
+  // are funded by seed and no phrase restores them. It must not widen the
+  // surface on a network where the seed is worth stealing.
+  it.each(['preview', 'preprod'])('rejects a raw hexadecimal seed on %s', (network) => {
+    expect(() =>
+      loadConfig({
+        env: {
+          ...baseEnv,
+          ZKUAT_NETWORK: network,
+          ZKUAT_SPONSOR_WALLET_SEED: `${'0'.repeat(63)}1`,
+        },
+        envFile: '/does/not/exist',
+      }),
+    ).toThrow('must be a valid 24-word English BIP-39 recovery phrase');
+  });
 });

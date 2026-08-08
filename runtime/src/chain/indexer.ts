@@ -111,16 +111,36 @@ export interface IndexedTransaction {
   }>;
 }
 
+/**
+ * Look up the transaction the SDK reported for a submitted call.
+ *
+ * Two things about this query are easy to get wrong, both confirmed by
+ * introspecting indexer-standalone 4.3.3 and the hosted preview/preprod v4
+ * endpoints:
+ *
+ *  1. `tx.public.txId` is a transaction *identifier*, not the transaction hash.
+ *     They are different values — the identifier appears in the indexed
+ *     transaction's `identifiers` array, while `hash` is something else
+ *     entirely. Offsetting by `hash` finds nothing, or rejects the value
+ *     outright because the identifier is 33 bytes and a hash is 32.
+ *  2. `Transaction` is an interface and `transactionResult` lives only on
+ *     `RegularTransaction`, so it must be selected through an inline fragment.
+ *     Selecting it directly is a schema error, not an empty result. Preview
+ *     also implements `BridgeClaimTransaction`, so the fragment cannot be
+ *     dropped by assuming there are only two implementations.
+ */
 export async function queryTransaction(
   indexer: string,
   txId: string,
 ): Promise<IndexedTransaction | null> {
   const data = await graphql<{ transactions: IndexedTransaction[] }>(
     indexer,
-    `query Transaction($hash: HexEncoded!) {
-      transactions(offset: { hash: $hash }) {
+    `query Transaction($identifier: HexEncoded!) {
+      transactions(offset: { identifier: $identifier }) {
         hash
-        transactionResult { status segments { success } }
+        ... on RegularTransaction {
+          transactionResult { status segments { success } }
+        }
         contractActions {
           __typename
           address
@@ -128,7 +148,7 @@ export async function queryTransaction(
         }
       }
     }`,
-    { hash: txId },
+    { identifier: txId },
   );
   return data.transactions[0] ?? null;
 }

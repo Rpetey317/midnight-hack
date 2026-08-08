@@ -126,7 +126,9 @@ sealed anchor of an already-deployed contract.
 The 24-word recovery phrase lives **only** in `runtime/.env`, mode `0600`. Never in Vercel,
 Supabase, a `NEXT_PUBLIC_*` variable, browser storage, or source control.
 
-The runtime checksum-validates the phrase and decodes its 32-byte BIP-39 entropy as the wallet seed.
+The runtime checksum-validates the phrase and runs BIP-39 seed derivation over it for the wallet seed.
+`ZKUAT_NETWORK=local` — and only `local` — additionally accepts a raw 64-character hexadecimal seed,
+because a devnet's genesis accounts are funded by seed and no phrase restores them.
 That seed is **never** a Compact witness. `deriveAnchorSecret()` HKDF-derives a 32-byte anchor witness;
 deployment seals `anchorIdOf(secret)` in the contract, and `attest` / `registerPolicy` fail if the
 configured phrase does not restore the deployer's wallet. Keep network + phrase constant for a given
@@ -160,7 +162,8 @@ cp runtime/.env.example runtime/.env
 chmod 600 runtime/.env
 ```
 
-Set `ZKUAT_NETWORK` (`preview`|`preprod`) and `ZKUAT_SPONSOR_WALLET_SEED` (a quoted, valid 24-word English BIP-39 recovery phrase), then:
+Set `ZKUAT_NETWORK` (`local`|`preview`|`preprod`) and `ZKUAT_SPONSOR_WALLET_SEED` (a quoted, valid
+24-word English BIP-39 recovery phrase), then:
 
 ```bash
 npm --prefix runtime run deploy             # 1 deploy + 4 registerPolicy transactions
@@ -184,6 +187,7 @@ Preview/Preprod sponsor wallet holding unshielded NIGHT so the SDK can register 
 | `runtime/` | `npm run deploy` · `npm start` | live network; needs keys + funded seed |
 | | `npm run typecheck` · `npm test` | fakes for GitHub/proof-server/chain/indexer; no live txs |
 | | `npx tsx src/cli.ts proof-server start\|status\|stop` | run from `runtime/` |
+| | `npx tsx src/cli.ts ledger [owner/name]` | read-only public ledger dump; no wallet or seed |
 | `ui/` | `npm run dev` · `lint` · `build` | needs Supabase env vars to serve |
 
 Full development check:

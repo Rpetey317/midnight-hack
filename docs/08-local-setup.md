@@ -62,17 +62,57 @@ ZKUAT_PROOF_SERVER_IMAGE=midnightntwrk/proof-server:8.1.0
 
 The value must be a valid 24-word English BIP-39 recovery phrase. Keep it quoted
 so dotenv and Compose preserve the spaces. The runtime validates its checksum
-and decodes it to the original 32-byte wallet seed. The phrase grants control of
-the sponsor wallet, so use a dedicated wallet and never commit or share this
-file. `ZKUAT_RUNTIME_URL` combines host and port; there are no separate runtime
-host/port variables. Runtime and proof-server URLs must remain loopback HTTP
-origins.
+and derives the wallet seed from it with BIP-39 seed derivation. The phrase
+grants control of the sponsor wallet, so use a dedicated wallet and never commit
+or share this file. `ZKUAT_RUNTIME_URL` combines host and port; there are no
+separate runtime host/port variables. Runtime and proof-server URLs must remain
+loopback HTTP origins.
 
 For frontend development at `http://localhost:3000`, change the allowed origin:
 
 ```dotenv
 ZKUAT_ALLOWED_ORIGIN=http://localhost:3000
 ```
+
+## Running against a local devnet
+
+`ZKUAT_NETWORK=local` targets a Midnight devnet on this machine and resolves the
+SDK network id `undeployed` — the identifier `indexer-standalone` is configured
+with in the development compose stack, and not the same string as the
+configuration name.
+
+```dotenv
+ZKUAT_NETWORK=local
+ZKUAT_SPONSOR_WALLET_SEED=0000000000000000000000000000000000000000000000000000000000000001
+```
+
+Endpoints default to `http://127.0.0.1:8088/api/v4/graphql` (indexer),
+`ws://127.0.0.1:8088/api/v4/graphql/ws`, and `http://127.0.0.1:9944` (node);
+override them with `ZKUAT_INDEXER_HTTP_URL`, `ZKUAT_INDEXER_WS_URL`, and
+`ZKUAT_NODE_URL`.
+
+A devnet's genesis accounts are funded by seed, and no recovery phrase restores
+them, so `local` — and only `local` — also accepts a raw 64-character
+hexadecimal seed. Every deployed network still requires a recovery phrase.
+
+The runtime reuses an already-healthy proof server rather than starting its own,
+so a devnet stack that already publishes one on `127.0.0.1:6300` needs no
+further configuration.
+
+## Reading the public ledger
+
+```bash
+npx tsx src/cli.ts ledger [owner/name]
+```
+
+Prints the contract's complete public state: the sealed anchor identity, the
+attested-leaf count, every registered policy, and every compliance record with
+its verdict and validity window. It queries only the indexer — no wallet, no
+proof server, no private state — and loads its configuration with the sponsor
+seed omitted entirely, so it is exactly what a buyer can see.
+
+Passing `owner/name` derives that repository's `vendorId` and `productId` with
+the same hash the circuit binds records to, and labels matching rows.
 
 ## Deploy once
 

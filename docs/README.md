@@ -6,6 +6,7 @@ These pages describe the repository as currently implemented on `main`:
 - [GitHub evidence and Compact encoding](03-evidence-schema.md)
 - [Compact contract specification](04-contract-spec.md)
 - [Local runtime setup and operations](08-local-setup.md)
+- [Four-minute demo video script](09-demo-script.md)
 - [Current product and implementation brief](Master-Doc-v2.md)
 
 The code is authoritative when behavior changes. The primary implementation

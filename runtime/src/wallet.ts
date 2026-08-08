@@ -77,7 +77,7 @@ export class SponsorWallet {
 
   async start(): Promise<void> {
     if (this.context) return;
-    setNetworkId(this.config.network);
+    setNetworkId(this.config.networkId);
     const keys = deriveKeys(this.config.sponsorSeed);
     const networkId = getNetworkId();
     const shieldedSecretKeys = ledger.ZswapSecretKeys.fromSeed(keys[Roles.Zswap]);

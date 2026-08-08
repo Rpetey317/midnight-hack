@@ -2,6 +2,7 @@
 import * as path from 'node:path';
 
 import { ChainClient } from './chain/client.js';
+import { formatPublicLedger, readPublicLedger } from './chain/ledger-view.js';
 import { loadConfig } from './config.js';
 import { JobManager } from './jobs.js';
 import { ProofServerManager } from './proof-server.js';
@@ -54,6 +55,16 @@ async function deploy(): Promise<void> {
   }
 }
 
+/**
+ * Print the contract's public state. Read-only, and deliberately loaded without
+ * a sponsor seed: anything this prints is readable by a buyer who holds no
+ * secret of ours.
+ */
+async function showLedger(repository?: string): Promise<void> {
+  const config = loadConfig({ requireSeed: false });
+  console.log(formatPublicLedger(await readPublicLedger(config), { repository }));
+}
+
 async function proofServer(command: string): Promise<void> {
   const config = loadConfig({ requireContract: false });
   const manager = new ProofServerManager(config.proofServer, config.proofServerImage);
@@ -67,8 +78,11 @@ async function main(): Promise<void> {
   const [command = 'start', subcommand = 'status'] = process.argv.slice(2);
   if (command === 'start') return start();
   if (command === 'deploy') return deploy();
+  if (command === 'ledger') return showLedger(process.argv[3]);
   if (command === 'proof-server') return proofServer(subcommand);
-  throw new Error('usage: zkuat-runtime start|deploy|proof-server start|stop|status');
+  throw new Error(
+    'usage: zkuat-runtime start|deploy|ledger [owner/name]|proof-server start|stop|status',
+  );
 }
 
 main().catch((error: unknown) => {

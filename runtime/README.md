@@ -62,22 +62,38 @@ ZKUAT_PROOF_SERVER_IMAGE=midnightntwrk/proof-server:8.1.0
 
 | Variable | Required | Meaning |
 | --- | --- | --- |
-| `ZKUAT_NETWORK` | Yes | `preview` or `preprod` |
-| `ZKUAT_SPONSOR_WALLET_SEED` | Yes | Valid 24-word English BIP-39 recovery phrase; quote it in dotenv files |
+| `ZKUAT_NETWORK` | Yes | `local`, `preview`, or `preprod` |
+| `ZKUAT_SPONSOR_WALLET_SEED` | Yes | Valid 24-word English BIP-39 recovery phrase; quote it in dotenv files. On `local` only, a raw 64-character hexadecimal seed is also accepted |
 | `ZKUAT_CONTRACT_ADDRESS` | For `start` | Hexadecimal address printed by `deploy` |
 | `ZKUAT_RUNTIME_URL` | No | Loopback HTTP origin containing both bind host and port; default `http://127.0.0.1:4317` |
 | `ZKUAT_ALLOWED_ORIGIN` | No | Exact browser origin allowed by CORS; default `https://zkuat.works` |
 | `ZKUAT_PROOF_SERVER_URL` | No | Loopback HTTP origin; default `http://127.0.0.1:6300` |
 | `ZKUAT_PROOF_SERVER_IMAGE` | No | Docker image; default `midnightntwrk/proof-server:8.1.0` |
-| `ZKUAT_INDEXER_HTTP_URL` | No | Override the selected network's hosted GraphQL endpoint |
-| `ZKUAT_INDEXER_WS_URL` | No | Override the selected network's hosted GraphQL WebSocket endpoint |
-| `ZKUAT_NODE_URL` | No | Override the selected network's hosted RPC endpoint |
+| `ZKUAT_INDEXER_HTTP_URL` | No | Override the selected network's GraphQL endpoint |
+| `ZKUAT_INDEXER_WS_URL` | No | Override the selected network's GraphQL WebSocket endpoint |
+| `ZKUAT_NODE_URL` | No | Override the selected network's RPC endpoint |
 | `ZKUAT_STORAGE_DIR` | No | State root; default `~/.zkuat/runtime` |
 
 Both local service URLs must use plain HTTP on `127.0.0.1`, `localhost`, or
 loopback IPv6. Keep the env file mode `0600`. The recovery phrase grants control
 of the sponsor wallet: use a dedicated wallet and never copy the phrase into
 Vercel, Supabase, browser storage, or source control.
+
+### Local devnet
+
+`ZKUAT_NETWORK=local` resolves the SDK network id `undeployed` — the identifier
+`indexer-standalone` is configured with in the development compose stack, and
+deliberately not the same string as the configuration name. Endpoints default to
+`127.0.0.1:8088` for the indexer and `127.0.0.1:9944` for the node.
+
+A devnet's genesis accounts are funded by seed and no recovery phrase restores
+them, so `local` also accepts a raw 64-character hexadecimal seed. That
+exception is scoped to `local`; `preview` and `preprod` still reject anything
+but a phrase.
+
+The runtime reuses an already-healthy proof server instead of starting its own,
+so a devnet stack that already publishes one on `127.0.0.1:6300` needs no extra
+configuration.
 
 ## Configure and deploy
 
@@ -146,6 +162,23 @@ docker exec zkuat-runtime tsx src/cli.ts proof-server stop
 The runtime does not automatically stop the proof-server container on shutdown.
 The explicit stop command only stops a container carrying the zkuat ownership
 label; it refuses to control an unrelated container with the same name.
+
+## Reading the public ledger
+
+```bash
+npx tsx src/cli.ts ledger                        # everything the contract publishes
+npx tsx src/cli.ts ledger owner/repository-name  # …with that repository's rows labelled
+```
+
+Prints the sealed anchor identity, the attested-leaf count, every registered
+policy with its thresholds, and every compliance record with its verdict and
+validity window.
+
+This command queries the indexer and nothing else — no wallet, no proof server,
+no private state — and loads its configuration with the sponsor seed omitted, so
+its output is exactly what any buyer can read. Passing `owner/name` derives that
+repository's `vendorId` and `productId` through the same hash the circuit binds
+records to, and labels the matching rows.
 
 ## Job lifecycle
 
