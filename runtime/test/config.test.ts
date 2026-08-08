@@ -61,7 +61,10 @@ describe('loadConfig', () => {
     );
     const config = loadConfig({ env: {}, envFile: file });
     expect(config.network).toBe('preprod');
-    expect(config.sponsorSeed).toBe('00'.repeat(32));
+    expect(config.sponsorSeed).toBe(
+      '408b285c123836004f4b8842c89324c1f01382450c0d439af345ba7fc49acf705' +
+        '489c6fc77dbd4e3dc1dd8cc6bc9f043db8ada1e243c4a0eafb290d399480840',
+    );
   });
 
   it('normalizes whitespace in the recovery phrase', () => {
@@ -72,7 +75,10 @@ describe('loadConfig', () => {
       },
       envFile: '/does/not/exist',
     });
-    expect(config.sponsorSeed).toBe('00'.repeat(32));
+    expect(config.sponsorSeed).toBe(
+      '408b285c123836004f4b8842c89324c1f01382450c0d439af345ba7fc49acf705' +
+        '489c6fc77dbd4e3dc1dd8cc6bc9f043db8ada1e243c4a0eafb290d399480840',
+    );
   });
 
   it('rejects a recovery phrase with fewer than 24 words', () => {

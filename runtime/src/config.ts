@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { mnemonicToEntropy, validateMnemonic } from '@scure/bip39';
+import { mnemonicToSeedSync, validateMnemonic } from '@scure/bip39';
 import { wordlist as english } from '@scure/bip39/wordlists/english.js';
 
 export type RuntimeNetwork = 'preview' | 'preprod';
@@ -74,7 +74,7 @@ function sponsorSeedFromMnemonic(value: string): string {
       'zkuat: ZKUAT_SPONSOR_WALLET_SEED must be a valid 24-word English BIP-39 recovery phrase',
     );
   }
-  return Buffer.from(mnemonicToEntropy(mnemonic, english)).toString('hex');
+  return Buffer.from(mnemonicToSeedSync(mnemonic)).toString('hex');
 }
 
 function httpUrl(value: string, field: string): URL {
