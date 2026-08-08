@@ -24,6 +24,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { EASE_OUT } from "@/lib/ease";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 
 type CenterMorphModalContextValue = {
@@ -209,11 +210,9 @@ export function CenterMorphModalContent({
 }: CenterMorphModalContentProps) {
   const context = useCenterMorphModalContext("CenterMorphModalContent");
   const reduce = useReducedMotion() ?? false;
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHydrated();
   const overlayRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!context.open) return;

@@ -380,13 +380,14 @@ export function SelectItem({
   children,
 }: SelectItemProps) {
   const ctx = useSelectContext("SelectItem");
+  const { register, unregister } = ctx;
   const selected = ctx.value === value;
   const label = typeof children === "string" ? children : value;
 
   useLayoutEffect(() => {
-    ctx.register(value, label);
-    return () => ctx.unregister(value);
-  }, [ctx.register, ctx.unregister, value, label]);
+    register(value, label);
+    return () => unregister(value);
+  }, [register, unregister, value, label]);
 
   return (
     <motion.li variants={ctx.reduce ? undefined : ITEM_VARIANTS}>

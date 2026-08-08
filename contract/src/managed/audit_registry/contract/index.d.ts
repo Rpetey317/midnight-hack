@@ -6,19 +6,13 @@ export type Witnesses<PS> = {
                                                                             productId: Uint8Array,
                                                                             artifactDigest: Uint8Array,
                                                                             commitId: Uint8Array,
-                                                                            attestorId: Uint8Array,
                                                                             generatedAt: bigint,
                                                                             validUntil: bigint,
                                                                             criticals: bigint,
                                                                             highs: bigint,
-                                                                            kev: bigint,
-                                                                            forbiddenDeps: bigint,
                                                                             vulnDeps: bigint,
-                                                                            mfaRequired: boolean,
-                                                                            branchProtected: boolean,
-                                                                            buildProvenanceVerified: boolean,
-                                                                            ciGreen: boolean,
-                                                                            coverage: bigint
+                                                                            lintPassed: boolean,
+                                                                            buildPassed: boolean
                                                                           }];
   getSalt(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   getPath(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, { leaf: Uint8Array,
@@ -37,12 +31,9 @@ export type ImpureCircuits<PS> = {
                              issuer: Uint8Array,
                              maxCriticals: bigint,
                              maxHighs: bigint,
-                             maxKev: bigint,
-                             maxForbiddenDeps: bigint,
-                             requireMfa: boolean,
-                             requireBranchProtection: boolean,
-                             requireBuildProvenance: boolean,
-                             requiredAttestor: Uint8Array,
+                             maxVulnDeps: bigint,
+                             requireLint: boolean,
+                             requireBuild: boolean,
                              maxAgeSeconds: bigint
                            }): __compactRuntime.CircuitResults<PS, []>;
   proveCompliance(context: __compactRuntime.CircuitContext<PS>,
@@ -60,12 +51,9 @@ export type ProvableCircuits<PS> = {
                              issuer: Uint8Array,
                              maxCriticals: bigint,
                              maxHighs: bigint,
-                             maxKev: bigint,
-                             maxForbiddenDeps: bigint,
-                             requireMfa: boolean,
-                             requireBranchProtection: boolean,
-                             requireBuildProvenance: boolean,
-                             requiredAttestor: Uint8Array,
+                             maxVulnDeps: bigint,
+                             requireLint: boolean,
+                             requireBuild: boolean,
                              maxAgeSeconds: bigint
                            }): __compactRuntime.CircuitResults<PS, []>;
   proveCompliance(context: __compactRuntime.CircuitContext<PS>,
@@ -80,19 +68,13 @@ export type PureCircuits = {
                  productId: Uint8Array,
                  artifactDigest: Uint8Array,
                  commitId: Uint8Array,
-                 attestorId: Uint8Array,
                  generatedAt: bigint,
                  validUntil: bigint,
                  criticals: bigint,
                  highs: bigint,
-                 kev: bigint,
-                 forbiddenDeps: bigint,
                  vulnDeps: bigint,
-                 mfaRequired: boolean,
-                 branchProtected: boolean,
-                 buildProvenanceVerified: boolean,
-                 ciGreen: boolean,
-                 coverage: bigint
+                 lintPassed: boolean,
+                 buildPassed: boolean
                },
          salt_0: Uint8Array): Uint8Array;
   nullifierOf(leaf_0: Uint8Array, policyId_0: Uint8Array): Uint8Array;
@@ -107,19 +89,13 @@ export type Circuits<PS> = {
                  productId: Uint8Array,
                  artifactDigest: Uint8Array,
                  commitId: Uint8Array,
-                 attestorId: Uint8Array,
                  generatedAt: bigint,
                  validUntil: bigint,
                  criticals: bigint,
                  highs: bigint,
-                 kev: bigint,
-                 forbiddenDeps: bigint,
                  vulnDeps: bigint,
-                 mfaRequired: boolean,
-                 branchProtected: boolean,
-                 buildProvenanceVerified: boolean,
-                 ciGreen: boolean,
-                 coverage: bigint
+                 lintPassed: boolean,
+                 buildPassed: boolean
                },
          salt_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   nullifierOf(context: __compactRuntime.CircuitContext<PS>,
@@ -137,12 +113,9 @@ export type Circuits<PS> = {
                              issuer: Uint8Array,
                              maxCriticals: bigint,
                              maxHighs: bigint,
-                             maxKev: bigint,
-                             maxForbiddenDeps: bigint,
-                             requireMfa: boolean,
-                             requireBranchProtection: boolean,
-                             requireBuildProvenance: boolean,
-                             requiredAttestor: Uint8Array,
+                             maxVulnDeps: bigint,
+                             requireLint: boolean,
+                             requireBuild: boolean,
                              maxAgeSeconds: bigint
                            }): __compactRuntime.CircuitResults<PS, []>;
   proveCompliance(context: __compactRuntime.CircuitContext<PS>,
@@ -170,24 +143,18 @@ export type Ledger = {
                                  issuer: Uint8Array,
                                  maxCriticals: bigint,
                                  maxHighs: bigint,
-                                 maxKev: bigint,
-                                 maxForbiddenDeps: bigint,
-                                 requireMfa: boolean,
-                                 requireBranchProtection: boolean,
-                                 requireBuildProvenance: boolean,
-                                 requiredAttestor: Uint8Array,
+                                 maxVulnDeps: bigint,
+                                 requireLint: boolean,
+                                 requireBuild: boolean,
                                  maxAgeSeconds: bigint
                                };
     [Symbol.iterator](): Iterator<[Uint8Array, { version: bigint,
   issuer: Uint8Array,
   maxCriticals: bigint,
   maxHighs: bigint,
-  maxKev: bigint,
-  maxForbiddenDeps: bigint,
-  requireMfa: boolean,
-  requireBranchProtection: boolean,
-  requireBuildProvenance: boolean,
-  requiredAttestor: Uint8Array,
+  maxVulnDeps: bigint,
+  requireLint: boolean,
+  requireBuild: boolean,
   maxAgeSeconds: bigint
 }]>
   };

@@ -11,7 +11,7 @@ const _descriptor_3 = new __compactRuntime.CompactTypeUnsignedInteger(1844674407
 
 class _Policy_0 {
   alignment() {
-    return _descriptor_1.alignment().concat(_descriptor_0.alignment().concat(_descriptor_1.alignment().concat(_descriptor_1.alignment().concat(_descriptor_1.alignment().concat(_descriptor_1.alignment().concat(_descriptor_2.alignment().concat(_descriptor_2.alignment().concat(_descriptor_2.alignment().concat(_descriptor_0.alignment().concat(_descriptor_3.alignment()))))))))));
+    return _descriptor_1.alignment().concat(_descriptor_0.alignment().concat(_descriptor_1.alignment().concat(_descriptor_1.alignment().concat(_descriptor_1.alignment().concat(_descriptor_2.alignment().concat(_descriptor_2.alignment().concat(_descriptor_3.alignment())))))));
   }
   fromValue(value_0) {
     return {
@@ -19,17 +19,14 @@ class _Policy_0 {
       issuer: _descriptor_0.fromValue(value_0),
       maxCriticals: _descriptor_1.fromValue(value_0),
       maxHighs: _descriptor_1.fromValue(value_0),
-      maxKev: _descriptor_1.fromValue(value_0),
-      maxForbiddenDeps: _descriptor_1.fromValue(value_0),
-      requireMfa: _descriptor_2.fromValue(value_0),
-      requireBranchProtection: _descriptor_2.fromValue(value_0),
-      requireBuildProvenance: _descriptor_2.fromValue(value_0),
-      requiredAttestor: _descriptor_0.fromValue(value_0),
+      maxVulnDeps: _descriptor_1.fromValue(value_0),
+      requireLint: _descriptor_2.fromValue(value_0),
+      requireBuild: _descriptor_2.fromValue(value_0),
       maxAgeSeconds: _descriptor_3.fromValue(value_0)
     }
   }
   toValue(value_0) {
-    return _descriptor_1.toValue(value_0.version).concat(_descriptor_0.toValue(value_0.issuer).concat(_descriptor_1.toValue(value_0.maxCriticals).concat(_descriptor_1.toValue(value_0.maxHighs).concat(_descriptor_1.toValue(value_0.maxKev).concat(_descriptor_1.toValue(value_0.maxForbiddenDeps).concat(_descriptor_2.toValue(value_0.requireMfa).concat(_descriptor_2.toValue(value_0.requireBranchProtection).concat(_descriptor_2.toValue(value_0.requireBuildProvenance).concat(_descriptor_0.toValue(value_0.requiredAttestor).concat(_descriptor_3.toValue(value_0.maxAgeSeconds)))))))))));
+    return _descriptor_1.toValue(value_0.version).concat(_descriptor_0.toValue(value_0.issuer).concat(_descriptor_1.toValue(value_0.maxCriticals).concat(_descriptor_1.toValue(value_0.maxHighs).concat(_descriptor_1.toValue(value_0.maxVulnDeps).concat(_descriptor_2.toValue(value_0.requireLint).concat(_descriptor_2.toValue(value_0.requireBuild).concat(_descriptor_3.toValue(value_0.maxAgeSeconds))))))));
   }
 }
 
@@ -116,7 +113,7 @@ const _descriptor_11 = new _MerkleTreePath_0();
 
 class _Evidence_0 {
   alignment() {
-    return _descriptor_0.alignment().concat(_descriptor_0.alignment().concat(_descriptor_0.alignment().concat(_descriptor_0.alignment().concat(_descriptor_0.alignment().concat(_descriptor_3.alignment().concat(_descriptor_3.alignment().concat(_descriptor_1.alignment().concat(_descriptor_1.alignment().concat(_descriptor_1.alignment().concat(_descriptor_1.alignment().concat(_descriptor_1.alignment().concat(_descriptor_2.alignment().concat(_descriptor_2.alignment().concat(_descriptor_2.alignment().concat(_descriptor_2.alignment().concat(_descriptor_1.alignment()))))))))))))))));
+    return _descriptor_0.alignment().concat(_descriptor_0.alignment().concat(_descriptor_0.alignment().concat(_descriptor_0.alignment().concat(_descriptor_3.alignment().concat(_descriptor_3.alignment().concat(_descriptor_1.alignment().concat(_descriptor_1.alignment().concat(_descriptor_1.alignment().concat(_descriptor_2.alignment().concat(_descriptor_2.alignment()))))))))));
   }
   fromValue(value_0) {
     return {
@@ -124,23 +121,17 @@ class _Evidence_0 {
       productId: _descriptor_0.fromValue(value_0),
       artifactDigest: _descriptor_0.fromValue(value_0),
       commitId: _descriptor_0.fromValue(value_0),
-      attestorId: _descriptor_0.fromValue(value_0),
       generatedAt: _descriptor_3.fromValue(value_0),
       validUntil: _descriptor_3.fromValue(value_0),
       criticals: _descriptor_1.fromValue(value_0),
       highs: _descriptor_1.fromValue(value_0),
-      kev: _descriptor_1.fromValue(value_0),
-      forbiddenDeps: _descriptor_1.fromValue(value_0),
       vulnDeps: _descriptor_1.fromValue(value_0),
-      mfaRequired: _descriptor_2.fromValue(value_0),
-      branchProtected: _descriptor_2.fromValue(value_0),
-      buildProvenanceVerified: _descriptor_2.fromValue(value_0),
-      ciGreen: _descriptor_2.fromValue(value_0),
-      coverage: _descriptor_1.fromValue(value_0)
+      lintPassed: _descriptor_2.fromValue(value_0),
+      buildPassed: _descriptor_2.fromValue(value_0)
     }
   }
   toValue(value_0) {
-    return _descriptor_0.toValue(value_0.vendorId).concat(_descriptor_0.toValue(value_0.productId).concat(_descriptor_0.toValue(value_0.artifactDigest).concat(_descriptor_0.toValue(value_0.commitId).concat(_descriptor_0.toValue(value_0.attestorId).concat(_descriptor_3.toValue(value_0.generatedAt).concat(_descriptor_3.toValue(value_0.validUntil).concat(_descriptor_1.toValue(value_0.criticals).concat(_descriptor_1.toValue(value_0.highs).concat(_descriptor_1.toValue(value_0.kev).concat(_descriptor_1.toValue(value_0.forbiddenDeps).concat(_descriptor_1.toValue(value_0.vulnDeps).concat(_descriptor_2.toValue(value_0.mfaRequired).concat(_descriptor_2.toValue(value_0.branchProtected).concat(_descriptor_2.toValue(value_0.buildProvenanceVerified).concat(_descriptor_2.toValue(value_0.ciGreen).concat(_descriptor_1.toValue(value_0.coverage)))))))))))))))));
+    return _descriptor_0.toValue(value_0.vendorId).concat(_descriptor_0.toValue(value_0.productId).concat(_descriptor_0.toValue(value_0.artifactDigest).concat(_descriptor_0.toValue(value_0.commitId).concat(_descriptor_3.toValue(value_0.generatedAt).concat(_descriptor_3.toValue(value_0.validUntil).concat(_descriptor_1.toValue(value_0.criticals).concat(_descriptor_1.toValue(value_0.highs).concat(_descriptor_1.toValue(value_0.vulnDeps).concat(_descriptor_2.toValue(value_0.lintPassed).concat(_descriptor_2.toValue(value_0.buildPassed)))))))))));
   }
 }
 
@@ -274,14 +265,14 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('attest',
                                      'argument 1 (as invoked from Typescript)',
-                                     'audit_registry.compact line 215 char 1',
+                                     'audit_registry.compact line 199 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(leaf_0.buffer instanceof ArrayBuffer && leaf_0.BYTES_PER_ELEMENT === 1 && leaf_0.length === 32)) {
           __compactRuntime.typeError('attest',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'audit_registry.compact line 215 char 1',
+                                     'audit_registry.compact line 199 char 1',
                                      'Bytes<32>',
                                      leaf_0)
         }
@@ -309,22 +300,22 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('registerPolicy',
                                      'argument 1 (as invoked from Typescript)',
-                                     'audit_registry.compact line 223 char 1',
+                                     'audit_registry.compact line 207 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(policyId_0.buffer instanceof ArrayBuffer && policyId_0.BYTES_PER_ELEMENT === 1 && policyId_0.length === 32)) {
           __compactRuntime.typeError('registerPolicy',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'audit_registry.compact line 223 char 1',
+                                     'audit_registry.compact line 207 char 1',
                                      'Bytes<32>',
                                      policyId_0)
         }
-        if (!(typeof(policy_0) === 'object' && typeof(policy_0.version) === 'bigint' && policy_0.version >= 0n && policy_0.version <= 4294967295n && policy_0.issuer.buffer instanceof ArrayBuffer && policy_0.issuer.BYTES_PER_ELEMENT === 1 && policy_0.issuer.length === 32 && typeof(policy_0.maxCriticals) === 'bigint' && policy_0.maxCriticals >= 0n && policy_0.maxCriticals <= 4294967295n && typeof(policy_0.maxHighs) === 'bigint' && policy_0.maxHighs >= 0n && policy_0.maxHighs <= 4294967295n && typeof(policy_0.maxKev) === 'bigint' && policy_0.maxKev >= 0n && policy_0.maxKev <= 4294967295n && typeof(policy_0.maxForbiddenDeps) === 'bigint' && policy_0.maxForbiddenDeps >= 0n && policy_0.maxForbiddenDeps <= 4294967295n && typeof(policy_0.requireMfa) === 'boolean' && typeof(policy_0.requireBranchProtection) === 'boolean' && typeof(policy_0.requireBuildProvenance) === 'boolean' && policy_0.requiredAttestor.buffer instanceof ArrayBuffer && policy_0.requiredAttestor.BYTES_PER_ELEMENT === 1 && policy_0.requiredAttestor.length === 32 && typeof(policy_0.maxAgeSeconds) === 'bigint' && policy_0.maxAgeSeconds >= 0n && policy_0.maxAgeSeconds <= 18446744073709551615n)) {
+        if (!(typeof(policy_0) === 'object' && typeof(policy_0.version) === 'bigint' && policy_0.version >= 0n && policy_0.version <= 4294967295n && policy_0.issuer.buffer instanceof ArrayBuffer && policy_0.issuer.BYTES_PER_ELEMENT === 1 && policy_0.issuer.length === 32 && typeof(policy_0.maxCriticals) === 'bigint' && policy_0.maxCriticals >= 0n && policy_0.maxCriticals <= 4294967295n && typeof(policy_0.maxHighs) === 'bigint' && policy_0.maxHighs >= 0n && policy_0.maxHighs <= 4294967295n && typeof(policy_0.maxVulnDeps) === 'bigint' && policy_0.maxVulnDeps >= 0n && policy_0.maxVulnDeps <= 4294967295n && typeof(policy_0.requireLint) === 'boolean' && typeof(policy_0.requireBuild) === 'boolean' && typeof(policy_0.maxAgeSeconds) === 'bigint' && policy_0.maxAgeSeconds >= 0n && policy_0.maxAgeSeconds <= 18446744073709551615n)) {
           __compactRuntime.typeError('registerPolicy',
                                      'argument 2 (argument 3 as invoked from Typescript)',
-                                     'audit_registry.compact line 223 char 1',
-                                     'struct Policy<version: Uint<0..4294967296>, issuer: Bytes<32>, maxCriticals: Uint<0..4294967296>, maxHighs: Uint<0..4294967296>, maxKev: Uint<0..4294967296>, maxForbiddenDeps: Uint<0..4294967296>, requireMfa: Boolean, requireBranchProtection: Boolean, requireBuildProvenance: Boolean, requiredAttestor: Bytes<32>, maxAgeSeconds: Uint<0..18446744073709551616>>',
+                                     'audit_registry.compact line 207 char 1',
+                                     'struct Policy<version: Uint<0..4294967296>, issuer: Bytes<32>, maxCriticals: Uint<0..4294967296>, maxHighs: Uint<0..4294967296>, maxVulnDeps: Uint<0..4294967296>, requireLint: Boolean, requireBuild: Boolean, maxAgeSeconds: Uint<0..18446744073709551616>>',
                                      policy_0)
         }
         const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
@@ -356,35 +347,35 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('proveCompliance',
                                      'argument 1 (as invoked from Typescript)',
-                                     'audit_registry.compact line 233 char 1',
+                                     'audit_registry.compact line 217 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(vendorId_0.buffer instanceof ArrayBuffer && vendorId_0.BYTES_PER_ELEMENT === 1 && vendorId_0.length === 32)) {
           __compactRuntime.typeError('proveCompliance',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'audit_registry.compact line 233 char 1',
+                                     'audit_registry.compact line 217 char 1',
                                      'Bytes<32>',
                                      vendorId_0)
         }
         if (!(productId_0.buffer instanceof ArrayBuffer && productId_0.BYTES_PER_ELEMENT === 1 && productId_0.length === 32)) {
           __compactRuntime.typeError('proveCompliance',
                                      'argument 2 (argument 3 as invoked from Typescript)',
-                                     'audit_registry.compact line 233 char 1',
+                                     'audit_registry.compact line 217 char 1',
                                      'Bytes<32>',
                                      productId_0)
         }
         if (!(artifactDigest_0.buffer instanceof ArrayBuffer && artifactDigest_0.BYTES_PER_ELEMENT === 1 && artifactDigest_0.length === 32)) {
           __compactRuntime.typeError('proveCompliance',
                                      'argument 3 (argument 4 as invoked from Typescript)',
-                                     'audit_registry.compact line 233 char 1',
+                                     'audit_registry.compact line 217 char 1',
                                      'Bytes<32>',
                                      artifactDigest_0)
         }
         if (!(policyId_0.buffer instanceof ArrayBuffer && policyId_0.BYTES_PER_ELEMENT === 1 && policyId_0.length === 32)) {
           __compactRuntime.typeError('proveCompliance',
                                      'argument 4 (argument 5 as invoked from Typescript)',
-                                     'audit_registry.compact line 233 char 1',
+                                     'audit_registry.compact line 217 char 1',
                                      'Bytes<32>',
                                      policyId_0)
         }
@@ -616,7 +607,7 @@ export class Contract {
     if (!(result_0.buffer instanceof ArrayBuffer && result_0.BYTES_PER_ELEMENT === 1 && result_0.length === 32)) {
       __compactRuntime.typeError('localSecret',
                                  'return value',
-                                 'audit_registry.compact line 136 char 1',
+                                 'audit_registry.compact line 120 char 1',
                                  'Bytes<32>',
                                  result_0)
     }
@@ -630,11 +621,11 @@ export class Contract {
     const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.currentQueryContext.state), context.currentPrivateState, context.currentQueryContext.address);
     const [nextPrivateState_0, result_0] = this.witnesses.getEvidence(witnessContext_0);
     context.currentPrivateState = nextPrivateState_0;
-    if (!(typeof(result_0) === 'object' && result_0.vendorId.buffer instanceof ArrayBuffer && result_0.vendorId.BYTES_PER_ELEMENT === 1 && result_0.vendorId.length === 32 && result_0.productId.buffer instanceof ArrayBuffer && result_0.productId.BYTES_PER_ELEMENT === 1 && result_0.productId.length === 32 && result_0.artifactDigest.buffer instanceof ArrayBuffer && result_0.artifactDigest.BYTES_PER_ELEMENT === 1 && result_0.artifactDigest.length === 32 && result_0.commitId.buffer instanceof ArrayBuffer && result_0.commitId.BYTES_PER_ELEMENT === 1 && result_0.commitId.length === 32 && result_0.attestorId.buffer instanceof ArrayBuffer && result_0.attestorId.BYTES_PER_ELEMENT === 1 && result_0.attestorId.length === 32 && typeof(result_0.generatedAt) === 'bigint' && result_0.generatedAt >= 0n && result_0.generatedAt <= 18446744073709551615n && typeof(result_0.validUntil) === 'bigint' && result_0.validUntil >= 0n && result_0.validUntil <= 18446744073709551615n && typeof(result_0.criticals) === 'bigint' && result_0.criticals >= 0n && result_0.criticals <= 4294967295n && typeof(result_0.highs) === 'bigint' && result_0.highs >= 0n && result_0.highs <= 4294967295n && typeof(result_0.kev) === 'bigint' && result_0.kev >= 0n && result_0.kev <= 4294967295n && typeof(result_0.forbiddenDeps) === 'bigint' && result_0.forbiddenDeps >= 0n && result_0.forbiddenDeps <= 4294967295n && typeof(result_0.vulnDeps) === 'bigint' && result_0.vulnDeps >= 0n && result_0.vulnDeps <= 4294967295n && typeof(result_0.mfaRequired) === 'boolean' && typeof(result_0.branchProtected) === 'boolean' && typeof(result_0.buildProvenanceVerified) === 'boolean' && typeof(result_0.ciGreen) === 'boolean' && typeof(result_0.coverage) === 'bigint' && result_0.coverage >= 0n && result_0.coverage <= 4294967295n)) {
+    if (!(typeof(result_0) === 'object' && result_0.vendorId.buffer instanceof ArrayBuffer && result_0.vendorId.BYTES_PER_ELEMENT === 1 && result_0.vendorId.length === 32 && result_0.productId.buffer instanceof ArrayBuffer && result_0.productId.BYTES_PER_ELEMENT === 1 && result_0.productId.length === 32 && result_0.artifactDigest.buffer instanceof ArrayBuffer && result_0.artifactDigest.BYTES_PER_ELEMENT === 1 && result_0.artifactDigest.length === 32 && result_0.commitId.buffer instanceof ArrayBuffer && result_0.commitId.BYTES_PER_ELEMENT === 1 && result_0.commitId.length === 32 && typeof(result_0.generatedAt) === 'bigint' && result_0.generatedAt >= 0n && result_0.generatedAt <= 18446744073709551615n && typeof(result_0.validUntil) === 'bigint' && result_0.validUntil >= 0n && result_0.validUntil <= 18446744073709551615n && typeof(result_0.criticals) === 'bigint' && result_0.criticals >= 0n && result_0.criticals <= 4294967295n && typeof(result_0.highs) === 'bigint' && result_0.highs >= 0n && result_0.highs <= 4294967295n && typeof(result_0.vulnDeps) === 'bigint' && result_0.vulnDeps >= 0n && result_0.vulnDeps <= 4294967295n && typeof(result_0.lintPassed) === 'boolean' && typeof(result_0.buildPassed) === 'boolean')) {
       __compactRuntime.typeError('getEvidence',
                                  'return value',
-                                 'audit_registry.compact line 140 char 1',
-                                 'struct Evidence<vendorId: Bytes<32>, productId: Bytes<32>, artifactDigest: Bytes<32>, commitId: Bytes<32>, attestorId: Bytes<32>, generatedAt: Uint<0..18446744073709551616>, validUntil: Uint<0..18446744073709551616>, criticals: Uint<0..4294967296>, highs: Uint<0..4294967296>, kev: Uint<0..4294967296>, forbiddenDeps: Uint<0..4294967296>, vulnDeps: Uint<0..4294967296>, mfaRequired: Boolean, branchProtected: Boolean, buildProvenanceVerified: Boolean, ciGreen: Boolean, coverage: Uint<0..4294967296>>',
+                                 'audit_registry.compact line 124 char 1',
+                                 'struct Evidence<vendorId: Bytes<32>, productId: Bytes<32>, artifactDigest: Bytes<32>, commitId: Bytes<32>, generatedAt: Uint<0..18446744073709551616>, validUntil: Uint<0..18446744073709551616>, criticals: Uint<0..4294967296>, highs: Uint<0..4294967296>, vulnDeps: Uint<0..4294967296>, lintPassed: Boolean, buildPassed: Boolean>',
                                  result_0)
     }
     partialProofData.privateTranscriptOutputs.push({
@@ -650,7 +641,7 @@ export class Contract {
     if (!(result_0.buffer instanceof ArrayBuffer && result_0.BYTES_PER_ELEMENT === 1 && result_0.length === 32)) {
       __compactRuntime.typeError('getSalt',
                                  'return value',
-                                 'audit_registry.compact line 141 char 1',
+                                 'audit_registry.compact line 125 char 1',
                                  'Bytes<32>',
                                  result_0)
     }
@@ -667,7 +658,7 @@ export class Contract {
     if (!(typeof(result_0) === 'object' && result_0.leaf.buffer instanceof ArrayBuffer && result_0.leaf.BYTES_PER_ELEMENT === 1 && result_0.leaf.length === 32 && Array.isArray(result_0.path) && result_0.path.length === 16 && result_0.path.every((t) => typeof(t) === 'object' && typeof(t.sibling) === 'object' && typeof(t.sibling.field) === 'bigint' && t.sibling.field >= 0 && t.sibling.field <= __compactRuntime.MAX_FIELD && typeof(t.goes_left) === 'boolean'))) {
       __compactRuntime.typeError('getPath',
                                  'return value',
-                                 'audit_registry.compact line 142 char 1',
+                                 'audit_registry.compact line 126 char 1',
                                  'struct MerkleTreePath<leaf: Bytes<32>, path: Vector<16, struct MerkleTreePathEntry<sibling: struct MerkleTreeDigest<field: Field>, goes_left: Boolean>>>',
                                  result_0)
     }
@@ -886,29 +877,20 @@ export class Contract {
                                                                                                       alignment: _descriptor_0.alignment() } }] } },
                                                                            { popeq: { cached: false,
                                                                                       result: undefined } }]).value);
-    __compactRuntime.assert(this._equal_5(p_0.requiredAttestor,
-                                          new Uint8Array(32))
-                            ||
-                            this._equal_6(ev_0.attestorId, p_0.requiredAttestor),
-                            'attestor not accepted');
     let t_0;
     __compactRuntime.assert((t_0 = ev_0.validUntil,
                              t_0 <= ev_0.generatedAt + p_0.maxAgeSeconds),
                             'validity window exceeds policy');
-    let t_3, t_4, t_1, t_2;
-    const ok_0 = (t_2 = ev_0.criticals, t_2 <= p_0.maxCriticals)
+    let t_2, t_3, t_1;
+    const ok_0 = (t_1 = ev_0.criticals, t_1 <= p_0.maxCriticals)
                  &&
-                 (t_1 = ev_0.highs, t_1 <= p_0.maxHighs)
+                 (t_3 = ev_0.highs, t_3 <= p_0.maxHighs)
                  &&
-                 (t_4 = ev_0.kev, t_4 <= p_0.maxKev)
+                 (t_2 = ev_0.vulnDeps, t_2 <= p_0.maxVulnDeps)
                  &&
-                 (t_3 = ev_0.forbiddenDeps, t_3 <= p_0.maxForbiddenDeps)
+                 (!p_0.requireLint || ev_0.lintPassed)
                  &&
-                 (!p_0.requireMfa || ev_0.mfaRequired)
-                 &&
-                 (!p_0.requireBranchProtection || ev_0.branchProtected)
-                 &&
-                 (!p_0.requireBuildProvenance || ev_0.buildProvenanceVerified);
+                 (!p_0.requireBuild || ev_0.buildPassed);
     const rec_0 = { vendorId: vendorId_0,
                     productId: productId_0,
                     artifactDigest: artifactDigest_0,
@@ -995,14 +977,6 @@ export class Contract {
     if (!x0.every((x, i) => y0[i] === x)) { return false; }
     return true;
   }
-  _equal_5(x0, y0) {
-    if (!x0.every((x, i) => y0[i] === x)) { return false; }
-    return true;
-  }
-  _equal_6(x0, y0) {
-    if (!x0.every((x, i) => y0[i] === x)) { return false; }
-    return true;
-  }
 }
 export function ledger(stateOrChargedState) {
   const state = stateOrChargedState instanceof __compactRuntime.StateValue ? stateOrChargedState : stateOrChargedState.state;
@@ -1055,7 +1029,7 @@ export function ledger(stateOrChargedState) {
         if (!(typeof(rt_0) === 'object' && typeof(rt_0.field) === 'bigint' && rt_0.field >= 0 && rt_0.field <= __compactRuntime.MAX_FIELD)) {
           __compactRuntime.typeError('checkRoot',
                                      'argument 1',
-                                     'audit_registry.compact line 105 char 1',
+                                     'audit_registry.compact line 89 char 1',
                                      'struct MerkleTreeDigest<field: Field>',
                                      rt_0)
         }
@@ -1105,14 +1079,14 @@ export function ledger(stateOrChargedState) {
         if (!(typeof(index_0) === 'bigint' && index_0 >= 0 && index_0 <= __compactRuntime.MAX_FIELD)) {
           __compactRuntime.typeError('path_for_leaf',
                                      'argument 1',
-                                     'audit_registry.compact line 105 char 1',
+                                     'audit_registry.compact line 89 char 1',
                                      'Field',
                                      index_0)
         }
         if (!(leaf_0.buffer instanceof ArrayBuffer && leaf_0.BYTES_PER_ELEMENT === 1 && leaf_0.length === 32)) {
           __compactRuntime.typeError('path_for_leaf',
                                      'argument 2',
-                                     'audit_registry.compact line 105 char 1',
+                                     'audit_registry.compact line 89 char 1',
                                      'Bytes<32>',
                                      leaf_0)
         }
@@ -1127,7 +1101,7 @@ export function ledger(stateOrChargedState) {
         if (!(leaf_0.buffer instanceof ArrayBuffer && leaf_0.BYTES_PER_ELEMENT === 1 && leaf_0.length === 32)) {
           __compactRuntime.typeError('find_path_for_leaf',
                                      'argument 1',
-                                     'audit_registry.compact line 105 char 1',
+                                     'audit_registry.compact line 89 char 1',
                                      'Bytes<32>',
                                      leaf_0)
         }
@@ -1191,7 +1165,7 @@ export function ledger(stateOrChargedState) {
         if (!(key_0.buffer instanceof ArrayBuffer && key_0.BYTES_PER_ELEMENT === 1 && key_0.length === 32)) {
           __compactRuntime.typeError('member',
                                      'argument 1',
-                                     'audit_registry.compact line 108 char 1',
+                                     'audit_registry.compact line 92 char 1',
                                      'Bytes<32>',
                                      key_0)
         }
@@ -1220,7 +1194,7 @@ export function ledger(stateOrChargedState) {
         if (!(key_0.buffer instanceof ArrayBuffer && key_0.BYTES_PER_ELEMENT === 1 && key_0.length === 32)) {
           __compactRuntime.typeError('lookup',
                                      'argument 1',
-                                     'audit_registry.compact line 108 char 1',
+                                     'audit_registry.compact line 92 char 1',
                                      'Bytes<32>',
                                      key_0)
         }
@@ -1300,7 +1274,7 @@ export function ledger(stateOrChargedState) {
         if (!(elem_0.buffer instanceof ArrayBuffer && elem_0.BYTES_PER_ELEMENT === 1 && elem_0.length === 32)) {
           __compactRuntime.typeError('member',
                                      'argument 1',
-                                     'audit_registry.compact line 112 char 1',
+                                     'audit_registry.compact line 96 char 1',
                                      'Bytes<32>',
                                      elem_0)
         }
@@ -1378,7 +1352,7 @@ export function ledger(stateOrChargedState) {
         if (!(key_0.buffer instanceof ArrayBuffer && key_0.BYTES_PER_ELEMENT === 1 && key_0.length === 32)) {
           __compactRuntime.typeError('member',
                                      'argument 1',
-                                     'audit_registry.compact line 123 char 1',
+                                     'audit_registry.compact line 107 char 1',
                                      'Bytes<32>',
                                      key_0)
         }
@@ -1407,7 +1381,7 @@ export function ledger(stateOrChargedState) {
         if (!(key_0.buffer instanceof ArrayBuffer && key_0.BYTES_PER_ELEMENT === 1 && key_0.length === 32)) {
           __compactRuntime.typeError('lookup',
                                      'argument 1',
-                                     'audit_registry.compact line 123 char 1',
+                                     'audit_registry.compact line 107 char 1',
                                      'Bytes<32>',
                                      key_0)
         }
@@ -1578,17 +1552,17 @@ export const pureCircuits = {
     }
     const ev_0 = args_0[0];
     const salt_0 = args_0[1];
-    if (!(typeof(ev_0) === 'object' && ev_0.vendorId.buffer instanceof ArrayBuffer && ev_0.vendorId.BYTES_PER_ELEMENT === 1 && ev_0.vendorId.length === 32 && ev_0.productId.buffer instanceof ArrayBuffer && ev_0.productId.BYTES_PER_ELEMENT === 1 && ev_0.productId.length === 32 && ev_0.artifactDigest.buffer instanceof ArrayBuffer && ev_0.artifactDigest.BYTES_PER_ELEMENT === 1 && ev_0.artifactDigest.length === 32 && ev_0.commitId.buffer instanceof ArrayBuffer && ev_0.commitId.BYTES_PER_ELEMENT === 1 && ev_0.commitId.length === 32 && ev_0.attestorId.buffer instanceof ArrayBuffer && ev_0.attestorId.BYTES_PER_ELEMENT === 1 && ev_0.attestorId.length === 32 && typeof(ev_0.generatedAt) === 'bigint' && ev_0.generatedAt >= 0n && ev_0.generatedAt <= 18446744073709551615n && typeof(ev_0.validUntil) === 'bigint' && ev_0.validUntil >= 0n && ev_0.validUntil <= 18446744073709551615n && typeof(ev_0.criticals) === 'bigint' && ev_0.criticals >= 0n && ev_0.criticals <= 4294967295n && typeof(ev_0.highs) === 'bigint' && ev_0.highs >= 0n && ev_0.highs <= 4294967295n && typeof(ev_0.kev) === 'bigint' && ev_0.kev >= 0n && ev_0.kev <= 4294967295n && typeof(ev_0.forbiddenDeps) === 'bigint' && ev_0.forbiddenDeps >= 0n && ev_0.forbiddenDeps <= 4294967295n && typeof(ev_0.vulnDeps) === 'bigint' && ev_0.vulnDeps >= 0n && ev_0.vulnDeps <= 4294967295n && typeof(ev_0.mfaRequired) === 'boolean' && typeof(ev_0.branchProtected) === 'boolean' && typeof(ev_0.buildProvenanceVerified) === 'boolean' && typeof(ev_0.ciGreen) === 'boolean' && typeof(ev_0.coverage) === 'bigint' && ev_0.coverage >= 0n && ev_0.coverage <= 4294967295n)) {
+    if (!(typeof(ev_0) === 'object' && ev_0.vendorId.buffer instanceof ArrayBuffer && ev_0.vendorId.BYTES_PER_ELEMENT === 1 && ev_0.vendorId.length === 32 && ev_0.productId.buffer instanceof ArrayBuffer && ev_0.productId.BYTES_PER_ELEMENT === 1 && ev_0.productId.length === 32 && ev_0.artifactDigest.buffer instanceof ArrayBuffer && ev_0.artifactDigest.BYTES_PER_ELEMENT === 1 && ev_0.artifactDigest.length === 32 && ev_0.commitId.buffer instanceof ArrayBuffer && ev_0.commitId.BYTES_PER_ELEMENT === 1 && ev_0.commitId.length === 32 && typeof(ev_0.generatedAt) === 'bigint' && ev_0.generatedAt >= 0n && ev_0.generatedAt <= 18446744073709551615n && typeof(ev_0.validUntil) === 'bigint' && ev_0.validUntil >= 0n && ev_0.validUntil <= 18446744073709551615n && typeof(ev_0.criticals) === 'bigint' && ev_0.criticals >= 0n && ev_0.criticals <= 4294967295n && typeof(ev_0.highs) === 'bigint' && ev_0.highs >= 0n && ev_0.highs <= 4294967295n && typeof(ev_0.vulnDeps) === 'bigint' && ev_0.vulnDeps >= 0n && ev_0.vulnDeps <= 4294967295n && typeof(ev_0.lintPassed) === 'boolean' && typeof(ev_0.buildPassed) === 'boolean')) {
       __compactRuntime.typeError('leafOf',
                                  'argument 1',
-                                 'audit_registry.compact line 157 char 1',
-                                 'struct Evidence<vendorId: Bytes<32>, productId: Bytes<32>, artifactDigest: Bytes<32>, commitId: Bytes<32>, attestorId: Bytes<32>, generatedAt: Uint<0..18446744073709551616>, validUntil: Uint<0..18446744073709551616>, criticals: Uint<0..4294967296>, highs: Uint<0..4294967296>, kev: Uint<0..4294967296>, forbiddenDeps: Uint<0..4294967296>, vulnDeps: Uint<0..4294967296>, mfaRequired: Boolean, branchProtected: Boolean, buildProvenanceVerified: Boolean, ciGreen: Boolean, coverage: Uint<0..4294967296>>',
+                                 'audit_registry.compact line 141 char 1',
+                                 'struct Evidence<vendorId: Bytes<32>, productId: Bytes<32>, artifactDigest: Bytes<32>, commitId: Bytes<32>, generatedAt: Uint<0..18446744073709551616>, validUntil: Uint<0..18446744073709551616>, criticals: Uint<0..4294967296>, highs: Uint<0..4294967296>, vulnDeps: Uint<0..4294967296>, lintPassed: Boolean, buildPassed: Boolean>',
                                  ev_0)
     }
     if (!(salt_0.buffer instanceof ArrayBuffer && salt_0.BYTES_PER_ELEMENT === 1 && salt_0.length === 32)) {
       __compactRuntime.typeError('leafOf',
                                  'argument 2',
-                                 'audit_registry.compact line 157 char 1',
+                                 'audit_registry.compact line 141 char 1',
                                  'Bytes<32>',
                                  salt_0)
     }
@@ -1603,14 +1577,14 @@ export const pureCircuits = {
     if (!(leaf_0.buffer instanceof ArrayBuffer && leaf_0.BYTES_PER_ELEMENT === 1 && leaf_0.length === 32)) {
       __compactRuntime.typeError('nullifierOf',
                                  'argument 1',
-                                 'audit_registry.compact line 161 char 1',
+                                 'audit_registry.compact line 145 char 1',
                                  'Bytes<32>',
                                  leaf_0)
     }
     if (!(policyId_0.buffer instanceof ArrayBuffer && policyId_0.BYTES_PER_ELEMENT === 1 && policyId_0.length === 32)) {
       __compactRuntime.typeError('nullifierOf',
                                  'argument 2',
-                                 'audit_registry.compact line 161 char 1',
+                                 'audit_registry.compact line 145 char 1',
                                  'Bytes<32>',
                                  policyId_0)
     }
@@ -1625,14 +1599,14 @@ export const pureCircuits = {
     if (!(artifactDigest_0.buffer instanceof ArrayBuffer && artifactDigest_0.BYTES_PER_ELEMENT === 1 && artifactDigest_0.length === 32)) {
       __compactRuntime.typeError('recordKeyOf',
                                  'argument 1',
-                                 'audit_registry.compact line 169 char 1',
+                                 'audit_registry.compact line 153 char 1',
                                  'Bytes<32>',
                                  artifactDigest_0)
     }
     if (!(policyId_0.buffer instanceof ArrayBuffer && policyId_0.BYTES_PER_ELEMENT === 1 && policyId_0.length === 32)) {
       __compactRuntime.typeError('recordKeyOf',
                                  'argument 2',
-                                 'audit_registry.compact line 169 char 1',
+                                 'audit_registry.compact line 153 char 1',
                                  'Bytes<32>',
                                  policyId_0)
     }
@@ -1646,7 +1620,7 @@ export const pureCircuits = {
     if (!(s_0.buffer instanceof ArrayBuffer && s_0.BYTES_PER_ELEMENT === 1 && s_0.length === 64)) {
       __compactRuntime.typeError('stringIdOf',
                                  'argument 1',
-                                 'audit_registry.compact line 179 char 1',
+                                 'audit_registry.compact line 163 char 1',
                                  'Bytes<64>',
                                  s_0)
     }
@@ -1660,7 +1634,7 @@ export const pureCircuits = {
     if (!(sk_0.buffer instanceof ArrayBuffer && sk_0.BYTES_PER_ELEMENT === 1 && sk_0.length === 32)) {
       __compactRuntime.typeError('anchorIdOf',
                                  'argument 1',
-                                 'audit_registry.compact line 186 char 1',
+                                 'audit_registry.compact line 170 char 1',
                                  'Bytes<32>',
                                  sk_0)
     }

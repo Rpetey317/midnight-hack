@@ -1,0 +1,10 @@
+{
+  "network": "undeployed",
+  "contractAddress": "21bbe885a9e663ceb81670dc67c4853087825f020e89fb0ed8893c9d2420c7d9",
+  "anchorAddress": "mn_addr_undeployed1h3ssm5ru2t6eqy4g3she78zlxn96e36ms6pq996aduvmateh9p9sk96u7s",
+  "policies": {
+    "bank-v1": "8eb066f1ff82c34bf459108e1854b511a5327f6a1181a72b7bcb14922a695cc6",
+    "enterprise-v1": "65bb1b975c97115919de8beba5b451602ab917c4813e6cff1ac4bcdaf274c3e5"
+  },
+  "deployedAt": "2026-08-07T23:33:44.778Z"
+}

@@ -5,6 +5,10 @@
   "description": "zkuat compliance registry — Compact contract, witnesses, canonical encoding, and simulator tests",
   "license": "Apache-2.0",
   "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./sdk": "./src/sdk.ts"
+  },
   "scripts": {
     "compile": "compact compile --skip-zk src/audit_registry.compact src/managed/audit_registry",
     "compile:keys": "compact compile src/audit_registry.compact src/managed/audit_registry",
@@ -13,19 +17,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf src/managed",
-    "devnet:up": "cd ../app && docker compose up -d --wait",
-    "devnet:down": "cd ../app && docker compose down",
-    "devnet:reset": "cd ../app && docker compose down -v && docker compose up -d --wait",
-    "devnet:deploy": "tsx src/devnet/deploy.ts",
-    "devnet:demo": "tsx src/devnet/demo.ts",
-    "devnet:inspect": "tsx src/devnet/inspect.ts",
-    "devnet:prove": "tsx src/devnet/prove.ts"
+    "clean": "rm -rf src/managed"
   },
   "dependencies": {
-    "@midnight-ntwrk/compact-runtime": "0.16.0"
-  },
-  "devDependencies": {
+    "@midnight-ntwrk/compact-runtime": "0.16.0",
     "@midnight-ntwrk/midnight-js-contracts": "4.1.1",
     "@midnight-ntwrk/midnight-js-http-client-proof-provider": "4.1.1",
     "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1",
@@ -35,13 +30,15 @@
     "@midnight-ntwrk/midnight-js-protocol": "4.1.1",
     "@midnight-ntwrk/midnight-js-types": "4.1.1",
     "@midnight-ntwrk/wallet-sdk": "1.2.0",
+    "rxjs": "^7.8.2",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/ws": "^8.18.1",
-    "rxjs": "^7.8.2",
     "tsx": "^4.23.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.10",
-    "ws": "^8.21.3"
+    "vitest": "^4.1.10"
   },
   "engines": {
     "node": ">=22.0.0"

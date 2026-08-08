@@ -47,11 +47,7 @@ export function NumberTicker({
 }: NumberTickerProps) {
   const containerRef = useRef<HTMLSpanElement>(null);
   const inView = useInView(containerRef, { once: true, amount: 0.6 });
-  const [armed, setArmed] = useState(!startOnView);
-
-  useEffect(() => {
-    if (startOnView && inView) setArmed(true);
-  }, [startOnView, inView]);
+  const armed = !startOnView || inView;
 
   const text = useMemo(() => {
     const rounded = Math.round(value);

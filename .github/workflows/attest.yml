@@ -28,12 +28,27 @@ jobs:
           node-version: "22"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run npm audit
         run: npm audit --json > npm-audit.json || true
 
+      # Keep these non-fatal so a failed check is still captured as evidence.
+      # `steps.<id>.outcome` retains the real result under continue-on-error.
+      - name: Run lint
+        id: lint
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Run build
+        id: build
+        continue-on-error: true
+        run: npm run build
+
       - name: Generate evidence
+        env:
+          LINT_OUTCOME: ${{ steps.lint.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
         run: |
           node <<'EOF'
           const fs = require("fs");
@@ -78,6 +93,16 @@ jobs:
               moderate: vulnerabilities.moderate ?? 0,
               low: vulnerabilities.low ?? 0,
               total: vulnerabilities.total ?? 0
+            },
+            checks: {
+              lint: {
+                command: "npm run lint",
+                passed: process.env.LINT_OUTCOME === "success"
+              },
+              build: {
+                command: "npm run build",
+                passed: process.env.BUILD_OUTCOME === "success"
+              }
             }
           };
 

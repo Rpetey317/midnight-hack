@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import { ChevronLeft, ExternalLink } from "lucide-react";
 import { AppNav } from "@/components/app/app-nav";
 import { EvidencePanel } from "@/components/app/evidence-panel";
-import { ProvePanel } from "@/components/app/prove-panel";
 import { ArtifactPicker } from "@/components/app/artifact-picker";
 import { GithubEvidenceValidation } from "@/components/app/github-evidence-validation";
 import { createClient } from "@/lib/supabase/server";
@@ -77,8 +76,8 @@ export default async function AttesterProduct({
           <div className="mt-8 rounded-2xl border border-border bg-card px-6 py-12">
             <h2 className="text-lg font-medium tracking-tight">No artifacts yet</h2>
             <p className="mt-1.5 max-w-md text-sm text-muted-foreground">
-              An artifact appears once this repository&apos;s CI produces a signed evidence bundle
-              and the anchor inserts its commitment.
+              Request repository validation above to retrieve its GitHub Actions evidence and
+              submit a proof through the paired local runtime.
             </p>
           </div>
         ) : (
@@ -96,10 +95,7 @@ export default async function AttesterProduct({
               />
             )}
 
-            <div className="mt-8 grid gap-6 lg:grid-cols-[1.35fr_1fr] lg:items-start">
-              <EvidencePanel evidence={evidence} />
-              <ProvePanel evidence={evidence} artifactId={current?.id ?? null} />
-            </div>
+            <EvidencePanel evidence={evidence} className="mt-8" />
           </>
         )}
 

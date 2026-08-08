@@ -32,6 +32,7 @@ import {
   SPRING_LAYOUT,
   SPRING_PRESS,
 } from "@/lib/ease";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 
 type SidebarState = "expanded" | "collapsed";
@@ -154,9 +155,10 @@ interface AnimatedSidebarContextValue {
   reduce: boolean;
   setOpen: (open: boolean) => void;
   setOpenMobile: (open: boolean) => void;
+  setTriggerNode: (node: HTMLButtonElement | null) => void;
+  focusTrigger: () => void;
   state: SidebarState;
   toggleSidebar: () => void;
-  triggerRef: React.RefObject<HTMLButtonElement | null>;
 }
 
 const AnimatedSidebarContext =
@@ -251,6 +253,14 @@ export function AnimatedSidebarProvider({
     else setOpen(!desktopOpen);
   }, [desktopOpen, isMobile, mobileOpen, setOpen, setOpenMobile]);
 
+  const setTriggerNode = useCallback((node: HTMLButtonElement | null) => {
+    triggerRef.current = node;
+  }, []);
+
+  const focusTrigger = useCallback(() => {
+    triggerRef.current?.focus({ preventScroll: true });
+  }, []);
+
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
       if (
@@ -276,9 +286,10 @@ export function AnimatedSidebarProvider({
         reduce,
         setOpen,
         setOpenMobile,
+        setTriggerNode,
+        focusTrigger,
         state: desktopOpen ? "expanded" : "collapsed",
         toggleSidebar,
-        triggerRef,
       }}
     >
       <div
@@ -314,13 +325,12 @@ function MobileSidebar({
   side: SidebarSide;
 }) {
   const context = useAnimatedSidebar();
+  const { focusTrigger, openMobile } = context;
   const panelRef = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useHydrated();
 
   useEffect(() => {
-    if (!context.openMobile) return;
+    if (!openMobile) return;
 
     const body = document.body;
     const scrollY = window.scrollY;
@@ -352,9 +362,9 @@ function MobileSidebar({
       body.style.right = previousBodyStyles.right;
       body.style.overflow = previousBodyStyles.overflow;
       window.scrollTo(0, scrollY);
-      context.triggerRef.current?.focus({ preventScroll: true });
+      focusTrigger();
     };
-  }, [context.openMobile, context.triggerRef]);
+  }, [focusTrigger, openMobile]);
 
   if (!mounted) return null;
 
@@ -563,8 +573,8 @@ export const AnimatedSidebar = forwardRef<HTMLElement, AnimatedSidebarProps>(
   },
 );
 
-export interface AnimatedSidebarTriggerProps
-  extends ButtonHTMLAttributes<HTMLButtonElement> {}
+export type AnimatedSidebarTriggerProps =
+  ButtonHTMLAttributes<HTMLButtonElement>;
 
 export const AnimatedSidebarTrigger = forwardRef<
   HTMLButtonElement,
@@ -580,7 +590,7 @@ export const AnimatedSidebarTrigger = forwardRef<
     <button
       {...props}
       ref={(node) => {
-        context.triggerRef.current = node;
+        context.setTriggerNode(node);
         if (typeof forwardedRef === "function") forwardedRef(node);
         else if (forwardedRef) forwardedRef.current = node;
       }}
@@ -602,8 +612,8 @@ export const AnimatedSidebarTrigger = forwardRef<
   );
 });
 
-export interface AnimatedSidebarCloseProps
-  extends ButtonHTMLAttributes<HTMLButtonElement> {}
+export type AnimatedSidebarCloseProps =
+  ButtonHTMLAttributes<HTMLButtonElement>;
 
 export const AnimatedSidebarClose = forwardRef<
   HTMLButtonElement,
@@ -635,8 +645,8 @@ export const AnimatedSidebarClose = forwardRef<
   );
 });
 
-export interface AnimatedSidebarRailProps
-  extends ButtonHTMLAttributes<HTMLButtonElement> {}
+export type AnimatedSidebarRailProps =
+  ButtonHTMLAttributes<HTMLButtonElement>;
 
 export const AnimatedSidebarRail = forwardRef<
   HTMLButtonElement,
@@ -671,8 +681,7 @@ export const AnimatedSidebarRail = forwardRef<
   );
 });
 
-export interface AnimatedSidebarInsetProps
-  extends HTMLMotionProps<"main"> {}
+export type AnimatedSidebarInsetProps = HTMLMotionProps<"main">;
 
 export const AnimatedSidebarInset = forwardRef<
   HTMLElement,

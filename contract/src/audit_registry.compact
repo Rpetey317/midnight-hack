@@ -1,21 +1,21 @@
 // zkuat — privacy-preserving continuous software assurance.
 //
-// A vendor's CI produces security evidence about a build artifact. An attestor
-// normalizes and signs it; an off-chain anchor verifies that signature and inserts
-// a blinded commitment here. The vendor then proves locally that the attested
+// A vendor's GitHub Actions workflow produces security evidence about a build
+// artifact. The locally-authorized zkuat runtime validates that document and
+// inserts a blinded commitment here. It then proves locally that the committed
 // evidence satisfies a buyer's published policy, disclosing only:
 //
 //   who (vendor, product), what (artifact digest), which policy, and pass/fail.
 //
-// The findings themselves — vulnerability counts, dependency facts, repository
-// configuration — never leave the vendor's machine.
+// The findings themselves — vulnerability counts and command results — are
+// never written to the ledger.
 //
 // We hide the findings, not the vendor. A procurement record that did not say
 // which vendor's which artifact is compliant would be useless to a buyer.
 //
 // Design docs: ../../docs/04-contract-spec.md (circuits),
-// ../../docs/03-evidence-schema.md (encoding), ../../docs/02-threat-model.md
-// (what this does and does not prove), ../../docs/Master-Doc-v2.md (the product).
+// ../../docs/03-evidence-schema.md (encoding), and ../../docs/01-architecture.md
+// (trust boundaries).
 
 pragma language_version >= 0.23;
 
@@ -24,20 +24,17 @@ import CompactStandardLibrary;
 // ─── Data ──────────────────────────────────────────────────────────────────────
 //
 // Field order is load-bearing: it determines the commitment. Reordering or
-// inserting a field mid-struct changes every leaf and invalidates every
-// outstanding proof. Append-only, and appending requires re-anchoring.
-// Schema v2 — see ../../docs/03-evidence-schema.md.
+// inserting a field changes every leaf and requires a new deployment.
+// Schema v3 — see ../../docs/03-evidence-schema.md.
 
 struct Evidence {
   // ── identity ──
   // vendorId/productId are bound here, not merely passed as public inputs, so a
-  // prover cannot label a record with somebody else's name. The attestor signs
-  // these along with everything else.
+  // prover cannot label a record with somebody else's name.
   vendorId:                Bytes<32>;   // stringIdOf(vendor slug)
   productId:               Bytes<32>;   // stringIdOf(product slug)
   artifactDigest:          Bytes<32>;   // sha256 of the built artifact
   commitId:                Bytes<32>;   // git SHA, 20 bytes left-aligned, zero-padded
-  attestorId:              Bytes<32>;   // stringIdOf(attestor slug)
 
   // ── time ──
   generatedAt:             Uint<64>;    // unix seconds
@@ -46,20 +43,11 @@ struct Evidence {
   // ── vulnerability facts ──
   criticals:               Uint<32>;
   highs:                   Uint<32>;
-  kev:                     Uint<32>;    // CISA Known Exploited Vulnerabilities
-
-  // ── dependency facts ──
-  forbiddenDeps:           Uint<32>;    // matches on the buyer's prohibited list
   vulnDeps:                Uint<32>;    // dependencies carrying known vulns
 
-  // ── configuration facts ──
-  mfaRequired:             Boolean;
-  branchProtected:         Boolean;
-  buildProvenanceVerified: Boolean;
-  ciGreen:                 Boolean;
-
-  // ── weak signal: a demo predicate, never a flagship threshold ──
-  coverage:                Uint<32>;    // percent * 100  (8734 == 87.34%)
+  // ── workflow command results ──
+  lintPassed:              Boolean;
+  buildPassed:             Boolean;
 }
 
 // Public in ledger state so buyers can read exactly what a record means.
@@ -70,12 +58,9 @@ struct Policy {
   issuer:                  Bytes<32>;   // stringIdOf(issuing organisation)
   maxCriticals:            Uint<32>;
   maxHighs:                Uint<32>;
-  maxKev:                  Uint<32>;
-  maxForbiddenDeps:        Uint<32>;
-  requireMfa:              Boolean;
-  requireBranchProtection: Boolean;
-  requireBuildProvenance:  Boolean;
-  requiredAttestor:        Bytes<32>;   // all-zero == any attestor accepted
+  maxVulnDeps:             Uint<32>;
+  requireLint:             Boolean;
+  requireBuild:            Boolean;
   maxAgeSeconds:           Uint<64>;    // longest validity window the policy allows
 }
 
@@ -98,10 +83,9 @@ struct ComplianceRecord {
 // first vendor's proof dies. checkRoot() here accepts any historic root, which
 // is what continuous compliance depends on. Depth 16 = 65,536 attestations.
 //
-// The tree is also how we get authenticated evidence without verifying the
-// attestor's signature in-circuit, and insert()'s leaf_hash() keeps the evidence
-// commitment off the transcript — so nobody can build a leaf→artifact
-// correlation table linking an on-chain proof to its attestation bundle.
+// The tree is also how the anchor-authorized runtime authenticates accepted
+// evidence, and insert()'s leaf_hash() keeps the evidence commitment off the
+// transcript — so nobody can build a leaf→artifact correlation table.
 export ledger attestations: HistoricMerkleTree<16, Bytes<32>>;
 
 // Buyer-published policies, readable by anyone.
@@ -131,8 +115,8 @@ export sealed ledger anchor: Bytes<32>;
 
 // ─── Witnesses ─────────────────────────────────────────────────────────────────
 
-// The anchor's secret. Only attest/registerPolicy reach for it; a vendor calling
-// proveCompliance never invokes this witness and needs no secret at all.
+// The anchor's secret. The runtime derives it from its sponsor wallet seed with
+// a domain-separated KDF. Only attest/registerPolicy reach for it.
 witness localSecret(): Bytes<32>;
 
 // The vendor's private evidence, its salt, and its Merkle path. None of these
@@ -145,8 +129,8 @@ witness getPath(): MerkleTreePath<16, Bytes<32>>;
 //
 // These are `pure`, so the compiler emits them into the generated `pureCircuits`
 // object and they are callable from TypeScript with no context and no
-// transaction. The collector, attestor, anchor, CLI, and both UIs call these
-// rather than reimplementing the encoding — which makes the schema drift that
+// transaction. The runtime and tests call these rather than reimplementing the
+// encoding — which makes the schema drift that
 // ../../docs/03-evidence-schema.md flags as the project's highest risk
 // structurally impossible rather than merely discouraged.
 //
@@ -172,8 +156,8 @@ export pure circuit recordKeyOf(artifactDigest: Bytes<32>, policyId: Bytes<32>):
   ]);
 }
 
-// Any identifier that starts life as a string: policy ids, attestor ids, vendor
-// ids, product ids, issuer names. Bytes<N> is fixed-width in Compact, so the
+// Any identifier that starts life as a string: policy ids, vendor ids, product
+// ids, issuer names. Bytes<N> is fixed-width in Compact, so the
 // padding has to be pinned somewhere — it is pinned at 64 bytes, zero-padded
 // right, and the TypeScript encoder throws rather than truncating.
 export pure circuit stringIdOf(s: Bytes<64>): Bytes<32> {
@@ -228,8 +212,8 @@ export circuit registerPolicy(policyId: Bytes<32>, policy: Policy): [] {
 // Called by the vendor, on their own machine.
 //
 // Public: vendor, product, artifact digest, policy, evidence dates, verdict.
-// Private: every vulnerability count, every dependency fact, every configuration
-// boolean, the commit, the attestor, the salt, the leaf, and the path siblings.
+// Private: every vulnerability count, workflow result, commit, salt, leaf, and
+// path sibling.
 export circuit proveCompliance(
   vendorId:       Bytes<32>,
   productId:      Bytes<32>,
@@ -270,11 +254,7 @@ export circuit proveCompliance(
 
   const p = policies.lookup(disclose(policyId));
 
-  // 4. Measured by an acceptable attestor? All-zero means "any".
-  assert(disclose(p.requiredAttestor == default<Bytes<32>>
-                  || ev.attestorId == p.requiredAttestor), "attestor not accepted");
-
-  // 5. Did the attestor grant a longer validity window than the policy allows?
+  // 4. Is the validity window longer than the policy allows?
   //    This is freshness enforcement that needs no block-time primitive: it
   //    bounds validUntil relative to generatedAt, both of which are committed.
   //    It does NOT check the evidence against wall-clock now — the record carries
@@ -282,7 +262,7 @@ export circuit proveCompliance(
   assert(disclose(ev.validUntil <= ev.generatedAt + p.maxAgeSeconds),
          "validity window exceeds policy");
 
-  // 6. The predicate.
+  // 5. The predicate.
   //
   //    disclose() wraps the *conjunction*, never the operands. Writing
   //    disclose(ev.criticals) would publish the finding count and defeat the
@@ -292,16 +272,14 @@ export circuit proveCompliance(
   //    definition. Do not add per-requirement disclosure without deciding that
   //    leaking the failure reason is acceptable.
   const ok = disclose(
-    ev.criticals     <= p.maxCriticals     &&
-    ev.highs         <= p.maxHighs         &&
-    ev.kev           <= p.maxKev           &&
-    ev.forbiddenDeps <= p.maxForbiddenDeps &&
-    (!p.requireMfa              || ev.mfaRequired)     &&
-    (!p.requireBranchProtection || ev.branchProtected) &&
-    (!p.requireBuildProvenance  || ev.buildProvenanceVerified)
+    ev.criticals <= p.maxCriticals &&
+    ev.highs     <= p.maxHighs     &&
+    ev.vulnDeps  <= p.maxVulnDeps  &&
+    (!p.requireLint  || ev.lintPassed) &&
+    (!p.requireBuild || ev.buildPassed)
   );
 
-  // 7. The public, time-bound record. Written whether or not the predicate passed,
+  // 6. The public, time-bound record. Written whether or not the predicate passed,
   //    carrying the verdict — so a buyer distinguishes NOT COMPLIANT from
   //    NO CURRENT PROOF, and the negative case is demonstrable on-chain.
   const rec = ComplianceRecord {

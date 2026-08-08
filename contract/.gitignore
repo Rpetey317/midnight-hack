@@ -1,19 +1,12 @@
 node_modules/
 
-# Compiler output. The generated contract JS and .d.ts (140 KB) ARE committed:
-# every other track imports `pureCircuits` through @zkuat/contract, and a fresh
-# clone or a CI runner has no Compact toolchain to regenerate them with.
-#
-# ⚠️ Track A: re-run `npm run compile` and COMMIT src/managed/audit_registry/
-#    whenever audit_registry.compact changes, or downstream silently builds
-#    against a stale encoding.
+# Generated contract JS and declarations are committed because the parser,
+# runtime, and UI build without requiring the Compact compiler.
 #
 # Proving keys (15 MB) and ZKIR stay out — regenerate with `npm run compile:keys`.
 src/managed/audit_registry/keys/
 src/managed/audit_registry/zkir/
 
-# Encrypted private-state store written by levelPrivateStateProvider.
+# Encrypted private-state store (the runtime normally keeps this under
+# ~/.zkuat/runtime instead).
 midnight-level-db/
-
-# Devnet deployment record written by `npm run devnet:deploy`.
-.zkuat-devnet.json

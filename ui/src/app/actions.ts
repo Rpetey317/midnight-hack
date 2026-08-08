@@ -165,33 +165,6 @@ export async function seedDemo() {
   return { ok: true, productId: product.id as string };
 }
 
-/** Records a proof result. The evidence itself is never sent here. */
-export async function recordProof(input: {
-  artifactId: string;
-  policySlug: string;
-  policyVersion: number;
-  verdict: boolean;
-  txHash: string;
-}) {
-  const { supabase, user } = await requireUser();
-  const { data, error } = await supabase
-    .from("proof_activity")
-    .insert({
-      user_id: user.id,
-      artifact_id: input.artifactId,
-      policy_id: input.policySlug,
-      policy_version: input.policyVersion,
-      verdict: input.verdict,
-      tx_hash: input.txHash,
-    })
-    .select("id")
-    .single();
-  if (error) return { error: error.message };
-
-  revalidatePath("/dashboard");
-  return { ok: true, auditId: data.id as string };
-}
-
 export async function requestRepositoryEvidence(productId: string) {
   const { supabase, user } = await requireUser();
   const {

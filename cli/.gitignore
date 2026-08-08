@@ -1,8 +1,0 @@
-node_modules/
-
-# The private-state store the SDK writes next to whatever cwd you ran from.
-# It holds evidence, salts, and merkle paths — the entire private side of the
-# protocol. Committing one would publish exactly what this project exists to
-# keep private.
-midnight-level-db/
-.midnight-wallet-state/

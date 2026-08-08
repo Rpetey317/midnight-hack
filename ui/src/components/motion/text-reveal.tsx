@@ -46,27 +46,34 @@ export function TextReveal({
 
   const lines = Array.isArray(text) ? text : [text];
   const s = { ...DEFAULT_SPRING, ...spring };
-
-  let unitIndex = 0;
-  const lineCounts = new Map<string, number>();
+  const preparedLines = lines.map((line, lineIndex) => {
+    const units = split === "word" ? line.split(" ") : Array.from(line);
+    const priorUnitCount = lines
+      .slice(0, lineIndex)
+      .reduce(
+        (count, priorLine) =>
+          count +
+          (split === "word"
+            ? priorLine.split(" ").length
+            : Array.from(priorLine).length),
+        0,
+      );
+    return {
+      key: `line-${lineIndex}`,
+      units: units.map((unit, unitIndex) => ({
+        key: `unit-${unitIndex}`,
+        value: unit,
+        delayIndex: priorUnitCount + unitIndex,
+      })),
+    };
+  });
 
   return (
     <Comp ref={ref} className={cn("block", className)}>
-      {lines.map((line) => {
-        const units = split === "word" ? line.split(" ") : Array.from(line);
-        const lineCount = lineCounts.get(line) ?? 0;
-        lineCounts.set(line, lineCount + 1);
-        const lineKey = `${line}-${lineCount}`;
-        const unitCounts = new Map<string, number>();
-
-        return (
-          <span key={lineKey} className="block">
-            {units.map((unit, i) => {
-              const d = delay + unitIndex * stagger;
-              unitIndex += 1;
-              const unitCount = unitCounts.get(unit) ?? 0;
-              unitCounts.set(unit, unitCount + 1);
-              const unitKey = `${unit}-${unitCount}`;
+      {preparedLines.map((line) => (
+          <span key={line.key} className="block">
+            {line.units.map((unit, i) => {
+              const d = delay + unit.delayIndex * stagger;
               const initial = reduce
                 ? { opacity: 0 }
                 : { y: yOffset, opacity: 0, filter: `blur(${blur}px)` };
@@ -84,22 +91,21 @@ export function TextReveal({
                   };
               return (
                 <motion.span
-                  key={unitKey}
+                  key={unit.key}
                   initial={initial}
                   animate={animate}
                   transition={transition}
                   className="inline-block will-change-transform"
                 >
-                  {unit}
-                  {split === "word" && i < units.length - 1 ? (
+                  {unit.value}
+                  {split === "word" && i < line.units.length - 1 ? (
                     <span className="inline-block">&nbsp;</span>
                   ) : null}
                 </motion.span>
               );
             })}
           </span>
-        );
-      })}
+        ))}
       {children}
     </Comp>
   );

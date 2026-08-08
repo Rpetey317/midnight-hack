@@ -15,6 +15,7 @@ import {
 import {
   type AgentCodeLanguage,
   AgentCodeLine,
+  splitAgentCodeLines,
   useAgentCodeTokens,
 } from "@/components/agents/agent-code";
 import { SPRING_PRESS } from "@/lib/ease";
@@ -59,12 +60,7 @@ export function CodeBlock({
     () => new Set(highlightLines),
     [highlightLines],
   );
-  let offset = 0;
-  const lines = code.split("\n").map((content) => {
-    const line = { content, offset };
-    offset += content.length + 1;
-    return line;
-  });
+  const lines = splitAgentCodeLines(code);
 
   useEffect(
     () => () => {

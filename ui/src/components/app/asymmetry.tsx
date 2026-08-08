@@ -11,9 +11,7 @@ import { cn } from "@/lib/utils";
 const PRIVATE_ROWS = [
   { label: "Critical vulnerabilities", value: EVIDENCE.vulns.criticals },
   { label: "High vulnerabilities", value: EVIDENCE.vulns.highs },
-  { label: "Known-exploited (KEV)", value: EVIDENCE.vulns.kev },
-  { label: "Vulnerable dependencies", value: EVIDENCE.deps.vulnerable },
-  { label: "Total dependencies", value: EVIDENCE.deps.total },
+  { label: "Vulnerable dependencies", value: EVIDENCE.vulns.vulnerableDependencies },
 ];
 
 export function Asymmetry() {
@@ -27,10 +25,10 @@ export function Asymmetry() {
       <div className="rounded-2xl border border-border bg-card p-6 lg:rounded-r-none lg:border-r-0">
         <div className="flex items-center gap-2.5">
           <Lock className="size-4 text-warning" strokeWidth={1.5} />
-          <span className="text-sm font-medium tracking-tight">What the attester holds</span>
+          <span className="text-sm font-medium tracking-tight">What the local runtime holds</span>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          {EVIDENCE.repo} · never leaves the machine
+          {EVIDENCE.repo} · never written to Midnight
         </p>
 
         <ul className="mt-5 flex flex-col">

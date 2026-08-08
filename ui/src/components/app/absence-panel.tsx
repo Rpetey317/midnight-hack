@@ -9,19 +9,13 @@ import { cn } from "@/lib/utils";
 const ABSENT = [
   "criticals",
   "highs",
-  "kev",
-  "forbiddenDeps",
-  "vulnerableDeps",
-  "coverage",
-  "mfaRequired",
-  "branchProtected",
-  "buildProvenanceVerified",
-  "ciGreen",
+  "vulnDeps",
+  "lintPassed",
+  "buildPassed",
   "salt",
   "leaf",
   "merklePath",
   "commitId",
-  "attestorId",
 ];
 
 export function AbsencePanel({

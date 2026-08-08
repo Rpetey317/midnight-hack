@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useCallback, useEffect, useState } from "react";
 import { Lock, Plus } from "lucide-react";
 import {
   CenterMorphModal,
@@ -23,15 +23,16 @@ type Repo = { fullName: string; private: boolean };
 
 export function AddRepoDialog({ label = "Add repository" }: { label?: string }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(addProduct, null);
+  const submit = useCallback(async (previous: unknown, formData: FormData) => {
+    const result = await addProduct(previous, formData);
+    if ("ok" in result && result.ok) setOpen(false);
+    return result;
+  }, []);
+  const [state, formAction, pending] = useActionState(submit, null);
 
   const [repos, setRepos] = useState<Repo[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [repo, setRepo] = useState("");
-
-  useEffect(() => {
-    if (state && "ok" in state && state.ok) setOpen(false);
-  }, [state]);
 
   // Fetch on open, once. A failure falls back to typing the name by hand.
   useEffect(() => {
@@ -64,7 +65,7 @@ export function AddRepoDialog({ label = "Add repository" }: { label?: string }) 
       >
         <h2 className="text-lg font-medium tracking-tight">Add a repository</h2>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Only the repository name is stored. Evidence stays on your machine.
+          Only the repository name is stored. Findings are never written to Midnight.
         </p>
 
         <form action={formAction} className="mt-6 flex flex-col gap-4">

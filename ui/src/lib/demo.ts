@@ -8,7 +8,7 @@ const t = (iso: string) => Math.floor(Date.parse(iso) / 1000);
 const DAY = 86400;
 
 /**
- * The two policies registered on-chain by `npm run devnet:deploy`.
+ * The two policies registered on-chain by `@zkuat/runtime deploy`.
  *
  * ⚠️ Mirrors `POLICY_BANK_V1` / `POLICY_ENTERPRISE_V1` in
  * `contract/src/encoding.ts` — see the note on `Policy` in `./types`. The ids
@@ -29,12 +29,9 @@ export const POLICIES: Policy[] = [
     version: 1,
     maxCriticals: 0,
     maxHighs: 5,
-    maxKev: 0,
-    maxForbiddenDeps: 4_294_967_295, // unconstrained: this policy does not care
-    requireMfa: false,
-    requireBranchProtection: false,
-    requireBuildProvenance: true,
-    requiredAttestor: null,
+    maxVulnDeps: 4_294_967_295,
+    requireLint: true,
+    requireBuild: true,
     maxAgeSeconds: 30 * DAY,
   },
   {
@@ -46,12 +43,9 @@ export const POLICIES: Policy[] = [
     version: 1,
     maxCriticals: 0,
     maxHighs: 4_294_967_295, // unconstrained
-    maxKev: 4_294_967_295, // unconstrained
-    maxForbiddenDeps: 0,
-    requireMfa: false,
-    requireBranchProtection: true,
-    requireBuildProvenance: true,
-    requiredAttestor: null,
+    maxVulnDeps: 0,
+    requireLint: true,
+    requireBuild: true,
     maxAgeSeconds: 30 * DAY,
   },
 ];
@@ -60,26 +54,18 @@ export const policyBySlug = (slug: string) => POLICIES.find((p) => p.slug === sl
 
 /**
  * The private evidence bundle. In production this is produced by the repo's own
- * CI, signed by GitHub's OIDC identity, and never leaves the developer's machine.
+ * CI and consumed by the local runtime.
  */
 export const EVIDENCE: Evidence = {
   schema: EVIDENCE_SCHEMA,
   repo: "user-name/repo-name",
   commit: "9f2a71c4be08d35a6c1f47e2b90d85af31c60e77",
-  attestor: "zkuat-scanner",
   artifactDigest:
     "sha256:3d8f21a90b47c6e5d21f89a03c74b6e18d95f2a7c40b83e619d7a52f8c03b41e",
   generatedAt: t("2026-08-05T09:14:00Z"),
   validUntil: t("2026-09-04T09:14:00Z"),
-  vulns: { criticals: 0, highs: 3, kev: 0 },
-  deps: { total: 427, forbidden: 0, vulnerable: 6 },
-  config: {
-    mfaRequired: true,
-    branchProtected: true,
-    buildProvenanceVerified: true,
-    ciGreen: true,
-  },
-  coverage: 8734,
+  vulns: { criticals: 0, highs: 3, vulnerableDependencies: 0 },
+  checks: { lintPassed: true, buildPassed: true },
 };
 
 /** The negative case — demo beat 6. Same shape, two criticals. */
@@ -88,8 +74,7 @@ export const EVIDENCE_FAILING: Evidence = {
   commit: "41b7e0c9d2a8f36514e7b02c9d38a71f60e4c825",
   artifactDigest:
     "sha256:b71c04e93a58d26f0c8471b3e95d20a6f83c17d4e09a625f34c08d71e926a3fb",
-  vulns: { criticals: 2, highs: 7, kev: 1 },
-  deps: { total: 431, forbidden: 1, vulnerable: 11 },
+  vulns: { criticals: 2, highs: 7, vulnerableDependencies: 11 },
   generatedAt: t("2026-08-06T11:02:00Z"),
   validUntil: t("2026-09-05T11:02:00Z"),
 };

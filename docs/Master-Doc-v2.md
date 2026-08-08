@@ -324,7 +324,7 @@ The minimum successful demo is:
 2. Vendor selects a GitHub repository.
 3. Vendor selects that policy.
 4. Application triggers the repository evidence workflow.
-5. GitHub Actions runs `npm audit`.
+5. GitHub Actions runs `npm audit`, lint, and the production build.
 6. `evidence.json` is generated and uploaded as an artifact.
 7. Application retrieves it.
 8. Application supplies it privately to the Compact witness.

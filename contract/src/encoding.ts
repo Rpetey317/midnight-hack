@@ -1,5 +1,5 @@
 /**
- * Canonical JSON → Evidence struct encoding (schema v2).
+ * Canonical GitHub Actions evidence → Evidence struct encoding (schema v3).
  *
  * ../../docs/03-evidence-schema.md names encoding drift between the tracks as the
  * highest-risk item in the project: four components encode this struct, and if
@@ -7,8 +7,7 @@
  * fails, and every proof breaks.
  *
  * This module plus the contract's exported `pureCircuits` is the single
- * implementation. The collector, attestor, anchor, CLI, and both UIs import it.
- * Nobody reimplements it — not "reimplements it carefully", nobody.
+ * implementation used by the runtime and contract tests.
  *
  *     import { encodeEvidence, pureCircuits, policyId } from '@zkuat/contract';
  *
@@ -30,12 +29,9 @@ export const MAX_U32 = 4_294_967_295n;
 /** `Uint<64>` ceiling, used for timestamps. */
 export const MAX_U64 = 18_446_744_073_709_551_615n;
 
-/** Coverage is percent × 100, so 100.00% is 10000. */
-export const MAX_COVERAGE = 10_000n;
+export const EVIDENCE_SCHEMA = 'zkuat.evidence.v3';
 
-export const EVIDENCE_SCHEMA = 'zkuat.evidence.v2';
-
-/** The canonical JSON the attestor signs and the vendor keeps privately. */
+/** The canonical private evidence produced from the GitHub Actions artifact. */
 export interface CanonicalEvidence {
   schema: string;
   vendor: string;
@@ -43,18 +39,17 @@ export interface CanonicalEvidence {
   /** Hex sha256, with or without a `sha256:` prefix. */
   artifactDigest: string;
   commit: string;
-  attestor: string;
   generatedAt: number;
   validUntil: number;
-  vulns: { criticals: number; highs: number; kev: number };
-  deps: { forbidden: number; vulnerable: number };
-  config: {
-    mfaRequired: boolean;
-    branchProtected: boolean;
-    buildProvenanceVerified: boolean;
-    ciGreen: boolean;
+  vulns: {
+    criticals: number;
+    highs: number;
+    vulnerableDependencies: number;
   };
-  coverage: number;
+  checks: {
+    lintPassed: boolean;
+    buildPassed: boolean;
+  };
 }
 
 function clamp(value: number, ceiling: bigint, field: string): bigint {
@@ -94,7 +89,6 @@ export function stringId(value: string): Uint8Array {
 // One padding rule covers every string this protocol hashes.
 export const vendorId = (slug: string): Uint8Array => stringId(slug);
 export const productId = (slug: string): Uint8Array => stringId(slug);
-export const attestorId = (slug: string): Uint8Array => stringId(slug);
 export const policyId = (slug: string): Uint8Array => stringId(slug);
 export const issuerId = (slug: string): Uint8Array => stringId(slug);
 
@@ -151,19 +145,17 @@ export function encodeEvidence(input: CanonicalEvidence): Evidence {
     productId: productId(input.product),
     artifactDigest: encodeArtifactDigest(input.artifactDigest),
     commitId: encodeCommit(input.commit),
-    attestorId: attestorId(input.attestor),
     generatedAt,
     validUntil,
     criticals: clamp(input.vulns.criticals, MAX_U32, 'vulns.criticals'),
     highs: clamp(input.vulns.highs, MAX_U32, 'vulns.highs'),
-    kev: clamp(input.vulns.kev, MAX_U32, 'vulns.kev'),
-    forbiddenDeps: clamp(input.deps.forbidden, MAX_U32, 'deps.forbidden'),
-    vulnDeps: clamp(input.deps.vulnerable, MAX_U32, 'deps.vulnerable'),
-    mfaRequired: input.config.mfaRequired,
-    branchProtected: input.config.branchProtected,
-    buildProvenanceVerified: input.config.buildProvenanceVerified,
-    ciGreen: input.config.ciGreen,
-    coverage: clamp(input.coverage, MAX_COVERAGE, 'coverage'),
+    vulnDeps: clamp(
+      input.vulns.vulnerableDependencies,
+      MAX_U32,
+      'vulns.vulnerableDependencies',
+    ),
+    lintPassed: input.checks.lintPassed,
+    buildPassed: input.checks.buildPassed,
   };
 }
 
@@ -174,51 +166,38 @@ export function recordKey(artifactDigest: string, policySlug: string): Uint8Arra
 
 // ─── The two shipped policies ──────────────────────────────────────────────────
 //
-// Both are evaluated over the *same* evidence bundle. That contrast — one
+// Both are evaluated over the *same* private evidence. That contrast — one
 // evidence set, two independent buyer policies, two independent verdicts, and
 // the buyer still sees no findings — is the strongest argument for programmable
-// ZK over a signed PDF.
+// ZK over a fixed verdict produced by one scanner.
 //
-// Note what is absent: coverage. It is a weak representation of software
-// security and does not belong in a flagship threshold, so it stays in the
-// schema as a demo predicate and out of both policies.
-
-/** All-zero: this policy accepts evidence from any attestor. */
-export const ANY_ATTESTOR = new Uint8Array(HASH_BYTES);
-
 /** 30 days, the longest validity window either policy grants. */
 export const THIRTY_DAYS_SECONDS = 30n * 24n * 60n * 60n;
 
 export const POLICY_BANK_SLUG = 'bank-v1';
 export const POLICY_ENTERPRISE_SLUG = 'enterprise-v1';
 
-/** criticals == 0, highs <= 5, kev == 0, build provenance verified. */
+/** criticals == 0, highs <= 5, and both workflow commands passed. */
 export const POLICY_BANK_V1: Policy = {
   version: 1n,
   issuer: issuerId('first-national-bank'),
   maxCriticals: 0n,
   maxHighs: 5n,
-  maxKev: 0n,
-  maxForbiddenDeps: MAX_U32, // unconstrained: this policy does not care
-  requireMfa: false,
-  requireBranchProtection: false,
-  requireBuildProvenance: true,
-  requiredAttestor: ANY_ATTESTOR,
+  maxVulnDeps: MAX_U32,
+  requireLint: true,
+  requireBuild: true,
   maxAgeSeconds: THIRTY_DAYS_SECONDS,
 };
 
-/** criticals == 0, no forbidden dependencies, branch protection, build provenance. */
+/** criticals == 0, no vulnerable dependencies, and both workflow commands passed. */
 export const POLICY_ENTERPRISE_V1: Policy = {
   version: 1n,
   issuer: issuerId('globex-corp'),
   maxCriticals: 0n,
   maxHighs: MAX_U32, // unconstrained: this policy does not care
-  maxKev: MAX_U32,
-  maxForbiddenDeps: 0n,
-  requireMfa: false,
-  requireBranchProtection: true,
-  requireBuildProvenance: true,
-  requiredAttestor: ANY_ATTESTOR,
+  maxVulnDeps: 0n,
+  requireLint: true,
+  requireBuild: true,
   maxAgeSeconds: THIRTY_DAYS_SECONDS,
 };
 

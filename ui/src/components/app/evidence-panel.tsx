@@ -4,7 +4,7 @@ import { Check, EyeOff, Lock, Minus } from "lucide-react";
 import { NumberTicker } from "@/components/motion/number-ticker";
 import { Tooltip } from "@/components/motion/tooltip";
 import type { Evidence } from "@/lib/types";
-import { fmtDateTime, pct, shortCommit, shortDigest } from "@/lib/format";
+import { fmtDateTime, shortCommit, shortDigest } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type Metric = { label: string; value: number; suffix?: string; hint: string };
@@ -13,10 +13,11 @@ function metricsOf(ev: Evidence): Metric[] {
   return [
     { label: "Critical", value: ev.vulns.criticals, hint: "Critical-severity advisories" },
     { label: "High", value: ev.vulns.highs, hint: "High-severity advisories" },
-    { label: "KEV", value: ev.vulns.kev, hint: "CISA Known Exploited Vulnerabilities" },
-    { label: "Forbidden deps", value: ev.deps.forbidden, hint: "Dependencies on the prohibited list" },
-    { label: "Vulnerable deps", value: ev.deps.vulnerable, hint: "Dependencies with an open advisory" },
-    { label: "Dependencies", value: ev.deps.total, hint: "Total resolved dependencies" },
+    {
+      label: "Vulnerable deps",
+      value: ev.vulns.vulnerableDependencies,
+      hint: "Dependencies with an open advisory",
+    },
   ];
 }
 
@@ -69,7 +70,7 @@ export function EvidencePanel({
         </span>
       </header>
 
-      <div className="grid grid-cols-2 gap-px overflow-hidden bg-border sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-px overflow-hidden bg-border sm:grid-cols-3">
         {metrics.map((m) => (
           <Tooltip key={m.label} content={m.hint} side="top" wrapperClassName="block h-full">
             <div className="flex h-full flex-col gap-1 bg-card px-6 py-5">
@@ -89,14 +90,8 @@ export function EvidencePanel({
       {!compact && (
         <>
           <div className="flex flex-col px-6 py-2">
-            <BoolRow label="Organisation MFA enforced" ok={evidence.config.mfaRequired} />
-            <BoolRow label="Branch protection" ok={evidence.config.branchProtected} />
-            <BoolRow label="Build provenance verified" ok={evidence.config.buildProvenanceVerified} />
-            <BoolRow label="CI green on HEAD" ok={evidence.config.ciGreen} />
-            <div className="flex min-h-11 items-center justify-between gap-4">
-              <span className="text-sm text-muted-foreground">Test coverage</span>
-              <span className="font-mono text-xs tabular-nums">{pct(evidence.coverage)}%</span>
-            </div>
+            <BoolRow label="Lint passed" ok={evidence.checks.lintPassed} />
+            <BoolRow label="Build passed" ok={evidence.checks.buildPassed} />
           </div>
 
           <footer className="grid gap-x-6 gap-y-3 border-t border-border px-6 py-4 sm:grid-cols-2">

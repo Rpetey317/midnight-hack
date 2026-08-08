@@ -1,9 +1,0 @@
-{
-  "name": "passes-both",
-  "title": "Satisfies both buyer policies",
-  "why": "Demo beats 3 and 4 — the happy path. 3 highs against the bank's limit of 5, no forbidden dependencies, provenance verified. The buyer sees ✓ SATISFIED and no numbers.",
-  "salt": "5100000000000000000000000000000000000000000000000000000000000000",
-  "overrides": {
-    "artifactDigest": "sha256:8f739ab08f739ab08f739ab08f739ab08f739ab08f739ab08f739ab08f739ab0"
-  }
-}

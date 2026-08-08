@@ -1,6 +1,0 @@
-node_modules/
-
-# Attestor private keys. Losing one is recoverable (generate another and
-# re-sign); committing one is not. `zkuat-attestor-keygen` writes here.
-*.key.json
-keys/

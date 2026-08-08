@@ -83,10 +83,7 @@ export function PolicyList({ className }: { className?: string }) {
 
                     <dl className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2">
                       <Meta label="Policy id" value={shortDigest(p.id, 14, 8)} />
-                      <Meta
-                        label="Max evidence age"
-                        value={`${Math.round(p.maxAgeSeconds / 86400)} days`}
-                      />
+                      <Meta label="Issuer" value={p.issuer} />
                     </dl>
 
                     <Link
