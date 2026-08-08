@@ -27,11 +27,17 @@ than independently verified attestation.
 
 ## Requirements
 
-- Node.js 22 or newer;
-- Docker available to the current user;
-- contract keys generated with `npm --prefix contract run compile:keys`;
+- Docker Compose with host networking available to the current user;
+- permission to mount `/var/run/docker.sock`, which lets the runtime container
+  manage the sibling proof-server container;
 - a Preview or Preprod seed with unshielded NIGHT available for DUST;
 - network access to the selected Midnight RPC/indexer.
+
+The runtime requires host networking because both configured local URLs are
+loopback-only. Enable host networking in Docker Desktop if your installation
+does not expose it by default. Mounting the Docker socket is effectively
+root-equivalent access to the host Docker daemon; use the published zkuat image
+or an image you built from trusted source.
 
 ## Configuration
 
@@ -66,15 +72,11 @@ Both local service URLs must use plain HTTP on `127.0.0.1`, `localhost`, or
 loopback IPv6. Keep the env file mode `0600`. Never copy the seed into Vercel,
 Supabase, browser storage, or source control.
 
-## Install and deploy
+## Configure and deploy
 
 From the repository root:
 
 ```bash
-npm --prefix contract ci
-npm --prefix contract run compile:keys
-npm --prefix runtime ci
-
 mkdir -p ~/.zkuat/runtime
 cp runtime/.env.example ~/.zkuat/runtime/.env
 chmod 600 ~/.zkuat/runtime/.env
@@ -83,7 +85,7 @@ chmod 600 ~/.zkuat/runtime/.env
 After setting the network and seed, deploy once:
 
 ```bash
-npm --prefix runtime run deploy
+docker compose run --rm runtime deploy
 ```
 
 Deployment starts the proof server, deploys the contract with the derived anchor
@@ -91,21 +93,49 @@ identity, and submits four policy-registration calls for the bundled npm
 reference policies. Copy the printed address into `ZKUAT_CONTRACT_ADDRESS`. The
 runtime must continue using the same network and seed.
 
-## Start and proof-server commands
+## Start the container
 
 ```bash
-npm --prefix runtime start
-
-cd runtime
-npx tsx src/cli.ts proof-server start
-npx tsx src/cli.ts proof-server status
-npx tsx src/cli.ts proof-server stop
+docker compose up
 ```
 
-`start` acquires `runtime.lock`, listens only on the configured loopback origin,
-prints a fresh pairing code, and queues any persisted nonterminal jobs for
-recovery. Pairing tokens live only in process memory and are invalid after a
-restart.
+The image defaults to the `start` command. Compose runs it in the foreground and
+streams the startup banner to the terminal:
+
+```text
+zkuat runtime listening at http://127.0.0.1:4317
+PAIRING CODE: 123456
+allowed origin: https://zkuat.works
+```
+
+Leave that terminal attached while using the UI. `start` acquires
+`runtime.lock`, listens only on the configured loopback origin, prints a fresh
+pairing code, and queues persisted nonterminal jobs for recovery. Pairing tokens
+live only in process memory and are invalid after a restart.
+
+If the container must run detached, start it and immediately follow its logs:
+
+```bash
+docker compose up --detach
+docker compose logs --follow runtime
+```
+
+The pairing code remains in the retained Docker logs and can also be retrieved
+without following:
+
+```bash
+docker compose logs runtime 2>&1 | grep "PAIRING CODE"
+```
+
+## Proof-server commands
+
+While the runtime container is running:
+
+```bash
+docker exec zkuat-runtime tsx src/cli.ts proof-server start
+docker exec zkuat-runtime tsx src/cli.ts proof-server status
+docker exec zkuat-runtime tsx src/cli.ts proof-server stop
+```
 
 The runtime does not automatically stop the proof-server container on shutdown.
 The explicit stop command only stops a container carrying the zkuat ownership
@@ -171,6 +201,17 @@ from the sponsor seed.
 
 ## Development checks
 
+Source development requires Node.js 22+, npm, the compatible Compact compiler,
+and a repository-root image build:
+
+```bash
+npm --prefix contract ci
+npm --prefix contract run compile:keys
+docker build -f runtime/Dockerfile -t zkuat-runtime .
+```
+
+From `runtime/`, run:
+
 ```bash
 npm run typecheck
 npm test
@@ -178,3 +219,8 @@ npm test
 
 The runtime tests use fakes for GitHub payloads, proof-server behavior, chain
 jobs, and indexer responses; they do not submit live network transactions.
+
+The release workflow performs those source-build steps and publishes
+`ghcr.io/rpetey317/zkuat-runtime:latest`, including the proving keys and ZKIR.
+The image must be built from the repository root because the runtime's local
+package dependency resolves `../contract`.

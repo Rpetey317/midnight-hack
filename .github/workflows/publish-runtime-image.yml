@@ -42,6 +42,9 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/zkuat-runtime
+  # Pin both the installer and the compiler selected through that installer.
+  # Updating either value is an explicit, reviewable image change.
+  COMPACT_CLI_RELEASE: compact-v0.5.1
   # Pin the toolchain. `compact update` with no argument tracks latest, and a
   # compiler bump changes the generated bindings and the proving keys.
   COMPACT_VERSION: "0.31.1"
@@ -59,6 +62,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # github.repository_owner preserves the account's display casing, while
+      # GHCR requires the complete repository name to be lowercase.
+      - name: Normalize image name
+        id: image
+        shell: bash
+        run: |
+          image_name="$(printf '%s/%s' "$REGISTRY" "$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')"
+          echo "name=$image_name" >> "$GITHUB_OUTPUT"
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -72,7 +84,7 @@ jobs:
           path: |
             ~/.compact
             ~/.local/bin/compact
-          key: compact-${{ runner.os }}-${{ env.COMPACT_VERSION }}
+          key: compact-${{ runner.os }}-${{ env.COMPACT_CLI_RELEASE }}-${{ env.COMPACT_VERSION }}
 
       - name: Install Compact toolchain
         env:
@@ -84,7 +96,7 @@ jobs:
         run: |
           if [ ! -x "$HOME/.local/bin/compact" ]; then
             curl --proto '=https' --tlsv1.2 -LsSf \
-              https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
+              "https://github.com/midnightntwrk/compact/releases/download/${COMPACT_CLI_RELEASE}/compact-installer.sh" | sh
           fi
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
@@ -109,13 +121,13 @@ jobs:
           test -d "$assets/zkir" || { echo "missing $assets/zkir" >&2; exit 1; }
           du -sh "$assets/keys" "$assets/zkir"
 
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # Only needed for the arm64 leg; harmless otherwise.
+      # Register arm64 emulation before Buildx creates its builder.
       - name: Set up QEMU
         if: contains(inputs.platforms, 'arm64')
         uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -128,11 +140,12 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ steps.image.outputs.name }}
           tags: |
             type=sha,format=short
             type=ref,event=tag
-            type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' }}
+            type=raw,value=${{ inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' && inputs.tag != '' }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -159,6 +172,6 @@ jobs:
             echo "${{ steps.meta.outputs.tags }}"
             echo '```'
             echo
-            echo "Packages are private by default — publish the package under"
-            echo "https://github.com/users/${{ github.repository_owner }}/packages to make it pullable."
+            echo "GitHub container packages are private by default. Make zkuat-runtime public"
+            echo "in its package settings before sharing the unauthenticated pull command."
           } >> "$GITHUB_STEP_SUMMARY"

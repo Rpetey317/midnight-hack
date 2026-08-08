@@ -65,18 +65,12 @@ one contract deployment plus four `registerPolicy` transactions.
 
 Requirements:
 
-- Node.js 22 or newer and npm;
-- the Compact CLI/compiler on `PATH`;
-- Docker;
+- Docker Compose with host networking enabled and permission to mount its socket;
 - a Preview or Preprod sponsor seed with unshielded NIGHT available for DUST.
 
 From the repository root:
 
 ```bash
-npm --prefix contract ci
-npm --prefix contract run compile:keys
-npm --prefix runtime ci
-
 mkdir -p ~/.zkuat/runtime
 cp runtime/.env.example ~/.zkuat/runtime/.env
 chmod 600 ~/.zkuat/runtime/.env
@@ -86,18 +80,19 @@ Set `ZKUAT_NETWORK` and `ZKUAT_SPONSOR_WALLET_SEED` in the private env file.
 Deploy once:
 
 ```bash
-npm --prefix runtime run deploy
+docker compose run --rm runtime deploy
 ```
 
 Copy the printed hexadecimal address into `ZKUAT_CONTRACT_ADDRESS`, then start
 the companion:
 
 ```bash
-npm --prefix runtime start
+docker compose up
 ```
 
-Open <https://zkuat.works/>, request evidence, enter the printed pairing code,
-select a policy, and start the proof job. The sponsor seed stays in
+Keep this attached command running: its stdout contains `PAIRING CODE: 123456`.
+Open <https://zkuat.works/>, request evidence, enter that code, select a policy,
+and start the proof job. The sponsor seed stays in
 `~/.zkuat/runtime/.env`; never put it in Vercel or a `NEXT_PUBLIC_*` variable.
 
 ## Verification during development
