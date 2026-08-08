@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { EVIDENCE, POLICIES } from "@/lib/demo";
+import { retrieveGithubEvidence } from "@/lib/github/evidence";
 
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 
@@ -128,4 +129,31 @@ export async function recordProof(input: {
 
   revalidatePath("/dashboard");
   return { ok: true };
+}
+
+export async function requestRepositoryEvidence(productId: string) {
+  const { supabase, user } = await requireUser();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const token = session?.provider_token;
+  if (!token) {
+    return { error: "GitHub access token not available. Sign out and sign in with GitHub again." };
+  }
+
+  const { data: product, error } = await supabase
+    .from("products")
+    .select("id,repo")
+    .eq("id", productId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (error || !product) return { error: "Repository not found." };
+
+  try {
+    return { ok: true, ...(await retrieveGithubEvidence({ token, repository: product.repo })) };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Could not retrieve evidence." };
+  }
 }
