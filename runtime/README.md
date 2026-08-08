@@ -30,8 +30,13 @@ than independently verified attestation.
 - Docker Compose with host networking available to the current user;
 - permission to mount `/var/run/docker.sock`, which lets the runtime container
   manage the sibling proof-server container;
-- a Preview or Preprod seed with unshielded NIGHT available for DUST;
+- a Preview or Preprod sponsor wallet with a 24-word recovery phrase and
+  unshielded NIGHT available for DUST;
 - network access to the selected Midnight RPC/indexer.
+
+The published `ghcr.io/rpetey317/zkuat-runtime:latest` image contains both
+`linux/amd64` and `linux/arm64` variants. Compose pulls the native variant for
+Intel/AMD Linux hosts or Apple Silicon without architecture emulation.
 
 The runtime requires host networking because both configured local URLs are
 loopback-only. Enable host networking in Docker Desktop if your installation
@@ -41,8 +46,9 @@ or an image you built from trusted source.
 
 ## Configuration
 
-The default configuration file is `runtime/.env`. Compose loads that file into
-the runtime process environment.
+The default configuration file is the gitignored `runtime/.env`. Compose loads
+that file into the runtime process environment. Persistent jobs, wallet sync
+state, and Compact private state remain separately under `~/.zkuat/runtime`.
 
 ```dotenv
 ZKUAT_NETWORK=preview
@@ -219,7 +225,7 @@ npm test
 The runtime tests use fakes for GitHub payloads, proof-server behavior, chain
 jobs, and indexer responses; they do not submit live network transactions.
 
-The release workflow performs those source-build steps and publishes
-`ghcr.io/rpetey317/zkuat-runtime:latest`, including the proving keys and ZKIR.
-The image must be built from the repository root because the runtime's local
-package dependency resolves `../contract`.
+The release workflow performs those source-build steps on every `main` push and
+publishes `ghcr.io/rpetey317/zkuat-runtime:latest` for both AMD64 and ARM64,
+including the proving keys and ZKIR. The image must be built from the repository
+root because the runtime's local package dependency resolves `../contract`.

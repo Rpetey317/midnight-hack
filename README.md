@@ -17,7 +17,9 @@ sponsor wallet pays DUST for deployment and proof transactions.
 | `ui/` | Next.js 16 application deployed on Vercel; GitHub OAuth, repository selection, workflow dispatch/artifact retrieval, local-runtime pairing, and the Supabase-backed demo/read-model UI |
 | `runtime/` | `@zkuat/runtime`, a loopback-only Node.js companion; validates evidence, manages the Docker proof server and sponsor wallet, submits transactions, and verifies results through the Midnight indexer |
 | `contract/` | `@zkuat/contract`; Compact source, generated bindings, canonical evidence encoding, witnesses, bundled policies, and simulator tests |
+| `compose.yml` | Pulls and starts the published local runtime with its private configuration and persistent state mounts |
 | `.github/workflows/generate-evidence.yml` | The compatible evidence workflow for this repository; it audits the `ui/` package and uploads `evidence.json` |
+| `.github/workflows/publish-runtime-image.yml` | Compiles proving assets and publishes the multi-platform runtime image to GHCR on every `main` push |
 | `docs/` | Current architecture, evidence, contract, setup, and product documentation |
 
 The runtime contains all local collection, proof-server, wallet, transaction,
@@ -69,6 +71,10 @@ Requirements:
 - a Preview or Preprod sponsor wallet with a 24-word recovery phrase and
   unshielded NIGHT available for DUST.
 
+No local Node.js, Compact compiler, or image build is required. Compose pulls
+`ghcr.io/rpetey317/zkuat-runtime:latest`, selecting the native `linux/amd64` or
+`linux/arm64` image for the host.
+
 From the repository root:
 
 ```bash
@@ -76,7 +82,10 @@ cp runtime/.env.example runtime/.env
 chmod 600 runtime/.env
 ```
 
-Set `ZKUAT_NETWORK` and `ZKUAT_SPONSOR_WALLET_SEED` in the private env file.
+Set `ZKUAT_NETWORK` and the quoted 24-word `ZKUAT_SPONSOR_WALLET_SEED` in this
+gitignored private file. Compose reads `runtime/.env`; it is separate from the
+persistent state under `~/.zkuat/runtime`.
+
 Deploy once:
 
 ```bash
