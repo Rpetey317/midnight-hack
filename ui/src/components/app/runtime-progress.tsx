@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Check, X } from "lucide-react";
 import { TodoList, type TodoItem, type TodoItemStatus } from "@/components/agents/todo-list";
@@ -44,17 +43,10 @@ const PHASES: { status: RuntimeJobStatus; label: string; detail: string }[] = [
 export function RuntimeProgress({ job }: { job: RuntimeJob }) {
   const reduce = useReducedMotion() ?? false;
 
-  // `failed` and `cancelled` do not say which phase died, so remember the last
-  // phase the runtime reported working on and mark that one as the casualty.
-  const [reached, setReached] = useState(-1);
-  useEffect(() => {
-    const index = PHASES.findIndex((phase) => phase.status === job.status);
-    if (index >= 0) setReached(index);
-  }, [job.status]);
-
   const running = !isTerminalStatus(job.status);
   const broke = job.status === "failed" || job.status === "cancelled";
   const active = PHASES.findIndex((phase) => phase.status === job.status);
+  const stoppedAt = PHASES.findIndex((phase) => phase.status === job.stoppedAt);
   const compliant = job.verification?.record.compliant;
 
   const statusFor = (index: number): TodoItemStatus => {
@@ -62,8 +54,8 @@ export function RuntimeProgress({ job }: { job: RuntimeJob }) {
     // differ only in the verdict it carried back, which the receipt reports.
     if (!running && !broke) return "completed";
     if (broke) {
-      if (index < reached) return "completed";
-      return index === reached ? "cancelled" : "pending";
+      if (index < stoppedAt) return "completed";
+      return index === stoppedAt ? "cancelled" : "pending";
     }
     if (index < active) return "completed";
     return index === active ? "in-progress" : "pending";

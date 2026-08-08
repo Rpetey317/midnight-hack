@@ -31,11 +31,16 @@ export function GithubEvidenceValidation({ productId }: { productId: string }) {
   const [pairingCode, setPairingCode] = useState("");
   const [runtimeToken, setRuntimeToken] = useState<string | null>(null);
   const [runtimeBusy, setRuntimeBusy] = useState(false);
+  const [pairingError, setPairingError] = useState<string | null>(null);
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [policySlug, setPolicySlug] = useState<RuntimePolicySlug>("npm-ci-baseline-v1");
   const [job, setJob] = useState<RuntimeJob | null>(null);
 
   const retrieve = () => {
+    if (!runtimeToken) {
+      setError("Pair the local runtime before requesting validation.");
+      return;
+    }
     setError(null);
     setJob(null);
     startTransition(async () => {
@@ -50,14 +55,14 @@ export function GithubEvidenceValidation({ productId }: { productId: string }) {
 
   const pair = async () => {
     setRuntimeBusy(true);
-    setRuntimeError(null);
+    setPairingError(null);
     try {
       await runtimeHealth(runtimeUrl);
       setRuntimeToken(await pairRuntime(runtimeUrl, pairingCode));
       setPairingCode("");
     } catch (next) {
       setRuntimeToken(null);
-      setRuntimeError(next instanceof Error ? next.message : "Could not pair with the runtime.");
+      setPairingError(next instanceof Error ? next.message : "Could not pair with the runtime.");
     } finally {
       setRuntimeBusy(false);
     }
@@ -107,7 +112,7 @@ export function GithubEvidenceValidation({ productId }: { productId: string }) {
                 <code className="rounded bg-card px-1 py-0.5 font-mono text-[11px] text-foreground">
                   PAIRING CODE: 123456
                 </code>
-                . Enter that code below once the evidence is ready.
+                . Enter that code below before requesting validation.
               </p>
             </div>
           </div>
@@ -123,7 +128,7 @@ export function GithubEvidenceValidation({ productId }: { productId: string }) {
         <div>
           <h2 className="text-sm font-medium tracking-tight">GitHub evidence and local proof</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Retrieve evidence through GitHub, then prove it with your paired local runtime.
+            Pair your local runtime, then retrieve GitHub evidence and generate its proof.
           </p>
         </div>
         <StatefulButton
@@ -134,9 +139,57 @@ export function GithubEvidenceValidation({ productId }: { productId: string }) {
           successText="Evidence ready"
           errorText="Try again"
           onClick={retrieve}
+          disabled={!runtimeToken || runtimeBusy}
+          title={runtimeToken ? undefined : "Pair the local runtime first"}
         >
           Request validation
         </StatefulButton>
+      </div>
+
+      <div className="border-b border-border px-6 py-5">
+        <div className="grid gap-3 md:grid-cols-[1fr_9rem_auto]">
+          <label className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+            Local runtime URL
+            <input
+              value={runtimeUrl}
+              onChange={(event) => {
+                setRuntimeUrl(event.target.value);
+                setRuntimeToken(null);
+                setPairingError(null);
+                setRuntimeError(null);
+                setJob(null);
+              }}
+              disabled={runtimeBusy}
+              className="h-9 rounded-lg border border-border bg-background px-3 font-mono text-xs text-foreground outline-none focus:border-foreground/40"
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+            Pairing code
+            <input
+              value={pairingCode}
+              onChange={(event) => setPairingCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="123456"
+              disabled={runtimeBusy || Boolean(runtimeToken)}
+              className="h-9 rounded-lg border border-border bg-background px-3 font-mono text-xs tracking-widest text-foreground outline-none focus:border-foreground/40"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={pair}
+            disabled={runtimeBusy || pairingCode.length !== 6 || Boolean(runtimeToken)}
+            className="mt-auto inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-secondary px-4 text-sm text-foreground transition-colors hover:bg-secondary/70 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {runtimeBusy && !runtimeToken ? (
+              <Loader variant="comet" size={16} speed={0.9} label="Pairing" />
+            ) : (
+              <KeyRound className="size-4" strokeWidth={1.5} />
+            )}
+            {runtimeToken ? "Runtime paired" : runtimeBusy ? "Pairing…" : "Pair runtime"}
+          </button>
+        </div>
+        {pairingError && <p className="mt-4 text-sm text-destructive">{pairingError}</p>}
       </div>
 
       {error && <p className="px-6 py-4 text-sm text-destructive">{error}</p>}
@@ -168,48 +221,8 @@ export function GithubEvidenceValidation({ productId }: { productId: string }) {
           </div>
 
           <div className="border-t border-border px-6 py-5">
-            <div className="grid gap-3 md:grid-cols-[1fr_9rem_auto]">
-              <label className="flex flex-col gap-1.5 text-xs text-muted-foreground">
-                Local runtime URL
-                <input
-                  value={runtimeUrl}
-                  onChange={(event) => {
-                    setRuntimeUrl(event.target.value);
-                    setRuntimeToken(null);
-                  }}
-                  disabled={runtimeBusy}
-                  className="h-9 rounded-lg border border-border bg-background px-3 font-mono text-xs text-foreground outline-none focus:border-foreground/40"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-xs text-muted-foreground">
-                Pairing code
-                <input
-                  value={pairingCode}
-                  onChange={(event) => setPairingCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  placeholder="123456"
-                  disabled={runtimeBusy || Boolean(runtimeToken)}
-                  className="h-9 rounded-lg border border-border bg-background px-3 font-mono text-xs tracking-widest text-foreground outline-none focus:border-foreground/40"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={pair}
-                disabled={runtimeBusy || pairingCode.length !== 6 || Boolean(runtimeToken)}
-                className="mt-auto inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-secondary px-4 text-sm text-foreground transition-colors hover:bg-secondary/70 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {runtimeBusy && !runtimeToken ? (
-                  <Loader variant="comet" size={16} speed={0.9} label="Pairing" />
-                ) : (
-                  <KeyRound className="size-4" strokeWidth={1.5} />
-                )}
-                {runtimeToken ? "Paired" : runtimeBusy ? "Pairing…" : "Pair runtime"}
-              </button>
-            </div>
-
             {runtimeToken && (
-              <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
+              <div className="grid gap-3 md:grid-cols-[1fr_auto]">
                 <label className="flex flex-col gap-1.5 text-xs text-muted-foreground">
                   Policy
                   <select

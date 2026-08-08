@@ -5,7 +5,7 @@ indexer services remain hosted.
 
 ## Prerequisites
 
-- Docker Compose running with host networking and callable by the current user;
+- Docker Compose running and callable by the current user;
 - permission to mount `/var/run/docker.sock` so the runtime container can manage
   the sibling proof-server container;
 - a Preview or Preprod sponsor-wallet 24-word recovery phrase;
@@ -13,11 +13,11 @@ indexer services remain hosted.
 - a deployed compatible evidence workflow in each repository used through the
   UI.
 
-The container shares host networking because the runtime and proof-server URLs
-are deliberately restricted to loopback. Enable host networking in Docker
-Desktop if needed. Treat the Docker socket mount as root-equivalent access to
-the host daemon and run only the published zkuat image or an image built from
-trusted source.
+Compose publishes the runtime only at `127.0.0.1:4317`. It connects the runtime
+and managed proof-server container through the private `zkuat-runtime` network,
+so Docker Desktop host networking is not required. Treat the Docker socket mount
+as root-equivalent access to the host daemon and run only the published zkuat
+image or an image built from trusted source.
 
 Check the local tools:
 
@@ -54,9 +54,7 @@ Before deployment, set at least:
 ```dotenv
 ZKUAT_NETWORK=preview
 ZKUAT_SPONSOR_WALLET_SEED="<24-word-English-BIP-39-recovery-phrase>"
-ZKUAT_RUNTIME_URL=http://127.0.0.1:4317
 ZKUAT_ALLOWED_ORIGIN=https://zkuat.works
-ZKUAT_PROOF_SERVER_URL=http://127.0.0.1:6300
 ZKUAT_PROOF_SERVER_IMAGE=midnightntwrk/proof-server:8.1.0
 ```
 
@@ -64,9 +62,9 @@ The value must be a valid 24-word English BIP-39 recovery phrase. Keep it quoted
 so dotenv and Compose preserve the spaces. The runtime validates its checksum
 and decodes it to the original 32-byte wallet seed. The phrase grants control of
 the sponsor wallet, so use a dedicated wallet and never commit or share this
-file. `ZKUAT_RUNTIME_URL` combines host and port; there are no separate runtime
-host/port variables. Runtime and proof-server URLs must remain loopback HTTP
-origins.
+file. Compose fixes the browser endpoint to `http://127.0.0.1:4317` and supplies
+the proof-server's private Docker-network origin; neither value needs to be in
+`runtime/.env`.
 
 For frontend development at `http://localhost:3000`, change the allowed origin:
 
@@ -109,8 +107,8 @@ docker compose up
 
 The foreground logs print the loopback URL, `PAIRING CODE: 123456`, and allowed
 origin. Leave Compose and the terminal running, open <https://zkuat.works/>, sign
-in with GitHub, select a repository, request evidence, and enter the code on the
-attester page.
+in with GitHub, select a repository, enter the code on the attester page, and
+then request evidence. The request button remains disabled until pairing works.
 
 For a detached container, follow the same log stream explicitly:
 
@@ -125,7 +123,7 @@ restart or page reload requires a new pairing.
 
 ## Run a proof
 
-After evidence retrieval and pairing:
+After pairing and evidence retrieval:
 
 1. select one of the four bundled npm policies;
 2. click **Generate proof**;

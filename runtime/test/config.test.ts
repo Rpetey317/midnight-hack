@@ -32,6 +32,35 @@ describe('loadConfig', () => {
     const config = loadConfig({ env: baseEnv, envFile: '/does/not/exist' });
     expect(config.indexer).toContain('indexer.preview.midnight.network');
     expect(config.proofServer).toBe('http://127.0.0.1:6300');
+    expect(config.dockerNetwork).toBeNull();
+  });
+
+  it('uses the private Compose network inside the runtime container', () => {
+    const config = loadConfig({
+      env: {
+        ...baseEnv,
+        ZKUAT_DOCKER_NETWORK: 'zkuat-runtime',
+        ZKUAT_PROOF_SERVER_URL: 'http://zkuat-proof-server:6300',
+      },
+      envFile: '/does/not/exist',
+    });
+    expect(config.bindHost).toBe('0.0.0.0');
+    expect(config.runtimeUrl.origin).toBe('http://127.0.0.1:4317');
+    expect(config.proofServer).toBe('http://zkuat-proof-server:6300');
+    expect(config.dockerNetwork).toBe('zkuat-runtime');
+  });
+
+  it('rejects a different proof-server host on the private Docker network', () => {
+    expect(() =>
+      loadConfig({
+        env: {
+          ...baseEnv,
+          ZKUAT_DOCKER_NETWORK: 'zkuat-runtime',
+          ZKUAT_PROOF_SERVER_URL: 'http://example.com:6300',
+        },
+        envFile: '/does/not/exist',
+      }),
+    ).toThrow('must use zkuat-proof-server');
   });
 
   it('rejects a non-loopback runtime URL', () => {

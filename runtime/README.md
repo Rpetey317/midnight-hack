@@ -27,7 +27,7 @@ than independently verified attestation.
 
 ## Requirements
 
-- Docker Compose with host networking available to the current user;
+- Docker Compose available to the current user;
 - permission to mount `/var/run/docker.sock`, which lets the runtime container
   manage the sibling proof-server container;
 - a Preview or Preprod sponsor wallet with a 24-word recovery phrase and
@@ -38,9 +38,10 @@ The published `ghcr.io/rpetey317/zkuat-runtime:latest` image contains both
 `linux/amd64` and `linux/arm64` variants. Compose pulls the native variant for
 Intel/AMD Linux hosts or Apple Silicon without architecture emulation.
 
-The runtime requires host networking because both configured local URLs are
-loopback-only. Enable host networking in Docker Desktop if your installation
-does not expose it by default. Mounting the Docker socket is effectively
+Compose publishes the runtime only at `127.0.0.1:4317` and attaches it to the
+private `zkuat-runtime` Docker network. The managed proof-server container joins
+that network under the name `zkuat-proof-server`. This works on Docker Desktop
+without enabling host networking. Mounting the Docker socket is effectively
 root-equivalent access to the host Docker daemon; use the published zkuat image
 or an image you built from trusted source.
 
@@ -54,9 +55,7 @@ state, and Compact private state remain separately under `~/.zkuat/runtime`.
 ZKUAT_NETWORK=preview
 ZKUAT_SPONSOR_WALLET_SEED="<24-word-English-BIP-39-recovery-phrase>"
 ZKUAT_CONTRACT_ADDRESS=<deployed-contract-address>
-ZKUAT_RUNTIME_URL=http://127.0.0.1:4317
 ZKUAT_ALLOWED_ORIGIN=https://zkuat.works
-ZKUAT_PROOF_SERVER_URL=http://127.0.0.1:6300
 ZKUAT_PROOF_SERVER_IMAGE=midnightntwrk/proof-server:8.1.0
 ```
 
@@ -65,19 +64,20 @@ ZKUAT_PROOF_SERVER_IMAGE=midnightntwrk/proof-server:8.1.0
 | `ZKUAT_NETWORK` | Yes | `preview` or `preprod` |
 | `ZKUAT_SPONSOR_WALLET_SEED` | Yes | Valid 24-word English BIP-39 recovery phrase; quote it in dotenv files |
 | `ZKUAT_CONTRACT_ADDRESS` | For `start` | Hexadecimal address printed by `deploy` |
-| `ZKUAT_RUNTIME_URL` | No | Loopback HTTP origin containing both bind host and port; default `http://127.0.0.1:4317` |
+| `ZKUAT_RUNTIME_URL` | No | Browser-facing loopback origin; Compose fixes it to `http://127.0.0.1:4317` |
 | `ZKUAT_ALLOWED_ORIGIN` | No | Exact browser origin allowed by CORS; default `https://zkuat.works` |
-| `ZKUAT_PROOF_SERVER_URL` | No | Loopback HTTP origin; default `http://127.0.0.1:6300` |
+| `ZKUAT_PROOF_SERVER_URL` | No | Proof-server origin; Compose supplies the private Docker DNS origin |
 | `ZKUAT_PROOF_SERVER_IMAGE` | No | Docker image; default `midnightntwrk/proof-server:8.1.0` |
 | `ZKUAT_INDEXER_HTTP_URL` | No | Override the selected network's hosted GraphQL endpoint |
 | `ZKUAT_INDEXER_WS_URL` | No | Override the selected network's hosted GraphQL WebSocket endpoint |
 | `ZKUAT_NODE_URL` | No | Override the selected network's hosted RPC endpoint |
 | `ZKUAT_STORAGE_DIR` | No | State root; default `~/.zkuat/runtime` |
 
-Both local service URLs must use plain HTTP on `127.0.0.1`, `localhost`, or
-loopback IPv6. Keep the env file mode `0600`. The recovery phrase grants control
-of the sponsor wallet: use a dedicated wallet and never copy the phrase into
-Vercel, Supabase, browser storage, or source control.
+Compose supplies `ZKUAT_RUNTIME_URL`, `ZKUAT_PROOF_SERVER_URL`, and the internal
+`ZKUAT_DOCKER_NETWORK`; do not add or override them in `runtime/.env`. Keep the
+env file mode `0600`. The recovery phrase grants control of the sponsor wallet:
+use a dedicated wallet and never copy the phrase into Vercel, Supabase, browser
+storage, or source control.
 
 ## Configure and deploy
 
@@ -115,9 +115,10 @@ allowed origin: https://zkuat.works
 ```
 
 Leave that terminal attached while using the UI. `start` acquires
-`runtime.lock`, listens only on the configured loopback origin, prints a fresh
+`runtime.lock`, is published only on host loopback by Compose, prints a fresh
 pairing code, and queues persisted nonterminal jobs for recovery. Pairing tokens
-live only in process memory and are invalid after a restart.
+live only in process memory and are invalid after a restart. Pair the UI before
+requesting validation; the request action stays disabled until pairing succeeds.
 
 If the container must run detached, start it and immediately follow its logs:
 

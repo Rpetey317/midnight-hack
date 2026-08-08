@@ -15,7 +15,7 @@ sponsor wallet pays DUST for deployment and proof transactions.
 | Path | Current responsibility |
 | --- | --- |
 | `ui/` | Next.js 16 application deployed on Vercel; GitHub OAuth, repository selection, workflow dispatch/artifact retrieval, local-runtime pairing, and the Supabase-backed demo/read-model UI |
-| `runtime/` | `@zkuat/runtime`, a loopback-only Node.js companion; validates evidence, manages the Docker proof server and sponsor wallet, submits transactions, and verifies results through the Midnight indexer |
+| `runtime/` | `@zkuat/runtime`, a loopback-published Node.js companion; validates evidence, manages the Docker proof server and sponsor wallet, submits transactions, and verifies results through the Midnight indexer |
 | `contract/` | `@zkuat/contract`; Compact source, generated bindings, canonical evidence encoding, witnesses, bundled policies, and simulator tests |
 | `compose.yml` | Pulls and starts the published local runtime with its private configuration and persistent state mounts |
 | `.github/workflows/generate-evidence.yml` | The compatible evidence workflow for this repository; it audits the `ui/` package and uploads `evidence.json` |
@@ -29,11 +29,11 @@ hackathon trust model accepts GitHub Actions as the measurement environment.
 ## Implemented flow
 
 1. The signed-in vendor selects a repository in the hosted UI.
-2. A Vercel server action dispatches `generate-evidence.yml` with a request UUID,
+2. The browser pairs with `http://127.0.0.1:4317` using the six-digit code printed
+   by the local runtime.
+3. A Vercel server action dispatches `generate-evidence.yml` with a request UUID,
    polls the matching run, downloads its one-day artifact, and returns the JSON
    and run metadata to the vendor's browser.
-3. The browser pairs with `http://127.0.0.1:4317` using the six-digit code printed
-   by the local runtime.
 4. The runtime validates the evidence and supplied GitHub metadata, records a
    policy-specific validity window, adds a fresh salt, and persists the
    private job with owner-only filesystem permissions.
@@ -67,7 +67,7 @@ one contract deployment plus four `registerPolicy` transactions.
 
 Requirements:
 
-- Docker Compose with host networking enabled and permission to mount its socket;
+- Docker Compose with permission to mount its socket;
 - a Preview or Preprod sponsor wallet with a 24-word recovery phrase and
   unshielded NIGHT available for DUST.
 
@@ -92,8 +92,8 @@ docker compose up
 ```
 
 Keep this attached command running: its stdout contains `PAIRING CODE: 123456`.
-Open <https://zkuat.works/>, request evidence, enter that code, select a policy,
-and start the proof job. The sponsor recovery phrase stays in the gitignored
+Open <https://zkuat.works/>, enter that code to pair, request evidence, select a
+policy, and start the proof job. The sponsor recovery phrase stays in the gitignored
 `runtime/.env`; never put it in Vercel or a `NEXT_PUBLIC_*` variable.
 
 ## Verification during development

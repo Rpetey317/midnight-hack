@@ -26,7 +26,7 @@ Vercel: zkuat.works ─────── Supabase `midnight` schema
 ├── submits proveCompliance
 └── verifies transaction + record through the hosted indexer
         │
-        ├── local proof server at 127.0.0.1:6300
+        ├── private Docker network → zkuat-proof-server:6300
         └── Midnight Preview/Preprod RPC + indexer
 ```
 
@@ -48,25 +48,26 @@ the local proof server.
 
 1. A GitHub-authenticated user registers a repository in the Supabase-backed
    dashboard.
-2. The Vercel server action dispatches the repository's evidence workflow with a
+2. The user starts `@zkuat/runtime`; Compose publishes it only at
+   `http://127.0.0.1:4317`, and it prints a random six-digit pairing code.
+3. The browser exchanges the code for an in-memory bearer token.
+4. The Vercel server action dispatches the repository's evidence workflow with a
    request UUID and waits for the matching run.
-3. The server action downloads `zkuat-evidence-<request-id>`, extracts
+5. The server action downloads `zkuat-evidence-<request-id>`, extracts
    `evidence.json`, and returns it with GitHub metadata to the browser.
-4. The user starts `@zkuat/runtime`; it binds to loopback and prints a random
-   six-digit pairing code.
-5. The browser exchanges the code for an in-memory bearer token and sends the
+6. The browser sends the
    evidence, request/run/artifact metadata, and one of the four policy slugs.
-6. The runtime validates the payload, maps it into `zkuat.evidence.v4`, derives a
+7. The runtime validates the payload, maps it into `zkuat.evidence.v4`, derives a
    fresh 32-byte salt and leaf with the contract's generated pure circuit, and
    writes the private job to disk.
-7. The proof server is started if necessary. The sponsor wallet synchronizes,
+8. The proof server is started if necessary. The sponsor wallet synchronizes,
    registers NIGHT outputs for DUST generation when necessary, and waits for
    spendable DUST.
-8. The runtime proves and submits `attest(leaf)`, then waits until the indexer can
+9. The runtime proves and submits `attest(leaf)`, then waits until the indexer can
    return a Merkle path for the inserted leaf.
-9. The runtime loads evidence, salt, and path into Compact private state, proves
+10. The runtime loads evidence, salt, and path into Compact private state, proves
    and submits `proveCompliance`, and obtains the private boolean result.
-10. The runtime polls the indexer for the transaction, requires a successful call
+11. The runtime polls the indexer for the transaction, requires a successful call
     to the configured contract's `proveCompliance` entry point, loads the record,
     and matches artifact digest, policy ID, and verdict.
 

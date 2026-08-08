@@ -12,7 +12,11 @@ async function start(): Promise<void> {
   const config = loadConfig();
   const lock = new ProcessLock(path.join(config.storageDir, 'runtime.lock'));
   lock.acquire();
-  const proofServer = new ProofServerManager(config.proofServer, config.proofServerImage);
+  const proofServer = new ProofServerManager(
+    config.proofServer,
+    config.proofServerImage,
+    config.dockerNetwork,
+  );
   const chain = new ChainClient(config);
   const jobs = new JobManager(config.storageDir, proofServer, chain);
   const server = new RuntimeServer(config, jobs, proofServer, chain);
@@ -41,7 +45,11 @@ async function start(): Promise<void> {
 
 async function deploy(): Promise<void> {
   const config = loadConfig({ requireContract: false });
-  const proofServer = new ProofServerManager(config.proofServer, config.proofServerImage);
+  const proofServer = new ProofServerManager(
+    config.proofServer,
+    config.proofServerImage,
+    config.dockerNetwork,
+  );
   await proofServer.start();
   const chain = new ChainClient(config);
   try {
@@ -56,7 +64,11 @@ async function deploy(): Promise<void> {
 
 async function proofServer(command: string): Promise<void> {
   const config = loadConfig({ requireContract: false });
-  const manager = new ProofServerManager(config.proofServer, config.proofServerImage);
+  const manager = new ProofServerManager(
+    config.proofServer,
+    config.proofServerImage,
+    config.dockerNetwork,
+  );
   if (command === 'start') await manager.start();
   else if (command === 'stop') await manager.stop();
   else if (command !== 'status') throw new Error('usage: zkuat-runtime proof-server start|stop|status');

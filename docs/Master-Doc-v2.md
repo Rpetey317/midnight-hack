@@ -19,9 +19,9 @@ The current hackathon trust statement is:
 
 ### Vendor / auditee
 
-The vendor signs into `zkuat.works` with GitHub, selects a repository and policy,
-retrieves the workflow evidence, pairs a local sponsor runtime, and requests the
-proof. The vendor does not connect a browser wallet.
+The vendor signs into `zkuat.works` with GitHub, selects a repository, pairs a
+local sponsor runtime, retrieves the workflow evidence, selects a policy, and
+requests the proof. The vendor does not connect a browser wallet.
 
 ### Buyer / auditor
 
@@ -30,7 +30,7 @@ window, and compliance verdict. The buyer does not receive vulnerability counts,
 lint/build output, commit evidence, salt, or Merkle path.
 
 In this hackathon build, arbitrary buyer policy creation is not implemented. The
-runtime deploy command registers two fixed examples.
+runtime deploy command registers four fixed examples.
 
 ### Local sponsor operator
 
@@ -82,9 +82,10 @@ Midnight ledger.
 
 ## 6. Local runtime
 
-`@zkuat/runtime` is an HTTP service bound to loopback. It must be started by the
-user; a deployed web page cannot launch it. The browser pairs using a six-digit
-code and receives an in-memory bearer token.
+`@zkuat/runtime` is an HTTP service published by Compose only on host loopback.
+It must be started by the user; a deployed web page cannot launch it. The browser
+pairs using a six-digit code and receives an in-memory bearer token before it can
+request evidence.
 
 For each job the runtime:
 
@@ -235,8 +236,8 @@ than providing independent live-chain verification.
 4. Start the runtime and leave it running.
 5. Sign into `zkuat.works` with GitHub.
 6. Add a repository that carries the compatible evidence workflow.
-7. Request evidence and wait for the successful Actions artifact.
-8. Pair the browser with the local runtime.
+7. Pair the browser with the local runtime.
+8. Request evidence and wait for the successful Actions artifact.
 9. Select one of the four policies and generate the proof.
 10. Observe the `attest` and `proveCompliance` transaction IDs and the final
     indexed `verified` or `rejected` record.

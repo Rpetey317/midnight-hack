@@ -14,8 +14,8 @@ connect a browser wallet.
 | --- | --- |
 | `/` | Product explanation and GitHub sign-in |
 | `/dashboard` | Authenticated repository workspace backed by Supabase |
-| `/attester/[product]` | Dispatch evidence, inspect the returned JSON, pair the local runtime, select a policy, and run a proof job |
-| `/policies` and `/policies/[id]` | Display the two bundled policy fixtures mirrored from `contract/src/encoding.ts` |
+| `/attester/[product]` | Pair the local runtime, dispatch evidence, inspect the returned JSON, select a policy, and run a proof job |
+| `/policies` and `/policies/[id]` | Display the four bundled policy fixtures mirrored from `contract/src/encoding.ts` |
 | `/verify` and `/verify/[id]` | Public lookup over Supabase `proof_activity` rows |
 | `/auth/callback` | Supabase GitHub OAuth callback |
 
@@ -31,9 +31,10 @@ provider token to:
 4. download `zkuat-evidence-<request-id>`;
 5. extract and parse `evidence.json` from the ZIP response.
 
-The JSON and run/artifact metadata are returned to the vendor's browser. After
-pairing, the browser sends them directly to the local runtime and polls the job
-until `verified`, `rejected`, `failed`, or `cancelled`.
+The UI requires pairing before it enables the evidence request. The JSON and
+run/artifact metadata are returned to the vendor's browser, which sends them
+directly to the paired local runtime and polls the job until `verified`,
+`rejected`, `failed`, or `cancelled`.
 
 The browser stores the pairing token only in React state. A page reload or
 runtime restart requires pairing again.

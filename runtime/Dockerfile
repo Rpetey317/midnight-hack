@@ -11,12 +11,10 @@
 # repository root after `npm --prefix contract run compile:keys`; runtime/
 # depends on ../contract through a `file:` link.
 #
-# Run with host networking. This is not a preference — runtime/src/config.ts
-# rejects any ZKUAT_RUNTIME_URL or ZKUAT_PROOF_SERVER_URL that is not loopback,
-# so the container must share the host's loopback interface for the paired
-# browser to reach :4317 and for the runtime to reach the proof server on :6300.
-# The Docker socket is mounted so the runtime can manage the sibling proof-server
-# container (`docker run --label works.zkuat.runtime=true ...`).
+# Compose publishes :4317 only on the host loopback and attaches the runtime to
+# a private Docker network shared with the managed proof-server container. The
+# Docker socket is mounted so the runtime can manage that sibling container
+# (`docker run --label works.zkuat.runtime=true ...`).
 #
 # The root compose.yml contains the normal operator configuration. Run attached
 # so the startup banner and PAIRING CODE remain visible:
@@ -126,7 +124,7 @@ RUN set -eux; \
 WORKDIR /app/runtime
 
 # Default from config.ts; override with -e ZKUAT_RUNTIME_URL and a matching
-# published port. Documentation only — --network host ignores EXPOSE.
+# published port.
 EXPOSE 4317
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

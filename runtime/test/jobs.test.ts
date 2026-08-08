@@ -80,6 +80,7 @@ describe('JobManager', () => {
     const created = manager.create(input);
     const final = await waitForTerminal(manager, created.id);
     expect(final.status).toBe('failed');
+    expect(final.stoppedAt).toBe('syncing-wallet');
     expect(final.error).toContain('wallet unavailable');
     expect(final).not.toHaveProperty('prepared');
   });

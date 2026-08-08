@@ -5,9 +5,22 @@ services:
     image: ghcr.io/rpetey317/zkuat-runtime:latest
     container_name: zkuat-runtime
     pull_policy: always
-    network_mode: host
     env_file:
       - ./runtime/.env
+    environment:
+      # Container networking is fixed here so runtime/.env contains only the
+      # operator's wallet, chain, and allowed-origin configuration.
+      ZKUAT_DOCKER_NETWORK: zkuat-runtime
+      ZKUAT_PROOF_SERVER_URL: http://zkuat-proof-server:6300
+      ZKUAT_RUNTIME_URL: http://127.0.0.1:4317
+    ports:
+      - "127.0.0.1:4317:4317"
+    networks:
+      - runtime
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOME}/.zkuat/runtime:/root/.zkuat/runtime
+
+networks:
+  runtime:
+    name: zkuat-runtime

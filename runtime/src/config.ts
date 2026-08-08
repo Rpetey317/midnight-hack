@@ -33,6 +33,7 @@ export interface RuntimeConfig {
   node: string;
   proofServer: string;
   proofServerImage: string;
+  dockerNetwork: string | null;
   storageDir: string;
   envFile: string;
 }
@@ -91,12 +92,17 @@ function httpUrl(value: string, field: string): URL {
 }
 
 function loopbackUrl(value: string, field: string): URL {
+  const parsed = plainHttpOrigin(value, field);
+  if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(parsed.hostname)) {
+    throw new Error(`zkuat: ${field} must bind to a loopback address`);
+  }
+  return parsed;
+}
+
+function plainHttpOrigin(value: string, field: string): URL {
   const parsed = httpUrl(value, field);
   if (parsed.protocol !== 'http:') {
     throw new Error(`zkuat: ${field} must use http because the local service has no TLS listener`);
-  }
-  if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(parsed.hostname)) {
-    throw new Error(`zkuat: ${field} must bind to a loopback address`);
   }
   if (
     parsed.username ||
@@ -105,9 +111,18 @@ function loopbackUrl(value: string, field: string): URL {
     parsed.search ||
     parsed.hash
   ) {
-    throw new Error(`zkuat: ${field} must contain only a loopback origin and optional port`);
+    throw new Error(`zkuat: ${field} must contain only an HTTP origin and optional port`);
   }
   return parsed;
+}
+
+function dockerNetworkName(value: string | undefined): string | null {
+  const name = value?.trim();
+  if (!name) return null;
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(name)) {
+    throw new Error('zkuat: ZKUAT_DOCKER_NETWORK is not a valid Docker network name');
+  }
+  return name;
 }
 
 function webOrigin(value: string, field: string): string {
@@ -155,18 +170,34 @@ export function loadConfig(options: LoadConfigOptions = {}): RuntimeConfig {
   }
 
   const defaults = NETWORKS[network];
-  const proofServer = loopbackUrl(
-    env.ZKUAT_PROOF_SERVER_URL?.trim() || 'http://127.0.0.1:6300',
-    'ZKUAT_PROOF_SERVER_URL',
-  ).toString().replace(/\/$/, '');
+  const dockerNetwork = dockerNetworkName(env.ZKUAT_DOCKER_NETWORK);
+  const proofServerUrl = dockerNetwork
+    ? plainHttpOrigin(
+        env.ZKUAT_PROOF_SERVER_URL?.trim() || 'http://zkuat-proof-server:6300',
+        'ZKUAT_PROOF_SERVER_URL',
+      )
+    : loopbackUrl(
+        env.ZKUAT_PROOF_SERVER_URL?.trim() || 'http://127.0.0.1:6300',
+        'ZKUAT_PROOF_SERVER_URL',
+      );
+  if (dockerNetwork && proofServerUrl.hostname !== 'zkuat-proof-server') {
+    throw new Error(
+      'zkuat: ZKUAT_PROOF_SERVER_URL must use zkuat-proof-server on the Docker network',
+    );
+  }
+  const proofServer = proofServerUrl.toString().replace(/\/$/, '');
 
   return {
     network,
     sponsorSeed,
     contractAddress,
     runtimeUrl,
-    bindHost:
-      runtimeUrl.hostname === 'localhost'
+    // A Compose port mapping publishes the runtime only on the host loopback,
+    // while the process must listen on the container interface. Direct source
+    // runs keep their loopback-only listener.
+    bindHost: dockerNetwork
+      ? '0.0.0.0'
+      : runtimeUrl.hostname === 'localhost'
         ? '127.0.0.1'
         : runtimeUrl.hostname === '[::1]'
           ? '::1'
@@ -182,6 +213,7 @@ export function loadConfig(options: LoadConfigOptions = {}): RuntimeConfig {
     proofServer,
     proofServerImage:
       env.ZKUAT_PROOF_SERVER_IMAGE?.trim() || 'midnightntwrk/proof-server:8.1.0',
+    dockerNetwork,
     storageDir: path.resolve(
       env.ZKUAT_STORAGE_DIR?.trim() || path.join(os.homedir(), '.zkuat', 'runtime'),
     ),

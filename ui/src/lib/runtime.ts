@@ -75,6 +75,7 @@ export type RuntimeJob = {
       compliant: boolean;
     };
   };
+  stoppedAt?: RuntimeJobStatus;
   error?: string;
 };
 
@@ -97,15 +98,23 @@ async function runtimeFetch<T>(
   init: RequestInit = {},
   token?: string,
 ): Promise<T> {
-  const response = await fetch(`${origin(runtimeUrl)}${pathname}`, {
-    ...init,
-    cache: "no-store",
-    headers: {
-      ...(init.body ? { "content-type": "application/json" } : {}),
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-      ...(init.headers ?? {}),
-    },
-  });
+  const runtimeOrigin = origin(runtimeUrl);
+  let response: Response;
+  try {
+    response = await fetch(`${runtimeOrigin}${pathname}`, {
+      ...init,
+      cache: "no-store",
+      headers: {
+        ...(init.body ? { "content-type": "application/json" } : {}),
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...(init.headers ?? {}),
+      },
+    });
+  } catch {
+    throw new Error(
+      `Could not reach the local runtime at ${runtimeOrigin}. Start it with docker compose up and keep that terminal open.`,
+    );
+  }
   const body = (await response.json().catch(() => ({}))) as T & ErrorBody;
   if (!response.ok) throw new Error(body.error ?? `Local runtime returned HTTP ${response.status}.`);
   return body;

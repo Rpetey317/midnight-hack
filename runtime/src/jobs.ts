@@ -39,6 +39,7 @@ export interface RuntimeJob {
   proof?: ProofReceipt;
   verification?: VerifiedProof;
   cancelRequested?: boolean;
+  stoppedAt?: JobStatus;
   error?: string;
 }
 
@@ -58,6 +59,7 @@ export interface PublicJob {
   anchor?: AnchorReceipt;
   proof?: ProofReceipt;
   verification?: VerifiedProof;
+  stoppedAt?: JobStatus;
   error?: string;
 }
 
@@ -129,6 +131,7 @@ export function publicJob(job: RuntimeJob): PublicJob {
     ...(job.anchor ? { anchor: job.anchor } : {}),
     ...(job.proof ? { proof: job.proof } : {}),
     ...(job.verification ? { verification: job.verification } : {}),
+    ...(job.stoppedAt ? { stoppedAt: job.stoppedAt } : {}),
     ...(job.error ? { error: job.error } : {}),
   };
 }
@@ -206,6 +209,7 @@ export class JobManager extends EventEmitter {
   private cancelled(job: RuntimeJob): boolean {
     const latest = this.store.get(job.id);
     if (!latest?.cancelRequested) return false;
+    latest.stoppedAt = latest.status;
     latest.status = 'cancelled';
     this.save(latest);
     return true;
@@ -253,6 +257,7 @@ export class JobManager extends EventEmitter {
       this.transition(job, job.verification.record.compliant ? 'verified' : 'rejected');
     } catch (error: unknown) {
       job.error = error instanceof Error ? error.message : String(error);
+      job.stoppedAt = job.status;
       this.transition(job, 'failed');
     }
   }

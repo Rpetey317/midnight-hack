@@ -15,6 +15,7 @@ export class ProofServerManager {
   constructor(
     private readonly url: string,
     private readonly image: string,
+    private readonly dockerNetwork: string | null = null,
   ) {}
 
   async isHealthy(): Promise<boolean> {
@@ -26,23 +27,38 @@ export class ProofServerManager {
     }
   }
 
-  private async inspect(): Promise<{ exists: boolean; running: boolean; managed: boolean }> {
+  private async inspect(): Promise<{
+    exists: boolean;
+    running: boolean;
+    managed: boolean;
+    networks: string[];
+  }> {
     try {
       const { stdout } = await execFile('docker', [
         'inspect',
         '--format',
-        '{{json .Config.Labels}}|{{.State.Running}}',
+        '{"labels":{{json .Config.Labels}},"running":{{json .State.Running}},"networks":{{json .NetworkSettings.Networks}}}',
         CONTAINER,
       ]);
-      const [labels, running] = stdout.trim().split('|');
+      const inspected = JSON.parse(stdout.trim()) as {
+        labels?: Record<string, string> | null;
+        running?: boolean;
+        networks?: Record<string, unknown> | null;
+      };
       return {
         exists: true,
-        running: running === 'true',
-        managed: labels?.includes('works.zkuat.runtime') ?? false,
+        running: inspected.running === true,
+        managed: inspected.labels?.['works.zkuat.runtime'] === 'true',
+        networks: Object.keys(inspected.networks ?? {}),
       };
     } catch {
-      return { exists: false, running: false, managed: false };
+      return { exists: false, running: false, managed: false, networks: [] };
     }
+  }
+
+  private async connectNetwork(networks: string[]): Promise<void> {
+    if (!this.dockerNetwork || networks.includes(this.dockerNetwork)) return;
+    await execFile('docker', ['network', 'connect', this.dockerNetwork, CONTAINER]);
   }
 
   async status(): Promise<ProofServerStatus> {
@@ -62,16 +78,20 @@ export class ProofServerManager {
       if (!inspected.managed) {
         throw new Error(`zkuat: Docker container ${CONTAINER} exists but is not owned by zkuat`);
       }
+      await this.connectNetwork(inspected.networks);
       if (!inspected.running) await execFile('docker', ['start', CONTAINER]);
     } else {
       const port = new URL(this.url).port || '6300';
-      await execFile('docker', [
+      const args = [
         'run',
         '--detach',
         '--name',
         CONTAINER,
         '--label',
         LABEL,
+      ];
+      if (this.dockerNetwork) args.push('--network', this.dockerNetwork);
+      args.push(
         '--publish',
         `127.0.0.1:${port}:6300`,
         '--env',
@@ -79,7 +99,8 @@ export class ProofServerManager {
         this.image,
         'midnight-proof-server',
         '-v',
-      ]);
+      );
+      await execFile('docker', args);
     }
 
     const deadline = Date.now() + timeoutMs;
