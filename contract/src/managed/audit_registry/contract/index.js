@@ -1669,3 +1669,4 @@ export const pureCircuits = {
 };
 export const contractReferenceLocations =
   { tag: 'publicLedgerArray', indices: { } };
+//# sourceMappingURL=index.js.map

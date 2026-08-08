@@ -23,7 +23,7 @@ async function requireUser() {
 export async function addProduct(_prev: unknown, formData: FormData) {
   const repo = String(formData.get("repo") ?? "").trim();
   if (!REPO_RE.test(repo)) {
-    return { error: "Use the owner/name form, e.g. acme-corp/payments-api." };
+    return { error: "Use the owner/name form, e.g. user-name/repo-name." };
   }
 
   const { supabase, user } = await requireUser();

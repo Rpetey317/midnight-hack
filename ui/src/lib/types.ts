@@ -76,33 +76,91 @@ export type ComplianceRecord = {
 
 export type RecordStatus = "compliant" | "expired" | "failed" | "none";
 
-/** A policy requirement rendered as a checklist line. Never carries a value. */
-export type Requirement = { id: string; label: string };
+/**
+ * A policy requirement rendered as a checklist line. Never carries a value from
+ * the evidence — `expr` is the predicate the circuit evaluates, stated in terms
+ * of evidence field names, and is identical for every artifact under a policy.
+ */
+export type Requirement = { id: string; label: string; expr: string };
+
+const UNBOUNDED = 4_294_967_295;
 
 export function policyRequirements(p: Policy): Requirement[] {
   const out: Requirement[] = [];
+  const days = Math.round(p.maxAgeSeconds / 86400);
+
   out.push({
     id: "criticals",
     label:
       p.maxCriticals === 0
-        ? "No critical vulnerabilities"
-        : `At most ${p.maxCriticals} critical vulnerabilities`,
+        ? "No critical-severity vulnerabilities in the resolved dependency set"
+        : `At most ${p.maxCriticals} critical-severity vulnerabilities`,
+    expr:
+      p.maxCriticals === 0
+        ? "criticalVulnerabilities == 0"
+        : `criticalVulnerabilities <= ${p.maxCriticals}`,
   });
-  if (p.maxHighs < 4_294_967_295)
-    out.push({ id: "highs", label: `At most ${p.maxHighs} high vulnerabilities` });
-  if (p.maxKev === 0)
-    out.push({ id: "kev", label: "No known-exploited (CISA KEV) vulnerabilities" });
-  if (p.maxForbiddenDeps === 0)
-    out.push({ id: "forbidden", label: "No forbidden dependencies" });
-  if (p.requireMfa) out.push({ id: "mfa", label: "Organisation-wide MFA enforced" });
+
+  if (p.maxHighs < UNBOUNDED)
+    out.push({
+      id: "highs",
+      label: `At most ${p.maxHighs} high-severity vulnerabilities outstanding`,
+      expr: `highVulnerabilities <= ${p.maxHighs}`,
+    });
+
+  if (p.maxKev < UNBOUNDED)
+    out.push({
+      id: "kev",
+      label:
+        p.maxKev === 0
+          ? "Nothing on the CISA Known Exploited Vulnerabilities catalog"
+          : `At most ${p.maxKev} CISA KEV entries`,
+      expr:
+        p.maxKev === 0
+          ? "knownExploitedVulnerabilities == 0"
+          : `knownExploitedVulnerabilities <= ${p.maxKev}`,
+    });
+
+  if (p.maxForbiddenDeps < UNBOUNDED)
+    out.push({
+      id: "forbidden",
+      label:
+        p.maxForbiddenDeps === 0
+          ? "No dependency appears on the issuer's prohibited list"
+          : `At most ${p.maxForbiddenDeps} prohibited dependencies`,
+      expr:
+        p.maxForbiddenDeps === 0
+          ? "prohibitedDependencyCount == 0"
+          : `prohibitedDependencyCount <= ${p.maxForbiddenDeps}`,
+    });
+
+  if (p.requireMfa)
+    out.push({
+      id: "mfa",
+      label: "Multi-factor authentication enforced for privileged accounts",
+      expr: "mfaRequiredForPrivilegedUsers == true",
+    });
+
   if (p.requireBranchProtection)
-    out.push({ id: "branch", label: "Branch protection enabled on default branch" });
+    out.push({
+      id: "branch",
+      label: "Default branch protected — reviewed merges, no force pushes",
+      expr: "protectedPrimaryBranch == true",
+    });
+
   if (p.requireBuildProvenance)
-    out.push({ id: "provenance", label: "Build provenance verified (SLSA / Sigstore)" });
+    out.push({
+      id: "provenance",
+      label: "Build provenance attested and verified (SLSA / Sigstore)",
+      expr: "buildProvenanceVerified == true",
+    });
+
   out.push({
     id: "freshness",
-    label: `Evidence no older than ${Math.round(p.maxAgeSeconds / 86400)} days`,
+    label: `Evidence generated within the last ${days} days`,
+    expr: `now - evidenceGeneratedAt <= ${days}d`,
   });
+
   return out;
 }
 

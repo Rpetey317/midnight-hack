@@ -26,7 +26,6 @@ export function PolicyDetails({ policy, className }: { policy: Policy; className
         <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
           <Meta label="Issuer" value={policy.issuer} />
           <Meta label="Policy id" value={shortDigest(policy.id, 14, 8)} />
-          <Meta label="Required attestor" value={policy.requiredAttestor ?? "any registered"} />
           <Meta
             label="Max evidence age"
             value={`${Math.round(policy.maxAgeSeconds / 86400)} days`}

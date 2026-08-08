@@ -72,7 +72,7 @@ export function AddRepoDialog({ label = "Add repository" }: { label?: string }) 
             <Input
               name="repo"
               label="Repository"
-              placeholder="acme-corp/payments-api"
+              placeholder="user-name/repo-name"
               autoFocus
               error={state && "error" in state ? state.error : undefined}
             />

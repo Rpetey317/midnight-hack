@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check, ScrollText } from "lucide-react";
+import { ScrollText } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { POLICIES } from "@/lib/demo";
 import { policyRequirements } from "@/lib/types";
@@ -60,16 +60,23 @@ export function PolicyList({ className }: { className?: string }) {
                     <h3 className="text-xs uppercase tracking-wider text-muted-foreground">
                       Predicates
                     </h3>
+                    {/* Nothing is evaluated here — these are the conditions a
+                        proof would have to satisfy, so no check marks. */}
                     <ul className="mt-2 flex flex-col">
-                      {policyRequirements(p).map((r) => (
+                      {policyRequirements(p).map((r, i) => (
                         <li
                           key={r.id}
-                          className="flex min-h-11 items-center gap-3 border-b border-border text-sm last:border-0"
+                          className="flex min-h-11 flex-col justify-center gap-0.5 border-b border-border py-2.5 text-sm last:border-0"
                         >
-                          <span className="grid size-5 shrink-0 place-items-center rounded-full bg-secondary text-muted-foreground">
-                            <Check className="size-3" strokeWidth={2} />
+                          <span className="flex gap-3">
+                            <span className="w-4 shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+                              {String(i + 1).padStart(2, "0")}
+                            </span>
+                            {r.label}
                           </span>
-                          {r.label}
+                          <code className="pl-7 font-mono text-xs text-muted-foreground">
+                            {r.expr}
+                          </code>
                         </li>
                       ))}
                     </ul>
@@ -77,8 +84,8 @@ export function PolicyList({ className }: { className?: string }) {
                     <dl className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2">
                       <Meta label="Policy id" value={shortDigest(p.id, 14, 8)} />
                       <Meta
-                        label="Required attestor"
-                        value={p.requiredAttestor ?? "any registered"}
+                        label="Max evidence age"
+                        value={`${Math.round(p.maxAgeSeconds / 86400)} days`}
                       />
                     </dl>
 

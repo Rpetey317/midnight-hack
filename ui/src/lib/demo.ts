@@ -23,8 +23,8 @@ export const POLICIES: Policy[] = [
   {
     id: "8eb066f1ff82c34bf459108e1854b511a5327f6a1181a72b7bcb14922a695cc6",
     slug: "bank-v1",
-    name: "ACME Bank Procurement",
-    issuer: "First National Bank",
+    name: "Security Policy",
+    issuer: "Example Bank",
     issuerSlug: "first-national-bank",
     version: 1,
     maxCriticals: 0,
@@ -40,8 +40,8 @@ export const POLICIES: Policy[] = [
   {
     id: "65bb1b975c97115919de8beba5b451602ab917c4813e6cff1ac4bcdaf274c3e5",
     slug: "enterprise-v1",
-    name: "Globex Supplier Baseline",
-    issuer: "Globex Corporation",
+    name: "Supply Chain Policy",
+    issuer: "Example Enterprise",
     issuerSlug: "globex-corp",
     version: 1,
     maxCriticals: 0,
@@ -64,7 +64,7 @@ export const policyBySlug = (slug: string) => POLICIES.find((p) => p.slug === sl
  */
 export const EVIDENCE: Evidence = {
   schema: EVIDENCE_SCHEMA,
-  repo: "acme-corp/payments-api",
+  repo: "user-name/repo-name",
   commit: "9f2a71c4be08d35a6c1f47e2b90d85af31c60e77",
   attestor: "zkuat-scanner",
   artifactDigest:
@@ -114,20 +114,20 @@ export function evidenceFor(digest: string, repo?: string, commit?: string | nul
 
 export const RECORDS: ComplianceRecord[] = [
   {
-    vendorId: "acme-corp",
-    productId: "payments-api",
+    vendorId: "user-name",
+    productId: "repo-name",
     artifactDigest: EVIDENCE.artifactDigest,
     policyId: POLICIES[0].id,
     policySlug: "bank-v1",
-    policyVersion: 3,
+    policyVersion: 1,
     provenAt: t("2026-08-05T09:41:00Z"),
     validUntil: EVIDENCE.validUntil,
     compliant: true,
     txHash: "0x8a3f21c07e94b6d5182a0f73c46b9e0d51f8a27c93b6e40d7152ac89f30e6b41",
   },
   {
-    vendorId: "acme-corp",
-    productId: "payments-api",
+    vendorId: "user-name",
+    productId: "repo-name",
     artifactDigest: EVIDENCE.artifactDigest,
     policyId: POLICIES[1].id,
     policySlug: "enterprise-v1",
@@ -138,13 +138,13 @@ export const RECORDS: ComplianceRecord[] = [
     txHash: "0x1d7c93a05e28f4b6c07d13e9a852f0b4d69c31e785a04f2b6c9d31708e45a2f6",
   },
   {
-    vendorId: "acme-corp",
-    productId: "payments-api",
+    vendorId: "user-name",
+    productId: "repo-name",
     artifactDigest:
       "sha256:5c19e73b0a284df61c93b70e5a8d42f07b16c9e30d54a821f7b0c6e39d25a814",
     policyId: POLICIES[0].id,
     policySlug: "bank-v1",
-    policyVersion: 3,
+    policyVersion: 1,
     provenAt: t("2026-07-08T14:20:00Z"),
     validUntil: t("2026-08-07T14:20:00Z"),
     compliant: true,

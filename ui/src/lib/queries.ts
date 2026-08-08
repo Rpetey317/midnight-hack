@@ -120,7 +120,7 @@ export async function getRecentAudits(limit = 5): Promise<PublicAudit[]> {
 
 /**
  * Every audit run over a repository, newest first. Matches case-insensitively
- * and on the bare name too, so `payments-api` finds `acme-corp/payments-api`.
+ * and on the bare name too, so `repo-name` finds `user-name/repo-name`.
  */
 export async function getAuditsForRepo(repo: string): Promise<PublicAudit[]> {
   const term = repo.trim();

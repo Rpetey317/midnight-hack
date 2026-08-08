@@ -96,7 +96,7 @@ export default async function Home() {
           <div className="mt-9 flex flex-wrap items-center gap-3">
             <GithubSignIn label="Start attesting" />
             <ButtonLink href="/verify" variant="secondary">
-              Verify an artifact
+              Look up an audit
               <ArrowRight className="size-4" strokeWidth={1.5} />
             </ButtonLink>
           </div>
@@ -131,16 +131,19 @@ export default async function Home() {
           <ol className="mt-10 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
             {STEPS.map((step, i) => (
               <li key={step.title} className="bg-card p-6">
-                <div className="flex items-center gap-3">
-                  <span className="grid size-8 place-items-center rounded-lg bg-secondary text-muted-foreground">
-                    <step.icon className="size-4" strokeWidth={1.5} />
-                  </span>
-                  <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
+                {/* Mobile puts the title beside the marker; sm stacks them. */}
+                <div className="flex items-center gap-3 sm:flex-col sm:items-start">
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="grid size-8 place-items-center rounded-lg bg-secondary text-muted-foreground">
+                      <step.icon className="size-4" strokeWidth={1.5} />
+                    </span>
+                    <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-medium tracking-tight sm:mt-4">{step.title}</h3>
                 </div>
-                <h3 className="mt-4 text-lg font-medium tracking-tight">{step.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.body}</p>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground sm:mt-2">{step.body}</p>
               </li>
             ))}
           </ol>
@@ -189,11 +192,13 @@ export default async function Home() {
             {USES.map((u) => (
               <TiltCard key={u.title} max={6} className="h-full rounded-2xl">
                 <div className="flex h-full flex-col rounded-2xl border border-border bg-card p-6">
-                  <span className="grid size-8 place-items-center rounded-lg bg-secondary text-muted-foreground">
-                    <u.icon className="size-4" strokeWidth={1.5} />
-                  </span>
-                  <h3 className="mt-4 text-base font-medium tracking-tight">{u.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{u.body}</p>
+                  <div className="flex items-center gap-3 sm:flex-col sm:items-start">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-secondary text-muted-foreground">
+                      <u.icon className="size-4" strokeWidth={1.5} />
+                    </span>
+                    <h3 className="text-base font-medium tracking-tight sm:mt-4">{u.title}</h3>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground sm:mt-2">{u.body}</p>
                 </div>
               </TiltCard>
             ))}
@@ -208,8 +213,8 @@ export default async function Home() {
                 Attest your first repository
               </h2>
               <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                Sign in with GitHub. Your evidence stays on your machine — we only ever see a
-                commitment.
+                Sign in with GitHub. Your findings stay on your machine — only the repository name,
+                the artifact digest and the verdict are ever recorded.
               </p>
             </div>
             <GithubSignIn label="Sign in with GitHub" />

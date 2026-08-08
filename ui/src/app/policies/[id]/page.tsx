@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Check, ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { SiteHeader } from "@/components/app/site-header";
 import { createClient } from "@/lib/supabase/server";
 import { POLICIES } from "@/lib/demo";
@@ -25,7 +25,6 @@ export default async function PolicyDetail({ params }: PageProps<"/policies/[id]
     { label: "Branch protection", value: yesNo(policy.requireBranchProtection) },
     { label: "Build provenance", value: yesNo(policy.requireBuildProvenance) },
     { label: "Max evidence age", value: `${Math.round(policy.maxAgeSeconds / 86400)} days` },
-    { label: "Required attestor", value: policy.requiredAttestor ?? "any registered" },
     { label: "Version", value: `v${policy.version}` },
   ];
 
@@ -58,16 +57,20 @@ export default async function PolicyDetail({ params }: PageProps<"/policies/[id]
               What a proof against this policy demonstrates
             </h2>
           </header>
+          {/* Conditions a proof must satisfy — not results, so no check marks. */}
           <ul className="px-6 py-2">
-            {policyRequirements(policy).map((r) => (
+            {policyRequirements(policy).map((r, i) => (
               <li
                 key={r.id}
-                className="flex min-h-11 items-center gap-3 border-b border-border text-sm last:border-0"
+                className="flex flex-col gap-0.5 border-b border-border py-3 text-sm last:border-0"
               >
-                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-success/10 text-success">
-                  <Check className="size-3" strokeWidth={2} />
+                <span className="flex gap-3">
+                  <span className="w-4 shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  {r.label}
                 </span>
-                {r.label}
+                <code className="pl-7 font-mono text-xs text-muted-foreground">{r.expr}</code>
               </li>
             ))}
           </ul>

@@ -62,7 +62,7 @@ export function VerifyForm({
       <div className="rounded-2xl border border-border bg-card p-6">
         <Input
           label="Repository or proof id"
-          placeholder="acme-corp/payments-api  ·  8f3c1a20-…"
+          placeholder="user-name/repo-name  ·  8f3c1a20-…"
           value={query}
           onChange={setQuery}
           error={error}
@@ -71,12 +71,12 @@ export function VerifyForm({
           classNames={{ input: "font-mono" }}
         />
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-xs text-muted-foreground">
             A proof id opens that audit. A repository name lists every audit run over it.
           </p>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-2 whitespace-nowrap">
             {/* TODO: demo affordance — drop before this is a real verifier. */}
             {sampleRepo && (
               <Button
@@ -87,7 +87,8 @@ export function VerifyForm({
                   setError(undefined);
                 }}
               >
-                Sample repo
+                <span className="sm:hidden">Repo</span>
+                <span className="hidden sm:inline">Sample repo</span>
               </Button>
             )}
             {sampleProofId && (
@@ -99,7 +100,8 @@ export function VerifyForm({
                   setError(undefined);
                 }}
               >
-                Sample proof id
+                <span className="sm:hidden">Proof id</span>
+                <span className="hidden sm:inline">Sample proof id</span>
               </Button>
             )}
             <Button onClick={submit} disabled={busy}>

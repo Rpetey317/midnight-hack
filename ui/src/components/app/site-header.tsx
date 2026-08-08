@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Logo } from "./logo";
 import { GithubSignIn } from "./github-sign-in";
+import { MobileDock } from "./mobile-dock";
+import { SignOutButton } from "./sign-out-button";
 import { ThemeToggle } from "@/components/motion/theme-toggle";
 import { ButtonLink } from "@/components/motion/button/base";
 import { cn } from "@/lib/utils";
@@ -19,6 +21,7 @@ export function SiteHeader({
   className?: string;
 }) {
   return (
+    <>
     <header
       className={cn(
         "sticky top-0 z-40 w-full border-b glass",
@@ -43,15 +46,22 @@ export function SiteHeader({
         <div className="ml-auto flex items-center gap-2">
           <ThemeToggle variant="circle-blur" className="text-muted-foreground hover:text-foreground" />
           {signedIn ? (
-            <ButtonLink href="/dashboard" variant="secondary" size="sm">
-              Dashboard
-              <ArrowUpRight className="size-3.5" strokeWidth={1.5} />
-            </ButtonLink>
+            <>
+              {/* The dock covers this route on mobile. */}
+              <ButtonLink href="/dashboard" variant="secondary" size="sm" className="hidden sm:inline-flex">
+                Dashboard
+                <ArrowUpRight className="size-3.5" strokeWidth={1.5} />
+              </ButtonLink>
+              <SignOutButton />
+            </>
           ) : (
             <GithubSignIn size="sm" label="Sign in" />
           )}
         </div>
       </div>
     </header>
+
+    <MobileDock signedIn={signedIn} />
+    </>
   );
 }

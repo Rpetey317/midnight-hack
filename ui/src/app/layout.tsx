@@ -9,7 +9,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: "zkuat — prove your security posture, disclose nothing",
   description:
-    "Prove a codebase satisfies a security policy without revealing the code, the findings, or which repository it is. Zero-knowledge attestation on Midnight.",
+    "Prove a codebase satisfies a security policy without revealing the code, the findings, or the dependency list. Zero-knowledge attestation on Midnight.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -19,7 +19,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      {/* Bottom padding clears the mobile dock; it is absent from sm upward. */}
+      <body className="min-h-full flex flex-col bg-background text-foreground pb-24 sm:pb-0">
         <Providers>{children}</Providers>
       </body>
     </html>

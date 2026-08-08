@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useRouter } from "next/navigation";
-import { LayoutGrid, LogOut, ScrollText, ShieldCheck } from "lucide-react";
+import { LayoutGrid, ScrollText, ShieldCheck } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { Logo } from "./logo";
+import { MobileDock } from "./mobile-dock";
+import { SignOutButton } from "./sign-out-button";
 import { ThemeToggle } from "@/components/motion/theme-toggle";
-import { Tooltip } from "@/components/motion/tooltip";
-import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -19,15 +18,15 @@ const LINKS = [
 
 export function AppNav({ handle }: { handle: string }) {
   const pathname = usePathname();
-  const router = useRouter();
   const reduce = useReducedMotion() ?? false;
 
   return (
+    <>
     <header className="sticky top-0 z-40 border-b glass">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:px-6 lg:px-8">
         <Logo href="/dashboard" />
 
-        <nav className="flex items-center gap-0.5">
+        <nav className="hidden items-center gap-0.5 sm:flex">
           {LINKS.map((link) => {
             const active =
               link.href === "/dashboard"
@@ -43,7 +42,7 @@ export function AppNav({ handle }: { handle: string }) {
                 )}
               >
                 <link.icon className="size-4" strokeWidth={1.5} />
-                <span className="hidden sm:inline">{link.label}</span>
+                <span>{link.label}</span>
                 {active && (
                   <motion.span
                     layoutId="app-nav-active"
@@ -64,21 +63,12 @@ export function AppNav({ handle }: { handle: string }) {
             variant="circle-blur"
             className="text-muted-foreground hover:text-foreground"
           />
-          <Tooltip content="Sign out" side="bottom">
-            <button
-              type="button"
-              onClick={async () => {
-                await createClient().auth.signOut();
-                router.replace("/");
-                router.refresh();
-              }}
-              className="grid size-9 place-items-center rounded-lg text-muted-foreground outline-none transition-colors duration-150 hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <LogOut className="size-4" strokeWidth={1.5} />
-            </button>
-          </Tooltip>
+          <SignOutButton />
         </div>
       </div>
     </header>
+
+    <MobileDock signedIn />
+    </>
   );
 }

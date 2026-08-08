@@ -47,8 +47,8 @@ export default async function VerifyAudit({ params }: PageProps<"/verify/[id]">)
           <p className="text-xs uppercase tracking-wider text-muted-foreground">Audit</p>
           <h1 className="mt-2 break-all font-mono text-lg tracking-tight sm:text-xl">
             {audit.repo}
-            <span className="text-muted-foreground">/{id}</span>
           </h1>
+          <p className="mt-1 break-all font-mono text-xs text-muted-foreground sm:text-sm">{id}</p>
         </div>
 
         <VerdictPanel className="mt-8" record={record} policy={policy} status={status} />
@@ -93,7 +93,7 @@ export default async function VerifyAudit({ params }: PageProps<"/verify/[id]">)
                   <li key={a.proof.id} className="border-b border-border last:border-0">
                     <Link
                       href={`/verify/${a.proof.id}`}
-                      className="flex min-h-14 flex-wrap items-center gap-x-6 gap-y-1 px-6 py-3 text-sm transition-colors duration-150 hover:bg-secondary"
+                      className="flex min-h-14 items-center gap-2.5 px-4 py-3 text-sm transition-colors duration-150 hover:bg-secondary sm:px-6"
                     >
                       <span
                         className={`size-1.5 shrink-0 rounded-full ${
@@ -104,9 +104,12 @@ export default async function VerifyAudit({ params }: PageProps<"/verify/[id]">)
                               : "bg-destructive"
                         }`}
                       />
-                      <span>{policyFor(a.proof.policy_id).name}</span>
-                      <span className="text-xs capitalize text-muted-foreground">{s}</span>
-                      <span className="ml-auto text-xs text-muted-foreground">
+                      {/* The dot carries the status; keep it readable without colour. */}
+                      <span className="sr-only">{s}</span>
+                      <span className="min-w-0 flex-1 truncate">
+                        {policyFor(a.proof.policy_id).name}
+                      </span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
                         {fmtDate(Date.parse(a.proof.created_at) / 1000)}
                       </span>
                     </Link>
