@@ -1,6 +1,6 @@
 # zkuat
 
-zkuat turns the JSON artifact produced by `.github/workflows/attest.yml` into a
+zkuat turns the JSON artifact produced by `.github/workflows/generate-evidence.yml` into a
 private Midnight contract input, generates a proof on the user's machine, pays
 the two required transactions from one local sponsor wallet, and verifies the
 result through the hosted indexer.

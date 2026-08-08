@@ -43,7 +43,7 @@ type Artifact = {
 };
 
 const API = "https://api.github.com";
-const DEFAULT_WORKFLOW = "attest.yml";
+const DEFAULT_WORKFLOW = "generate-evidence.yml";
 const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000;
 const POLL_MS = 4_000;
 
@@ -173,7 +173,7 @@ async function getEvidenceArtifact(token: string, repo: GithubRepo, runId: numbe
     token,
     `/repos/${repo.owner}/${repo.name}/actions/runs/${runId}/artifacts?per_page=100`,
   );
-  // Must match `.github/workflows/attest.yml`'s upload step verbatim:
+  // Must match `.github/workflows/generate-evidence.yml`'s upload step verbatim:
   //   name: zkuat-evidence-${{ inputs.request_id || github.sha }}
   // A mismatch here is not a soft failure — every retrieval throws
   // "did not produce artifact …" after waiting out the whole workflow run.

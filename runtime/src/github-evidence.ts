@@ -1,11 +1,11 @@
 /**
- * Strictly validates the unchanged `.github/workflows/attest.yml` artifact and
+ * Strictly validates the `.github/workflows/generate-evidence.yml` artifact and
  * maps it into the private Compact `Evidence` input. There is no envelope,
  * signature, evidence key, or intermediary report in this path.
  */
 import { EVIDENCE_SCHEMA, type CanonicalEvidence } from '@zkuat/contract';
 
-const WORKFLOW = '.github/workflows/attest.yml';
+const WORKFLOW = '.github/workflows/generate-evidence.yml';
 const DEFAULT_VALID_DAYS = 29;
 
 export interface GithubEvidenceDocument {
