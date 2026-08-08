@@ -10,7 +10,7 @@ import { shortDigest } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function PolicyList({ className }: { className?: string }) {
-  const [open, setOpen] = useState<string | null>(POLICIES[0].slug);
+  const [open, setOpen] = useState<string | null>(null);
   const reduce = useReducedMotion() ?? false;
 
   return (
@@ -83,10 +83,10 @@ export function PolicyList({ className }: { className?: string }) {
                     </dl>
 
                     <Link
-                      href={`/verify?policy=${p.slug}`}
+                      href={`/policies/${p.slug}`}
                       className="mt-5 inline-block text-sm underline underline-offset-4 transition-colors hover:text-muted-foreground"
                     >
-                      Check an artifact against this policy
+                      Open the full policy
                     </Link>
                   </div>
                 </motion.div>

@@ -51,7 +51,11 @@ export function ProvePanel({
   const [slug, setSlug] = useState(POLICIES[0].slug);
   const [phase, setPhase] = useState<Phase>("idle");
   const [stepIndex, setStepIndex] = useState(-1);
-  const [result, setResult] = useState<{ verdict: boolean; txHash: string } | null>(null);
+  const [result, setResult] = useState<{
+    verdict: boolean;
+    txHash: string;
+    auditId: string | null;
+  } | null>(null);
 
   const policy = useMemo(() => POLICIES.find((p) => p.slug === slug)!, [slug]);
   const requirements = policyRequirements(policy);
@@ -81,7 +85,7 @@ export function ProvePanel({
     setStepIndex(STEPS.length);
 
     const txHash = fakeTx();
-    setResult({ verdict, txHash });
+    setResult({ verdict, txHash, auditId: null });
     setPhase("done");
 
     if (artifactId) {
@@ -92,7 +96,10 @@ export function ProvePanel({
         verdict,
         txHash,
       });
-      if (!res?.error) router.refresh();
+      if (!("error" in res)) {
+        setResult({ verdict, txHash, auditId: res.auditId });
+        router.refresh();
+      }
     }
 
     showToast({
@@ -204,13 +211,20 @@ export function ProvePanel({
             <p className="mt-1.5 font-mono text-xs text-muted-foreground">
               tx {shortDigest(result.txHash, 16, 10)}
             </p>
-            <Link
-              href={`/verify/${evidence.artifactDigest.replace(/^sha256:/, "")}?policy=${policy.slug}`}
-              className="mt-3 inline-flex items-center gap-1.5 text-sm text-foreground underline underline-offset-4 transition-colors hover:text-muted-foreground"
-            >
-              Open the verifier view
-              <ArrowUpRight className="size-3.5" strokeWidth={1.5} />
-            </Link>
+            {result.auditId && (
+              <p className="mt-1 font-mono text-xs text-muted-foreground">
+                audit {result.auditId}
+              </p>
+            )}
+            {result.auditId && (
+              <Link
+                href={`/verify/${result.auditId}`}
+                className="mt-3 inline-flex items-center gap-1.5 text-sm text-foreground underline underline-offset-4 transition-colors hover:text-muted-foreground"
+              >
+                Open the verifier view
+                <ArrowUpRight className="size-3.5" strokeWidth={1.5} />
+              </Link>
+            )}
           </div>
         ) : (
           <StatefulButton

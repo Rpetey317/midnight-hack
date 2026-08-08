@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, Boxes, CheckCircle2, GitCommitHorizontal, ScrollText } from "lucide-react";
+import { ArrowRight, Boxes, CheckCircle2, GitCommitHorizontal } from "lucide-react";
 import { AppNav } from "@/components/app/app-nav";
 import { AddRepoDialog } from "@/components/app/add-repo-dialog";
 import { SeedDemoButton } from "@/components/app/seed-demo-button";
 import { NumberTicker } from "@/components/motion/number-ticker";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspace } from "@/lib/queries";
-import { POLICIES } from "@/lib/demo";
 import { shortCommit, shortDigest } from "@/lib/format";
 
 export default async function Dashboard() {
@@ -24,7 +23,6 @@ export default async function Dashboard() {
     { label: "Repositories", value: products.length, icon: Boxes },
     { label: "Artifacts", value: artifacts.length, icon: GitCommitHorizontal },
     { label: "Proofs", value: proofs.length, icon: CheckCircle2 },
-    { label: "Policies", value: POLICIES.length, icon: ScrollText },
   ];
 
   return (
@@ -36,15 +34,13 @@ export default async function Dashboard() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Repositories</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Signed in as{" "}
-              <span className="font-mono text-foreground">@{handle}</span>. Evidence is generated and
-              proven locally — nothing here holds a finding.
+              Evidence is generated and proven locally — nothing here holds a finding.
             </p>
           </div>
           {products.length > 0 && <AddRepoDialog />}
         </div>
 
-        <dl className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-4">
+        <dl className="mt-8 grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-3">
           {stats.map((s) => (
             <div key={s.label} className="flex flex-col gap-2 bg-card px-6 py-5">
               <dt className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">

@@ -2,10 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getAuditsForRepo } from "@/lib/queries";
 import { EVIDENCE, POLICIES } from "@/lib/demo";
 import { retrieveGithubEvidence } from "@/lib/github/evidence";
 
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
+
+const fakeHash = () =>
+  `0x${Array.from({ length: 64 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join("")}`;
 
 async function requireUser() {
   const supabase = await createClient();
@@ -38,6 +42,57 @@ export async function addProduct(_prev: unknown, formData: FormData) {
 
   revalidatePath("/dashboard");
   return { ok: true };
+}
+
+/**
+ * The signed-in user's GitHub repositories, minus the ones already registered.
+ * Needs the OAuth provider token, which only exists on a fresh sign-in.
+ */
+export async function listGithubRepos() {
+  const { supabase, user } = await requireUser();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const token = session?.provider_token;
+  if (!token) return { error: "GitHub access token not available. Sign out and sign in again." };
+
+  const res = await fetch(
+    "https://api.github.com/user/repos?per_page=100&sort=updated&affiliation=owner,collaborator,organization_member",
+    {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "GitHub-Api-Version": "2022-11-28",
+      },
+    },
+  );
+
+  if (!res.ok) return { error: `GitHub API ${res.status} ${res.statusText}` };
+
+  const repos = ((await res.json()) as { full_name: string; private: boolean }[]).map((r) => ({
+    fullName: r.full_name,
+    private: r.private,
+  }));
+
+  const { data: existing } = await supabase.from("products").select("repo").eq("user_id", user.id);
+  const taken = new Set((existing ?? []).map((p) => p.repo as string));
+
+  return { ok: true as const, repos: repos.filter((r) => !taken.has(r.fullName)) };
+}
+
+/** Public audit search by repository name. No session required. */
+export async function findAuditsByRepo(repo: string) {
+  const audits = await getAuditsForRepo(repo);
+  return audits.map((a) => ({
+    id: a.proof.id,
+    repo: a.repo,
+    policySlug: a.proof.policy_id,
+    policyVersion: a.proof.policy_version,
+    verdict: a.proof.verdict,
+    commitSha: a.commitSha,
+    createdAt: a.proof.created_at,
+  }));
 }
 
 export async function deleteProduct(formData: FormData) {
@@ -98,7 +153,9 @@ export async function seedDemo() {
           policy_version: p.version,
           verdict: true,
           record_key: null,
-          tx_hash: null,
+          // Seeded proofs carry a hash so the verifier's "check it yourself"
+          // panel has every value a real proof would.
+          tx_hash: fakeHash(),
         })),
       );
     }
@@ -117,18 +174,22 @@ export async function recordProof(input: {
   txHash: string;
 }) {
   const { supabase, user } = await requireUser();
-  const { error } = await supabase.from("proof_activity").insert({
-    user_id: user.id,
-    artifact_id: input.artifactId,
-    policy_id: input.policySlug,
-    policy_version: input.policyVersion,
-    verdict: input.verdict,
-    tx_hash: input.txHash,
-  });
+  const { data, error } = await supabase
+    .from("proof_activity")
+    .insert({
+      user_id: user.id,
+      artifact_id: input.artifactId,
+      policy_id: input.policySlug,
+      policy_version: input.policyVersion,
+      verdict: input.verdict,
+      tx_hash: input.txHash,
+    })
+    .select("id")
+    .single();
   if (error) return { error: error.message };
 
   revalidatePath("/dashboard");
-  return { ok: true };
+  return { ok: true, auditId: data.id as string };
 }
 
 export async function requestRepositoryEvidence(productId: string) {

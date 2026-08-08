@@ -32,7 +32,11 @@ export function GithubSignIn({
         setState("loading");
         const { error } = await createClient().auth.signInWithOAuth({
           provider: "github",
-          options: { redirectTo: `${location.origin}/auth/callback` },
+          options: {
+            redirectTo: `${location.origin}/auth/callback`,
+            // `repo` lists private repositories and dispatches the evidence workflow.
+            scopes: "read:user repo workflow",
+          },
         });
         if (error) setState("error");
       }}

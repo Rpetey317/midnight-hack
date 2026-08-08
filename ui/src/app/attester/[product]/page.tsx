@@ -112,25 +112,27 @@ export default async function AttesterProduct({
             </header>
             <ul>
               {proofs.map((p) => (
-                <li
-                  key={p.id}
-                  className="flex min-h-14 flex-wrap items-center gap-x-6 gap-y-1 border-b border-border px-6 py-3 text-sm last:border-0"
-                >
-                  <span className="flex items-center gap-2">
-                    <span
-                      className={`size-1.5 rounded-full ${
-                        p.verdict ? "bg-success" : "bg-destructive"
-                      }`}
-                    />
-                    <span className="font-mono">{p.policy_id}</span>
-                    <span className="text-muted-foreground">v{p.policy_version}</span>
-                  </span>
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {p.tx_hash ? shortDigest(p.tx_hash, 12, 8) : "pre-anchored"}
-                  </span>
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {fmtDate(Date.parse(p.created_at) / 1000)}
-                  </span>
+                <li key={p.id} className="border-b border-border last:border-0">
+                  <Link
+                    href={`/verify/${p.id}`}
+                    className="flex min-h-14 flex-wrap items-center gap-x-6 gap-y-1 px-6 py-3 text-sm transition-colors duration-150 hover:bg-secondary"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={`size-1.5 rounded-full ${
+                          p.verdict ? "bg-success" : "bg-destructive"
+                        }`}
+                      />
+                      <span className="font-mono">{p.policy_id}</span>
+                      <span className="text-muted-foreground">v{p.policy_version}</span>
+                    </span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {p.tx_hash ? shortDigest(p.tx_hash, 12, 8) : "pre-anchored"}
+                    </span>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {fmtDate(Date.parse(p.created_at) / 1000)}
+                    </span>
+                  </Link>
                 </li>
               ))}
             </ul>

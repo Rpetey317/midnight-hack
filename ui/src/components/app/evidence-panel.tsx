@@ -71,8 +71,8 @@ export function EvidencePanel({
 
       <div className="grid grid-cols-2 gap-px overflow-hidden bg-border sm:grid-cols-3">
         {metrics.map((m) => (
-          <Tooltip key={m.label} content={m.hint} side="top">
-            <div className="flex flex-col gap-1 bg-card px-6 py-5">
+          <Tooltip key={m.label} content={m.hint} side="top" wrapperClassName="block h-full">
+            <div className="flex h-full flex-col gap-1 bg-card px-6 py-5">
               <span className="text-xs uppercase tracking-wider text-muted-foreground">
                 {m.label}
               </span>
