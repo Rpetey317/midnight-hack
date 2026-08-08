@@ -265,14 +265,14 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('attest',
                                      'argument 1 (as invoked from Typescript)',
-                                     'audit_registry.compact line 199 char 1',
+                                     'audit_registry.compact line 198 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(leaf_0.buffer instanceof ArrayBuffer && leaf_0.BYTES_PER_ELEMENT === 1 && leaf_0.length === 32)) {
           __compactRuntime.typeError('attest',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'audit_registry.compact line 199 char 1',
+                                     'audit_registry.compact line 198 char 1',
                                      'Bytes<32>',
                                      leaf_0)
         }
@@ -300,21 +300,21 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('registerPolicy',
                                      'argument 1 (as invoked from Typescript)',
-                                     'audit_registry.compact line 207 char 1',
+                                     'audit_registry.compact line 206 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(policyId_0.buffer instanceof ArrayBuffer && policyId_0.BYTES_PER_ELEMENT === 1 && policyId_0.length === 32)) {
           __compactRuntime.typeError('registerPolicy',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'audit_registry.compact line 207 char 1',
+                                     'audit_registry.compact line 206 char 1',
                                      'Bytes<32>',
                                      policyId_0)
         }
         if (!(typeof(policy_0) === 'object' && typeof(policy_0.version) === 'bigint' && policy_0.version >= 0n && policy_0.version <= 4294967295n && policy_0.issuer.buffer instanceof ArrayBuffer && policy_0.issuer.BYTES_PER_ELEMENT === 1 && policy_0.issuer.length === 32 && typeof(policy_0.maxCriticals) === 'bigint' && policy_0.maxCriticals >= 0n && policy_0.maxCriticals <= 4294967295n && typeof(policy_0.maxHighs) === 'bigint' && policy_0.maxHighs >= 0n && policy_0.maxHighs <= 4294967295n && typeof(policy_0.maxVulnDeps) === 'bigint' && policy_0.maxVulnDeps >= 0n && policy_0.maxVulnDeps <= 4294967295n && typeof(policy_0.requireLint) === 'boolean' && typeof(policy_0.requireBuild) === 'boolean' && typeof(policy_0.maxAgeSeconds) === 'bigint' && policy_0.maxAgeSeconds >= 0n && policy_0.maxAgeSeconds <= 18446744073709551615n)) {
           __compactRuntime.typeError('registerPolicy',
                                      'argument 2 (argument 3 as invoked from Typescript)',
-                                     'audit_registry.compact line 207 char 1',
+                                     'audit_registry.compact line 206 char 1',
                                      'struct Policy<version: Uint<0..4294967296>, issuer: Bytes<32>, maxCriticals: Uint<0..4294967296>, maxHighs: Uint<0..4294967296>, maxVulnDeps: Uint<0..4294967296>, requireLint: Boolean, requireBuild: Boolean, maxAgeSeconds: Uint<0..18446744073709551616>>',
                                      policy_0)
         }
@@ -347,35 +347,35 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('proveCompliance',
                                      'argument 1 (as invoked from Typescript)',
-                                     'audit_registry.compact line 217 char 1',
+                                     'audit_registry.compact line 216 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(vendorId_0.buffer instanceof ArrayBuffer && vendorId_0.BYTES_PER_ELEMENT === 1 && vendorId_0.length === 32)) {
           __compactRuntime.typeError('proveCompliance',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'audit_registry.compact line 217 char 1',
+                                     'audit_registry.compact line 216 char 1',
                                      'Bytes<32>',
                                      vendorId_0)
         }
         if (!(productId_0.buffer instanceof ArrayBuffer && productId_0.BYTES_PER_ELEMENT === 1 && productId_0.length === 32)) {
           __compactRuntime.typeError('proveCompliance',
                                      'argument 2 (argument 3 as invoked from Typescript)',
-                                     'audit_registry.compact line 217 char 1',
+                                     'audit_registry.compact line 216 char 1',
                                      'Bytes<32>',
                                      productId_0)
         }
         if (!(artifactDigest_0.buffer instanceof ArrayBuffer && artifactDigest_0.BYTES_PER_ELEMENT === 1 && artifactDigest_0.length === 32)) {
           __compactRuntime.typeError('proveCompliance',
                                      'argument 3 (argument 4 as invoked from Typescript)',
-                                     'audit_registry.compact line 217 char 1',
+                                     'audit_registry.compact line 216 char 1',
                                      'Bytes<32>',
                                      artifactDigest_0)
         }
         if (!(policyId_0.buffer instanceof ArrayBuffer && policyId_0.BYTES_PER_ELEMENT === 1 && policyId_0.length === 32)) {
           __compactRuntime.typeError('proveCompliance',
                                      'argument 4 (argument 5 as invoked from Typescript)',
-                                     'audit_registry.compact line 217 char 1',
+                                     'audit_registry.compact line 216 char 1',
                                      'Bytes<32>',
                                      policyId_0)
         }
@@ -1643,4 +1643,3 @@ export const pureCircuits = {
 };
 export const contractReferenceLocations =
   { tag: 'publicLedgerArray', indices: { } };
-//# sourceMappingURL=index.js.map

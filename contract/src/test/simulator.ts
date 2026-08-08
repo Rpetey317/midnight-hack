@@ -14,7 +14,6 @@ import {
   createConstructorContext,
   dummyContractAddress,
   type CircuitContext,
-  type ProofData,
 } from '@midnight-ntwrk/compact-runtime';
 
 import {
@@ -39,9 +38,6 @@ const CALLER_COIN_PUBLIC_KEY = '00'.repeat(32);
 export class ComplianceRegistrySimulator {
   private readonly contract: Contract<AuditPrivateState>;
   private context: CircuitContext<AuditPrivateState>;
-
-  /** Proof data from the most recent circuit call, for transcript inspection. */
-  public lastProofData: ProofData | undefined;
 
   /**
    * Deploys the contract. Whoever holds `anchorSecret` at construction becomes
@@ -72,10 +68,6 @@ export class ComplianceRegistrySimulator {
     return ledger(this.context.currentQueryContext.state);
   }
 
-  get privateState(): AuditPrivateState {
-    return this.context.currentPrivateState;
-  }
-
   /**
    * Swaps fields of the caller's private state, leaving the ledger untouched.
    *
@@ -104,13 +96,11 @@ export class ComplianceRegistrySimulator {
   attest(leaf: Uint8Array): void {
     const result = this.contract.impureCircuits.attest(this.context, leaf);
     this.context = result.context;
-    this.lastProofData = result.proofData;
   }
 
   registerPolicy(policyId: Uint8Array, policy: Policy): void {
     const result = this.contract.impureCircuits.registerPolicy(this.context, policyId, policy);
     this.context = result.context;
-    this.lastProofData = result.proofData;
   }
 
   proveCompliance(
@@ -127,7 +117,6 @@ export class ComplianceRegistrySimulator {
       policyId,
     );
     this.context = result.context;
-    this.lastProofData = result.proofData;
     return result.result;
   }
 
@@ -155,90 +144,8 @@ export class ComplianceRegistrySimulator {
     return records.member(key) ? records.lookup(key) : undefined;
   }
 
-  /** Every current record. Exercises the Map iterator the buyer dashboard needs. */
-  allRecords(): ComplianceRecord[] {
-    return [...this.ledger.records].map(([, record]) => record);
-  }
-
   /** The append-only timeline, newest first (`pushFront`). */
   timeline(): ComplianceRecord[] {
     return [...this.ledger.history];
-  }
-
-  /** Collects every distinct 32-byte value reachable from an arbitrary structure. */
-  private static collectHashes(root: unknown): Set<string> {
-    const found = new Set<string>();
-    const walk = (node: unknown): void => {
-      if (typeof node === 'string') {
-        if (/^[0-9a-f]{64}$/.test(node)) found.add(node);
-        return;
-      }
-      if (node instanceof Uint8Array) {
-        if (node.length === 32) found.add(Buffer.from(node).toString('hex'));
-        return;
-      }
-      if (Array.isArray(node)) {
-        for (const child of node) walk(child);
-        return;
-      }
-      if (node && typeof node === 'object') {
-        for (const child of Object.values(node)) walk(child);
-      }
-    };
-    walk(root);
-    return found;
-  }
-
-  /**
-   * Every distinct 32-byte value appearing anywhere in the last call's proof
-   * data — inputs, outputs, and the public transcript.
-   *
-   * Useful, but **not sufficient on its own** as a privacy oracle: see
-   * `publicStateHashes`.
-   */
-  transcriptHashes(): Set<string> {
-    const pd = this.lastProofData;
-    return ComplianceRegistrySimulator.collectHashes([
-      pd?.input,
-      pd?.output,
-      pd?.publicTranscript,
-    ]);
-  }
-
-  /**
-   * Every distinct 32-byte value readable from public ledger state.
-   *
-   * **This is the real privacy boundary, and it is strictly larger than the
-   * transcript.** A value written into a ledger struct is readable by anyone
-   * afterwards, but does not necessarily appear anywhere in `proofData` — not in
-   * `input`, `output`, `publicTranscript`, or even `privateTranscriptOutputs`.
-   * Verified by deliberately leaking a private field into a `ComplianceRecord`:
-   * the transcript looked clean while the value sat in plain sight in `records`.
-   *
-   * So a privacy test that only inspects the transcript can pass while private
-   * data is being published to the chain. Check both.
-   */
-  publicStateHashes(): Set<string> {
-    return ComplianceRegistrySimulator.collectHashes([
-      this.allRecords(),
-      this.timeline(),
-      [...this.ledger.policies].map(([key, policy]) => [key, policy]),
-      [...this.ledger.claimed],
-      this.ledger.anchor,
-    ]);
-  }
-
-  /**
-   * The public transcript of the last circuit call, serialized for substring
-   * search. Complements `transcriptHashes` for non-32-byte values.
-   */
-  publicTranscriptJson(): string {
-    return JSON.stringify(this.lastProofData?.publicTranscript ?? [], (_key, value) =>
-      typeof value === 'bigint'
-        ? value.toString()
-        : value instanceof Uint8Array
-          ? Buffer.from(value).toString('hex')
-          : value,
-    );
   }
 }

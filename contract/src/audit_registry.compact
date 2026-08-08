@@ -190,8 +190,7 @@ circuit requireAnchor(): [] {
 // and the compiler's disclosure analysis treats any ledger operation as a
 // potential disclosure of its argument. Note this is the compiler being
 // conservative about the *annotation*, not proof that the leaf reaches the
-// transcript in the clear — insert() applies leaf_hash() internally. The
-// transcript test in src/test/ checks what actually lands there.
+// transcript in the clear — insert() applies leaf_hash() internally.
 //
 // Use insert(), never insertHash(): insertHash publishes the hash you hand it.
 // Correspondingly proveCompliance uses merkleTreePathRoot (which hashes the
