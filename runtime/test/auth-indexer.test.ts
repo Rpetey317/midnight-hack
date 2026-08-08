@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { PairingAuth } from '../src/auth.js';
-import { assertSuccessfulCall } from '../src/chain/indexer.js';
+import { assertSuccessfulCall, queryTransaction } from '../src/chain/indexer.js';
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('PairingAuth', () => {
   it('issues and validates a bearer token for the displayed code', () => {
@@ -38,5 +40,40 @@ describe('assertSuccessfulCall', () => {
         'proveCompliance',
       ),
     ).toThrow('status');
+  });
+});
+
+describe('queryTransaction', () => {
+  it('queries a Midnight.js transaction identifier through the RegularTransaction fragment', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      async json() {
+        return {
+          data: {
+            transactions: [
+              {
+                __typename: 'RegularTransaction',
+                hash: 'ab'.repeat(32),
+                transactionResult: { status: 'SUCCESS', segments: null },
+                contractActions: [],
+              },
+            ],
+          },
+        };
+      },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const identifier = `00${'cd'.repeat(32)}`;
+    const transaction = await queryTransaction('https://indexer.example/graphql', identifier);
+    const request = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as {
+      query: string;
+      variables: Record<string, string>;
+    };
+
+    expect(transaction?.transactionResult?.status).toBe('SUCCESS');
+    expect(request.query).toContain('offset: { identifier: $identifier }');
+    expect(request.query).toContain('... on RegularTransaction');
+    expect(request.variables).toEqual({ identifier });
   });
 });

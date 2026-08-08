@@ -99,10 +99,11 @@ export function createPublicDataProvider(indexer: string, indexerWS: string): an
 }
 
 export interface IndexedTransaction {
+  __typename?: string;
   hash: string;
   transactionResult?: {
     status?: string;
-    segments?: Array<{ success?: boolean }>;
+    segments?: Array<{ id?: string; success?: boolean }> | null;
   } | null;
   contractActions?: Array<{
     __typename?: string;
@@ -115,20 +116,27 @@ export async function queryTransaction(
   indexer: string,
   txId: string,
 ): Promise<IndexedTransaction | null> {
+  // Midnight.js exposes a segment identifier in tx.public.txId. It is normally
+  // 33 bytes and must use TransactionOffset.identifier, not the 32-byte
+  // transaction hash. transactionResult belongs only to RegularTransaction in
+  // the v4 schema, so it must be selected through an inline fragment.
   const data = await graphql<{ transactions: IndexedTransaction[] }>(
     indexer,
-    `query Transaction($hash: HexEncoded!) {
-      transactions(offset: { hash: $hash }) {
+    `query Transaction($identifier: HexEncoded!) {
+      transactions(offset: { identifier: $identifier }) {
+        __typename
         hash
-        transactionResult { status segments { success } }
         contractActions {
           __typename
           address
           ... on ContractCall { entryPoint }
         }
+        ... on RegularTransaction {
+          transactionResult { status segments { id success } }
+        }
       }
     }`,
-    { hash: txId },
+    { identifier: txId },
   );
   return data.transactions[0] ?? null;
 }
