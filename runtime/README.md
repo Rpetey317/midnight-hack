@@ -27,20 +27,32 @@ than independently verified attestation.
 
 ## Requirements
 
-- Node.js 22 or newer;
-- Docker available to the current user;
-- contract keys generated with `npm --prefix contract run compile:keys`;
-- a Preview or Preprod seed with unshielded NIGHT available for DUST;
+- Docker Compose with host networking available to the current user;
+- permission to mount `/var/run/docker.sock`, which lets the runtime container
+  manage the sibling proof-server container;
+- a Preview or Preprod sponsor wallet with a 24-word recovery phrase and
+  unshielded NIGHT available for DUST;
 - network access to the selected Midnight RPC/indexer.
+
+The published `ghcr.io/rpetey317/zkuat-runtime:latest` image contains both
+`linux/amd64` and `linux/arm64` variants. Compose pulls the native variant for
+Intel/AMD Linux hosts or Apple Silicon without architecture emulation.
+
+The runtime requires host networking because both configured local URLs are
+loopback-only. Enable host networking in Docker Desktop if your installation
+does not expose it by default. Mounting the Docker socket is effectively
+root-equivalent access to the host Docker daemon; use the published zkuat image
+or an image you built from trusted source.
 
 ## Configuration
 
-The default configuration file is `~/.zkuat/runtime/.env`. Process environment
-variables override values in the file.
+The default configuration file is the gitignored `runtime/.env`. Compose loads
+that file into the runtime process environment. Persistent jobs, wallet sync
+state, and Compact private state remain separately under `~/.zkuat/runtime`.
 
 ```dotenv
 ZKUAT_NETWORK=preview
-ZKUAT_SPONSOR_WALLET_SEED=<32-to-128-hex-characters>
+ZKUAT_SPONSOR_WALLET_SEED="<24-word-English-BIP-39-recovery-phrase>"
 ZKUAT_CONTRACT_ADDRESS=<deployed-contract-address>
 ZKUAT_RUNTIME_URL=http://127.0.0.1:4317
 ZKUAT_ALLOWED_ORIGIN=https://zkuat.works
@@ -51,7 +63,7 @@ ZKUAT_PROOF_SERVER_IMAGE=midnightntwrk/proof-server:8.1.0
 | Variable | Required | Meaning |
 | --- | --- | --- |
 | `ZKUAT_NETWORK` | Yes | `preview` or `preprod` |
-| `ZKUAT_SPONSOR_WALLET_SEED` | Yes | 16–64 bytes encoded as hex; optional `0x` prefix is accepted |
+| `ZKUAT_SPONSOR_WALLET_SEED` | Yes | Valid 24-word English BIP-39 recovery phrase; quote it in dotenv files |
 | `ZKUAT_CONTRACT_ADDRESS` | For `start` | Hexadecimal address printed by `deploy` |
 | `ZKUAT_RUNTIME_URL` | No | Loopback HTTP origin containing both bind host and port; default `http://127.0.0.1:4317` |
 | `ZKUAT_ALLOWED_ORIGIN` | No | Exact browser origin allowed by CORS; default `https://zkuat.works` |
@@ -63,27 +75,23 @@ ZKUAT_PROOF_SERVER_IMAGE=midnightntwrk/proof-server:8.1.0
 | `ZKUAT_STORAGE_DIR` | No | State root; default `~/.zkuat/runtime` |
 
 Both local service URLs must use plain HTTP on `127.0.0.1`, `localhost`, or
-loopback IPv6. Keep the env file mode `0600`. Never copy the seed into Vercel,
-Supabase, browser storage, or source control.
+loopback IPv6. Keep the env file mode `0600`. The recovery phrase grants control
+of the sponsor wallet: use a dedicated wallet and never copy the phrase into
+Vercel, Supabase, browser storage, or source control.
 
-## Install and deploy
+## Configure and deploy
 
 From the repository root:
 
 ```bash
-npm --prefix contract ci
-npm --prefix contract run compile:keys
-npm --prefix runtime ci
-
-mkdir -p ~/.zkuat/runtime
-cp runtime/.env.example ~/.zkuat/runtime/.env
-chmod 600 ~/.zkuat/runtime/.env
+cp runtime/.env.example runtime/.env
+chmod 600 runtime/.env
 ```
 
-After setting the network and seed, deploy once:
+After setting the network and recovery phrase, deploy once:
 
 ```bash
-npm --prefix runtime run deploy
+docker compose run --rm runtime deploy
 ```
 
 Deployment starts the proof server, deploys the contract with the derived anchor
@@ -91,21 +99,49 @@ identity, and submits four policy-registration calls for the bundled npm
 reference policies. Copy the printed address into `ZKUAT_CONTRACT_ADDRESS`. The
 runtime must continue using the same network and seed.
 
-## Start and proof-server commands
+## Start the container
 
 ```bash
-npm --prefix runtime start
-
-cd runtime
-npx tsx src/cli.ts proof-server start
-npx tsx src/cli.ts proof-server status
-npx tsx src/cli.ts proof-server stop
+docker compose up
 ```
 
-`start` acquires `runtime.lock`, listens only on the configured loopback origin,
-prints a fresh pairing code, and queues any persisted nonterminal jobs for
-recovery. Pairing tokens live only in process memory and are invalid after a
-restart.
+The image defaults to the `start` command. Compose runs it in the foreground and
+streams the startup banner to the terminal:
+
+```text
+zkuat runtime listening at http://127.0.0.1:4317
+PAIRING CODE: 123456
+allowed origin: https://zkuat.works
+```
+
+Leave that terminal attached while using the UI. `start` acquires
+`runtime.lock`, listens only on the configured loopback origin, prints a fresh
+pairing code, and queues persisted nonterminal jobs for recovery. Pairing tokens
+live only in process memory and are invalid after a restart.
+
+If the container must run detached, start it and immediately follow its logs:
+
+```bash
+docker compose up --detach
+docker compose logs --follow runtime
+```
+
+The pairing code remains in the retained Docker logs and can also be retrieved
+without following:
+
+```bash
+docker compose logs runtime 2>&1 | grep "PAIRING CODE"
+```
+
+## Proof-server commands
+
+While the runtime container is running:
+
+```bash
+docker exec zkuat-runtime tsx src/cli.ts proof-server start
+docker exec zkuat-runtime tsx src/cli.ts proof-server status
+docker exec zkuat-runtime tsx src/cli.ts proof-server stop
+```
 
 The runtime does not automatically stop the proof-server container on shutdown.
 The explicit stop command only stops a container carrying the zkuat ownership
@@ -148,7 +184,7 @@ All remaining routes require `Authorization: Bearer <paired-token>`:
 
 The job-creation body contains `evidence`, `requestId`, completed GitHub run
 metadata, artifact metadata, and `policySlug`. Public job responses omit the raw
-evidence, salt, Merkle path, and sponsor seed.
+evidence, salt, Merkle path, recovery phrase, and derived sponsor seed.
 
 ## Local state
 
@@ -156,7 +192,6 @@ The default state tree is:
 
 ```text
 ~/.zkuat/runtime/
-├── .env
 ├── jobs/<uuid>.json
 ├── private-state/zkuat/
 ├── wallet-state/<network>.json
@@ -164,12 +199,23 @@ The default state tree is:
 ```
 
 Directories are forced to mode `0700`; JSON files and the process lock are mode
-`0600`. Job files intentionally contain the prepared evidence, salt, and leaf,
-so treat the entire storage directory as sensitive. Wallet state is a sync
-cache, while Compact private state is password-protected using a value derived
-from the sponsor seed.
+`0600`. The sponsor recovery phrase stays separately in `runtime/.env`. Job files
+intentionally contain the prepared evidence, salt, and leaf, so treat the entire
+storage directory as sensitive. Wallet state is a sync cache, while Compact
+private state is password-protected using a value derived from the sponsor seed.
 
 ## Development checks
+
+Source development requires Node.js 22+, npm, the compatible Compact compiler,
+and a repository-root image build:
+
+```bash
+npm --prefix contract ci
+npm --prefix contract run compile:keys
+docker build -f runtime/Dockerfile -t zkuat-runtime .
+```
+
+From `runtime/`, run:
 
 ```bash
 npm run typecheck
@@ -178,3 +224,8 @@ npm test
 
 The runtime tests use fakes for GitHub payloads, proof-server behavior, chain
 jobs, and indexer responses; they do not submit live network transactions.
+
+The release workflow performs those source-build steps on every `main` push and
+publishes `ghcr.io/rpetey317/zkuat-runtime:latest` for both AMD64 and ARM64,
+including the proving keys and ZKIR. The image must be built from the repository
+root because the runtime's local package dependency resolves `../contract`.

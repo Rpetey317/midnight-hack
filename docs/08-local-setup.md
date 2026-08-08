@@ -5,36 +5,36 @@ indexer services remain hosted.
 
 ## Prerequisites
 
-- Node.js 22+ and npm;
-- a compatible `compact` CLI/compiler on `PATH`;
-- Docker running and callable by the current user;
-- a Preview or Preprod sponsor-wallet seed;
+- Docker Compose running with host networking and callable by the current user;
+- permission to mount `/var/run/docker.sock` so the runtime container can manage
+  the sibling proof-server container;
+- a Preview or Preprod sponsor-wallet 24-word recovery phrase;
 - unshielded NIGHT in that wallet so the SDK can register it and generate DUST;
 - a deployed compatible evidence workflow in each repository used through the
   UI.
 
+The container shares host networking because the runtime and proof-server URLs
+are deliberately restricted to loopback. Enable host networking in Docker
+Desktop if needed. Treat the Docker socket mount as root-equivalent access to
+the host daemon and run only the published zkuat image or an image built from
+trusted source.
+
 Check the local tools:
 
 ```bash
-node --version
-npm --version
-compact --version
 docker version
+docker compose version
 ```
 
-## Install and compile
+## Runtime image
 
-From the repository root:
+The publishing workflow compiles the contract with proving keys and packages all
+required runtime assets. The root `compose.yml` pulls the current image
+automatically.
 
-```bash
-npm --prefix contract ci
-npm --prefix contract run compile:keys
-npm --prefix runtime ci
-```
-
-`compile:keys` regenerates the ignored proving/verifying assets and ZKIR below
-`contract/src/managed/audit_registry/`. The runtime cannot deploy or prove with
-only the committed JavaScript bindings.
+No local Node.js or Compact installation is needed to run this image. The GHCR
+package must be public for an unauthenticated pull; while it is private, log in
+to `ghcr.io` with an account that has package read access.
 
 Install the frontend separately only when developing it locally:
 
@@ -45,26 +45,28 @@ npm --prefix ui ci
 ## Create the private runtime configuration
 
 ```bash
-mkdir -p ~/.zkuat/runtime
-cp runtime/.env.example ~/.zkuat/runtime/.env
-chmod 600 ~/.zkuat/runtime/.env
+cp runtime/.env.example runtime/.env
+chmod 600 runtime/.env
 ```
 
 Before deployment, set at least:
 
 ```dotenv
 ZKUAT_NETWORK=preview
-ZKUAT_SPONSOR_WALLET_SEED=<hex-seed>
+ZKUAT_SPONSOR_WALLET_SEED="<24-word-English-BIP-39-recovery-phrase>"
 ZKUAT_RUNTIME_URL=http://127.0.0.1:4317
 ZKUAT_ALLOWED_ORIGIN=https://zkuat.works
 ZKUAT_PROOF_SERVER_URL=http://127.0.0.1:6300
 ZKUAT_PROOF_SERVER_IMAGE=midnightntwrk/proof-server:8.1.0
 ```
 
-The seed must contain 16–64 bytes represented as hex. An optional `0x` prefix is
-accepted. `ZKUAT_RUNTIME_URL` combines host and port; there are no separate
-runtime host/port variables. Runtime and proof-server URLs must remain loopback
-HTTP origins.
+The value must be a valid 24-word English BIP-39 recovery phrase. Keep it quoted
+so dotenv and Compose preserve the spaces. The runtime validates its checksum
+and decodes it to the original 32-byte wallet seed. The phrase grants control of
+the sponsor wallet, so use a dedicated wallet and never commit or share this
+file. `ZKUAT_RUNTIME_URL` combines host and port; there are no separate runtime
+host/port variables. Runtime and proof-server URLs must remain loopback HTTP
+origins.
 
 For frontend development at `http://localhost:3000`, change the allowed origin:
 
@@ -75,7 +77,7 @@ ZKUAT_ALLOWED_ORIGIN=http://localhost:3000
 ## Deploy once
 
 ```bash
-npm --prefix runtime run deploy
+docker compose run --rm runtime deploy
 ```
 
 This command:
@@ -102,13 +104,20 @@ accrue.
 ## Start and pair
 
 ```bash
-npm --prefix runtime start
+docker compose up
 ```
 
-The terminal prints the loopback URL, six-digit pairing code, and allowed
-origin. Leave the process running, open <https://zkuat.works/>, sign in with
-GitHub, select a repository, request evidence, and enter the pairing code on the
+The foreground logs print the loopback URL, `PAIRING CODE: 123456`, and allowed
+origin. Leave Compose and the terminal running, open <https://zkuat.works/>, sign
+in with GitHub, select a repository, request evidence, and enter the code on the
 attester page.
+
+For a detached container, follow the same log stream explicitly:
+
+```bash
+docker compose up --detach
+docker compose logs --follow runtime
+```
 
 A web page cannot start the runtime or Docker on the user's machine. Pairing
 only works after this process is running. Pairing tokens are not persisted, so
@@ -131,10 +140,9 @@ will not automatically list them.
 ## Proof-server operations
 
 ```bash
-cd runtime
-npx tsx src/cli.ts proof-server start
-npx tsx src/cli.ts proof-server status
-npx tsx src/cli.ts proof-server stop
+docker exec zkuat-runtime tsx src/cli.ts proof-server start
+docker exec zkuat-runtime tsx src/cli.ts proof-server status
+docker exec zkuat-runtime tsx src/cli.ts proof-server stop
 ```
 
 The runtime uses container name `zkuat-proof-server` and label
@@ -150,7 +158,6 @@ Default state:
 
 ```text
 ~/.zkuat/runtime/
-├── .env
 ├── jobs/
 ├── private-state/
 ├── wallet-state/
@@ -161,9 +168,9 @@ Only one runtime process may hold the lock. A stale lock is removed when its PID
 no longer exists. Nonterminal jobs are re-queued on startup; terminal jobs remain
 available through the authenticated API.
 
-Back up the seed separately using an appropriate secret-storage mechanism. Job
-files contain raw prepared evidence and salts, so do not upload the runtime
-directory or put it in the repository.
+The gitignored `runtime/.env` contains the sponsor recovery phrase; back it up
+separately using an appropriate secret-storage mechanism. Job files contain raw
+prepared evidence and salts, so do not upload the runtime state directory.
 
 ## Health and troubleshooting
 
@@ -176,10 +183,10 @@ curl http://127.0.0.1:4317/v1/health
 Common failures:
 
 - **contract address missing**: set the hexadecimal address printed by deploy;
-- **anchor identity mismatch**: the configured seed does not match the deployer
-  seed for that contract;
-- **proof assets missing**: rerun `npm --prefix contract run compile:keys` and
-  reinstall/relink runtime dependencies if needed;
+- **anchor identity mismatch**: the configured recovery phrase does not restore
+  the sponsor wallet used to deploy that contract;
+- **proof assets missing**: pull the current published image; for a source build,
+  regenerate the assets with `npm --prefix contract run compile:keys` first;
 - **proof server not ready**: inspect Docker and the named container, then use the
   status command;
 - **wallet waits for DUST**: confirm the seed has unshielded NIGHT and allow time
@@ -193,6 +200,9 @@ Common failures:
   the runtime retries for roughly two minutes.
 
 ## Development verification
+
+These contributor checks require Node.js 22+, npm, and a compatible Compact
+compiler; they are not runtime installation steps.
 
 ```bash
 npm --prefix contract run typecheck

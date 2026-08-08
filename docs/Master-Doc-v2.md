@@ -34,10 +34,10 @@ runtime deploy command registers two fixed examples.
 
 ### Local sponsor operator
 
-The person running `@zkuat/runtime` controls one Preview/Preprod sponsor seed.
-That wallet pays DUST for the vendor's contract calls and also derives the
-contract anchor witness. For the demo this is normally the vendor's machine and
-operator.
+The person running `@zkuat/runtime` controls one Preview/Preprod sponsor wallet
+through its 24-word recovery phrase. That wallet pays DUST for the vendor's
+contract calls and its decoded seed also derives the contract anchor witness.
+For the demo this is normally the vendor's machine and operator.
 
 ## 3. Repository state
 
@@ -177,7 +177,7 @@ moderate/low artifact values
 lint/build results
 salt and evidence leaf
 Merkle path
-sponsor seed and derived anchor secret
+sponsor recovery phrase, decoded seed, and derived anchor secret
 ```
 
 ### Public on Midnight
@@ -206,9 +206,10 @@ Verification is a read. On first use the wallet may separately register NIGHT
 UTXOs for DUST generation. Deployment creates one contract and submits two
 policy-registration calls.
 
-The sponsor seed is stored only in the local runtime env file. It is never put in
-Vercel, Supabase, frontend environment variables, or the contract witness in raw
-form.
+The sponsor recovery phrase is stored only in the local runtime env file. The
+runtime checksum-validates it and decodes the original wallet seed. Neither the
+phrase nor raw seed is put in Vercel, Supabase, frontend environment variables,
+or the contract witness.
 
 ## 11. Hosted UI and public verifier status
 
@@ -229,7 +230,7 @@ than providing independent live-chain verification.
 ## 12. Minimum reproducible demo
 
 1. Install/compile the contract and runtime.
-2. Configure a funded Preview/Preprod sponsor seed.
+2. Configure the 24-word recovery phrase for a funded Preview/Preprod sponsor wallet.
 3. Deploy the contract and record its address.
 4. Start the runtime and leave it running.
 5. Sign into `zkuat.works` with GitHub.

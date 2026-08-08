@@ -2,6 +2,9 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+import { mnemonicToEntropy, validateMnemonic } from '@scure/bip39';
+import { wordlist as english } from '@scure/bip39/wordlists/english.js';
+
 export type RuntimeNetwork = 'preview' | 'preprod';
 
 const NETWORKS: Record<RuntimeNetwork, { indexer: string; indexerWS: string; node: string }> = {
@@ -64,6 +67,16 @@ function required(env: Record<string, string | undefined>, key: string): string 
   return value;
 }
 
+function sponsorSeedFromMnemonic(value: string): string {
+  const mnemonic = value.trim().split(/\s+/).join(' ');
+  if (mnemonic.split(' ').length !== 24 || !validateMnemonic(mnemonic, english)) {
+    throw new Error(
+      'zkuat: ZKUAT_SPONSOR_WALLET_SEED must be a valid 24-word English BIP-39 recovery phrase',
+    );
+  }
+  return Buffer.from(mnemonicToEntropy(mnemonic, english)).toString('hex');
+}
+
 function httpUrl(value: string, field: string): URL {
   let parsed: URL;
   try {
@@ -111,9 +124,7 @@ function webOrigin(value: string, field: string): string {
 }
 
 export function loadConfig(options: LoadConfigOptions = {}): RuntimeConfig {
-  const envFile = path.resolve(
-    options.envFile ?? path.join(os.homedir(), '.zkuat', 'runtime', '.env'),
-  );
+  const envFile = path.resolve(options.envFile ?? path.join(process.cwd(), '.env'));
   const fileEnv = parseEnvFile(envFile);
   const processEnv = options.env ?? process.env;
   const env: Record<string, string | undefined> = { ...fileEnv, ...processEnv };
@@ -124,12 +135,7 @@ export function loadConfig(options: LoadConfigOptions = {}): RuntimeConfig {
   }
   const network = networkValue as RuntimeNetwork;
 
-  const sponsorSeed = required(env, 'ZKUAT_SPONSOR_WALLET_SEED')
-    .replace(/^0x/i, '')
-    .toLowerCase();
-  if (!/^(?:[0-9a-f]{2}){16,64}$/.test(sponsorSeed)) {
-    throw new Error('zkuat: ZKUAT_SPONSOR_WALLET_SEED must contain 16-64 bytes of hex');
-  }
+  const sponsorSeed = sponsorSeedFromMnemonic(required(env, 'ZKUAT_SPONSOR_WALLET_SEED'));
 
   const contractAddress = env.ZKUAT_CONTRACT_ADDRESS?.trim() || null;
   if (options.requireContract !== false && !contractAddress) {

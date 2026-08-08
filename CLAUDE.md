@@ -121,15 +121,16 @@ pad(32, "zkuat:anchor:pk:")     // sealed anchor identity
 `zkuat:anchor-secret:v1`). Changing any of these invalidates every nullifier, record key, and the
 sealed anchor of an already-deployed contract.
 
-### 4. Sponsor seed hygiene
+### 4. Sponsor recovery phrase hygiene
 
-The seed lives **only** in `~/.zkuat/runtime/.env`, mode `0600`. Never in Vercel, Supabase, a
-`NEXT_PUBLIC_*` variable, browser storage, or source control.
+The 24-word recovery phrase lives **only** in `runtime/.env`, mode `0600`. Never in Vercel,
+Supabase, a `NEXT_PUBLIC_*` variable, browser storage, or source control.
 
-The raw seed is **never** a Compact witness. `deriveAnchorSecret()` HKDF-derives a 32-byte anchor
-witness; deployment seals `anchorIdOf(secret)` in the contract, and `attest` / `registerPolicy` fail if
-the configured seed does not match the deployer's. Keep network + seed constant for a given contract
-address.
+The runtime checksum-validates the phrase and decodes its 32-byte BIP-39 entropy as the wallet seed.
+That seed is **never** a Compact witness. `deriveAnchorSecret()` HKDF-derives a 32-byte anchor witness;
+deployment seals `anchorIdOf(secret)` in the contract, and `attest` / `registerPolicy` fail if the
+configured phrase does not restore the deployer's wallet. Keep network + phrase constant for a given
+contract address.
 
 `~/.zkuat/runtime/jobs/*.json` deliberately contain raw prepared evidence, salt, and leaf. Treat the
 whole storage directory as sensitive; never upload it or copy it into the repo.
@@ -155,12 +156,11 @@ npm --prefix contract run compile:keys      # needed for deploy/prove, not for u
 npm --prefix runtime ci
 npm --prefix ui ci                          # only when developing the frontend
 
-mkdir -p ~/.zkuat/runtime
-cp runtime/.env.example ~/.zkuat/runtime/.env
-chmod 600 ~/.zkuat/runtime/.env
+cp runtime/.env.example runtime/.env
+chmod 600 runtime/.env
 ```
 
-Set `ZKUAT_NETWORK` (`preview`|`preprod`) and `ZKUAT_SPONSOR_WALLET_SEED` (16–64 bytes as hex), then:
+Set `ZKUAT_NETWORK` (`preview`|`preprod`) and `ZKUAT_SPONSOR_WALLET_SEED` (a quoted, valid 24-word English BIP-39 recovery phrase), then:
 
 ```bash
 npm --prefix runtime run deploy             # 1 deploy + 4 registerPolicy transactions
@@ -172,7 +172,7 @@ For local frontend work set `ZKUAT_ALLOWED_ORIGIN=http://localhost:3000` — COR
 origin match, no path.
 
 Prerequisites: Node 22+, `compact` CLI/compiler on `PATH`, Docker callable by the current user, and a
-Preview/Preprod seed holding unshielded NIGHT so the SDK can register it for DUST generation.
+Preview/Preprod sponsor wallet holding unshielded NIGHT so the SDK can register it for DUST generation.
 
 ## Commands
 

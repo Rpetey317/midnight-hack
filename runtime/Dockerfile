@@ -2,11 +2,14 @@
 #
 # @zkuat/runtime — the local sponsor companion.
 #
-# Build from the REPOSITORY ROOT, not from runtime/, because runtime/ depends on
-# ../contract through a `file:` link:
+# The release workflow generates the ignored Compact assets, builds this file
+# from the repository root, and publishes:
 #
-#   npm --prefix contract run compile:keys        # keys/ + zkir/ are gitignored
-#   docker build -f runtime/Dockerfile -t zkuat-runtime .
+#   ghcr.io/rpetey317/zkuat-runtime:latest
+#
+# Operators should pull that image. A source build is still possible from the
+# repository root after `npm --prefix contract run compile:keys`; runtime/
+# depends on ../contract through a `file:` link.
 #
 # Run with host networking. This is not a preference — runtime/src/config.ts
 # rejects any ZKUAT_RUNTIME_URL or ZKUAT_PROOF_SERVER_URL that is not loopback,
@@ -15,15 +18,14 @@
 # The Docker socket is mounted so the runtime can manage the sibling proof-server
 # container (`docker run --label works.zkuat.runtime=true ...`).
 #
-#   docker run --rm -it \
-#     --network host \
-#     -v /var/run/docker.sock:/var/run/docker.sock \
-#     -v "$HOME/.zkuat/runtime:/root/.zkuat/runtime" \
-#     zkuat-runtime start
+# The root compose.yml contains the normal operator configuration. Run attached
+# so the startup banner and PAIRING CODE remain visible:
 #
-# The mounted ~/.zkuat/runtime carries .env (mode 0600), jobs/, and the
-# private-state LevelDB. It holds the sponsor seed and raw prepared evidence —
-# treat it as sensitive; never bake it into an image layer.
+#   docker compose up
+#
+# Compose loads runtime/.env into the process environment and mounts
+# ~/.zkuat/runtime separately for jobs and private state. Both contain sensitive
+# material; never bake either into an image layer.
 
 ARG NODE_VERSION=22-bookworm-slim
 ARG DOCKER_CLI_VERSION=27.5.1
@@ -105,9 +107,10 @@ RUN set -eux; \
     ln -s ../../../contract runtime/node_modules/@zkuat/contract; \
     node -e "console.log(require('node:fs').realpathSync('runtime/node_modules/@zkuat/contract'))"
 
-# Proving keys and ZKIR are gitignored (~15 MB) and are copied from the build
-# context, so the image never needs the Compact compiler. Generate them first
-# with `npm --prefix contract run compile:keys`. Pass
+# Proving keys and ZKIR are gitignored (~15 MB). The publishing workflow
+# generates them before this build and COPY above includes them in the image, so
+# operators never need the Compact compiler. For a manual source build, generate
+# them first with `npm --prefix contract run compile:keys`. Pass
 # --build-arg SKIP_ZK_ASSET_CHECK=1 to build a proof-less image (useful only for
 # `proof-server status` or config smoke tests — deploy and prove will fail).
 ARG SKIP_ZK_ASSET_CHECK=0
@@ -115,7 +118,7 @@ RUN set -eux; \
     assets=contract/src/managed/audit_registry; \
     if [ ! -d "${assets}/keys" ] || [ ! -d "${assets}/zkir" ]; then \
       echo "zkuat: ${assets}/keys and ${assets}/zkir are missing." >&2; \
-      echo "zkuat: run 'npm --prefix contract run compile:keys' on the host, then rebuild." >&2; \
+      echo "zkuat: the publishing workflow or source builder must run 'npm --prefix contract run compile:keys' first." >&2; \
       [ "${SKIP_ZK_ASSET_CHECK}" = "1" ] || exit 1; \
       echo "zkuat: continuing without ZK assets (SKIP_ZK_ASSET_CHECK=1); proving will fail." >&2; \
     fi
@@ -129,5 +132,8 @@ EXPOSE 4317
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "const u = new URL('/v1/health', process.env.ZKUAT_RUNTIME_URL || 'http://127.0.0.1:4317'); fetch(u).then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
 
+# JSON form keeps the TypeScript runtime as PID 1. It writes its startup banner
+# directly to stdout, which is visible in the attached terminal and retained by
+# Docker's log driver for `docker logs zkuat-runtime`.
 ENTRYPOINT ["tsx", "src/cli.ts"]
 CMD ["start"]

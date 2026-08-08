@@ -1,0 +1,13 @@
+name: zkuat
+
+services:
+  runtime:
+    image: ghcr.io/rpetey317/zkuat-runtime:latest
+    container_name: zkuat-runtime
+    pull_policy: always
+    network_mode: host
+    env_file:
+      - ./runtime/.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOME}/.zkuat/runtime:/root/.zkuat/runtime

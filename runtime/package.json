@@ -15,6 +15,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@scure/bip39": "2.0.1",
     "@zkuat/contract": "file:../contract"
   },
   "devDependencies": {

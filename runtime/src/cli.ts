@@ -27,9 +27,16 @@ async function start(): Promise<void> {
 
   await server.listen();
   jobs.recover();
-  console.log(`zkuat runtime listening at ${config.runtimeUrl.toString().replace(/\/$/, '')}`);
-  console.log(`pairing code: ${server.auth.code}`);
-  console.log(`allowed origin: ${config.allowedOrigin}`);
+  // Write the startup banner directly to stdout. When this process is PID 1 in
+  // the runtime image, Docker captures these lines verbatim in `docker logs`.
+  process.stdout.write(
+    [
+      `zkuat runtime listening at ${config.runtimeUrl.toString().replace(/\/$/, '')}`,
+      `PAIRING CODE: ${server.auth.code}`,
+      `allowed origin: ${config.allowedOrigin}`,
+      '',
+    ].join('\n'),
+  );
 }
 
 async function deploy(): Promise<void> {

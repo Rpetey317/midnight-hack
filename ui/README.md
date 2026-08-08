@@ -5,7 +5,8 @@ GitHub authentication, repository selection, evidence-workflow orchestration,
 local-runtime pairing, proof-job progress, policy presentation, and the current
 Supabase-backed dashboard/verifier experience.
 
-It never contains the sponsor wallet seed and does not connect a browser wallet.
+It never contains the sponsor recovery phrase or wallet seed and does not
+connect a browser wallet.
 
 ## Current routes
 

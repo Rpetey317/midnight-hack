@@ -70,11 +70,11 @@ The runtime maps `npm audit`'s `vulnerabilities.total` directly into the private
 
 ## Anchor and private state
 
-Deployment derives a 32-byte anchor secret from the sponsor seed with
-domain-separated HKDF and seals `anchorIdOf(secret)` in the contract. The raw
-wallet seed is never passed to Compact. Runtime calls to `attest` and
-`registerPolicy` derive the same secret and fail when the configured seed does
-not match the deployed contract.
+The runtime decodes the sponsor recovery phrase to its 32-byte wallet seed.
+Deployment derives an anchor secret from that seed with domain-separated HKDF
+and seals `anchorIdOf(secret)` in the contract. Neither the phrase nor raw seed
+is passed to Compact. Runtime calls to `attest` and `registerPolicy` derive the
+same secret and fail when the configured phrase restores a different wallet.
 
 The proof witness state contains the canonical evidence struct, fresh salt, and
 Merkle path. `pureCircuits.leafOf`, `stringIdOf`, `recordKeyOf`, and
