@@ -19,7 +19,7 @@ ranks priorities differently from the original plan — see [Priority inversion]
 | `contract/` | ✅ **Schema v2, 87 tests green, real keys, deployed to local devnet.** Full attest → prove → read round trip works. |
 | `collector/`, `attestor/` | ✅ **11 checks, DSSE signing, 186 tests green.** Four signed fixtures anchored and proven on the devnet. Plus `collector/src/github-evidence.ts`, the v2 §4–§5 adapter. |
 | `demo/fixtures/` | ✅ Committed and verifying |
-| `.github/workflows/attest.yml` | ✅ **Replaced with the Master-Doc-v2 §4 evidence job** — dispatch → `npm audit` → `npm pack` digest → `evidence.json` artifact. **The app depends on it**: `ui/src/lib/github/evidence.ts` dispatches it by name. It no longer runs the collector or `actions/attest`. |
+| `.github/workflows/attest.yml` | ✅ **Replaced with the Master-Doc-v2 §4 evidence job** — dispatch → audit + lint + build → `npm pack` digest → `evidence.json` artifact. **The app depends on it**: `ui/src/lib/github/evidence.ts` dispatches it by name. It no longer runs the collector or `actions/attest`. |
 | `anchor/`, `cli/` | ✅ **Trust boundary + `anchor`/`prove`/`status`, 12 tests.** Two fixtures anchored and proven end to end on the devnet. Sigstore path written, comparator tested, never run against a real Fulcio cert. |
 | `ui/` (vendor + buyer) | 🟡 Four routes, Supabase GitHub auth, and the workflow dispatch → poll → artifact download path. **Proving is simulated** and the verifier view reads `lib/demo.ts` fixtures, not the chain. |
 
@@ -189,7 +189,7 @@ Four things the rest of the team needs to know:
 
 **The workflow was since replaced, and this changed.** `.github/workflows/attest.yml` no longer runs
 the collector or `actions/attest`; it is the Master-Doc-v2 §4 job — `workflow_dispatch` with a
-`request_id`, `npm audit --json`, an `npm pack` digest, and `evidence.json` uploaded as
+`request_id`, `npm audit --json`, `npm run lint`, `npm run build`, an `npm pack` digest, and `evidence.json` uploaded as
 `zkuat-evidence-<request_id>`. The application dispatches it by name, so it **is** depended on now, and
 none of the Sigstore/predicate machinery below runs in CI any more.
 

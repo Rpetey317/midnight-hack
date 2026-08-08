@@ -65,7 +65,7 @@ Fastest path for a new team member:
 | `contract/` | ✅ **v2, 87 tests, real keys, deployed to local devnet.** Full attest → prove → read round trip. |
 | `collector/`, `attestor/` | ✅ **11 checks, DSSE-signed bundles, 186 tests.** Four signed fixtures anchored and proven on the devnet with real ZK proofs. Plus the v2 GitHub-evidence adapter. |
 | `demo/fixtures/` | ✅ Committed, verifying, and consumable by `--bundle` |
-| `.github/workflows/attest.yml` | ✅ **The Master-Doc-v2 §4 evidence job** — dispatch → `npm audit` → `npm pack` digest → `evidence.json` artifact. The app dispatches it by name. |
+| `.github/workflows/attest.yml` | ✅ **The Master-Doc-v2 §4 evidence job** — dispatch → audit + lint + build → `npm pack` digest → `evidence.json` artifact. The app dispatches it by name. |
 | `anchor/`, `cli/` | ✅ **Trust boundary + `anchor`/`prove`/`status`, 12 tests.** Two fixtures anchored and proven on the devnet with real ZK proofs; Sigstore repo binding written and unit-tested, never exercised against a real Fulcio cert (the repo is private). |
 | `ui/` (vendor + buyer) | 🟡 Four routes, Supabase GitHub auth, live workflow dispatch → artifact download. **Proving is simulated; the verifier view reads fixtures, not the chain.** |
 

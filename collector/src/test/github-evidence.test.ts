@@ -36,6 +36,10 @@ const doc = (over: Record<string, unknown> = {}) => ({
   commit: COMMIT,
   artifactDigest: DIGEST,
   vulnerabilities: { critical: 0, high: 3, moderate: 4, low: 1, total: 8 },
+  checks: {
+    lint: { command: 'npm run lint', passed: true },
+    build: { command: 'npm run build', passed: true },
+  },
   ...over,
 });
 
@@ -47,6 +51,10 @@ describe('parseGithubEvidence', () => {
     expect(parsed.repository).toBe('acme-software/payment-engine');
     expect(parsed.commit).toBe(COMMIT);
     expect(parsed.vulnerabilities.high).toBe(3);
+    expect(parsed.checks).toEqual({
+      lint: { command: 'npm run lint', passed: true },
+      build: { command: 'npm run build', passed: true },
+    });
   });
 
   it('lowercases the commit and digest so the encoder sees a stable form', () => {
@@ -94,6 +102,20 @@ describe('parseGithubEvidence', () => {
     expect(() => parseGithubEvidence(null)).toThrow(/must be a JSON object/);
     expect(() => parseGithubEvidence([doc()])).toThrow(/must be a JSON object/);
   });
+
+  it('rejects missing or malformed workflow check results', () => {
+    expect(() => parseGithubEvidence(doc({ checks: undefined }))).toThrow(/missing a checks object/);
+    expect(() =>
+      parseGithubEvidence(
+        doc({
+          checks: {
+            lint: { command: 'npm run lint', passed: 'yes' },
+            build: { command: 'npm run build', passed: true },
+          },
+        }),
+      ),
+    ).toThrow(/checks\.lint\.passed must be a boolean/);
+  });
 });
 
 describe('reportFromGithubEvidence', () => {
@@ -127,10 +149,22 @@ describe('reportFromGithubEvidence', () => {
     expect(checks.forbiddenDeps.error).toMatch(/no prohibited-package list/);
   });
 
-  it('derives ciGreen and buildProvenanceVerified from the run conclusion', async () => {
+  it('derives ciGreen from the run conclusion and lint/build results', async () => {
     const ok = await reportFromGithubEvidence(doc(), succeeded);
     expect(ok.checks.ciGreen).toMatchObject({ value: true, status: 'measured' });
     expect(ok.checks.buildProvenanceVerified).toMatchObject({ value: true, status: 'measured' });
+
+    const lintFailed = await reportFromGithubEvidence(
+      doc({
+        checks: {
+          lint: { command: 'npm run lint', passed: false },
+          build: { command: 'npm run build', passed: true },
+        },
+      }),
+      succeeded,
+    );
+    expect(lintFailed.checks.ciGreen).toMatchObject({ value: false, status: 'measured' });
+    expect(lintFailed.checks.buildProvenanceVerified.value).toBe(true);
 
     const failed = await reportFromGithubEvidence(doc(), {
       run: { id: 43, conclusion: 'failure' },

@@ -5,7 +5,7 @@
  * repository's own workflow, waits for it, downloads the artifact, and gets a
  * deliberately small document back:
  *
- *     { repository, commit, artifactDigest, vulnerabilities: { critical, … } }
+ *     { repository, commit, artifactDigest, vulnerabilities: { critical, … }, checks: { lint, build } }
  *
  * The circuit needs seventeen fields. This module bridges the two **without
  * pretending the missing ones were measured**.
@@ -45,7 +45,7 @@ import { checkBranchProtected, checkMfaRequired, repoMetadata } from './checks/r
 import { hashConfig } from './config.js';
 
 export const GITHUB_ADAPTER_NAME = 'zkuat-github-evidence';
-export const GITHUB_ADAPTER_VERSION = '0.1.0';
+export const GITHUB_ADAPTER_VERSION = '0.2.0';
 
 /**
  * The attestor slug for evidence produced this way.
@@ -77,6 +77,15 @@ export interface GithubEvidenceDocument {
     low: number;
     total: number;
   };
+  checks: {
+    lint: GithubCommandCheck;
+    build: GithubCommandCheck;
+  };
+}
+
+export interface GithubCommandCheck {
+  command: string;
+  passed: boolean;
 }
 
 /** What the application learned about the run that produced the document. */
@@ -113,6 +122,26 @@ function requireCount(value: unknown, field: string): number {
     throw new Error(`zkuat: evidence.json ${field} must be a non-negative integer, got ${value}`);
   }
   return value;
+}
+
+function requireCommandCheck(
+  value: unknown,
+  field: string,
+  expectedCommand: string,
+): GithubCommandCheck {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`zkuat: evidence.json ${field} must be an object`);
+  }
+  const check = value as Record<string, unknown>;
+  if (check.command !== expectedCommand) {
+    throw new Error(
+      `zkuat: evidence.json ${field}.command must be ${JSON.stringify(expectedCommand)}, got ${JSON.stringify(check.command)}`,
+    );
+  }
+  if (typeof check.passed !== 'boolean') {
+    throw new Error(`zkuat: evidence.json ${field}.passed must be a boolean`);
+  }
+  return { command: expectedCommand, passed: check.passed };
 }
 
 /**
@@ -159,6 +188,12 @@ export function parseGithubEvidence(input: unknown): GithubEvidenceDocument {
   }
   const counts = vulns as Record<string, unknown>;
 
+  const checks = doc.checks;
+  if (!checks || typeof checks !== 'object' || Array.isArray(checks)) {
+    throw new Error('zkuat: evidence.json is missing a checks object');
+  }
+  const commandChecks = checks as Record<string, unknown>;
+
   return {
     repository,
     commit: commit.toLowerCase(),
@@ -166,6 +201,10 @@ export function parseGithubEvidence(input: unknown): GithubEvidenceDocument {
     vulnerabilities: Object.fromEntries(
       INTEGER_KEYS.map((key) => [key, requireCount(counts[key], `vulnerabilities.${key}`)]),
     ) as GithubEvidenceDocument['vulnerabilities'],
+    checks: {
+      lint: requireCommandCheck(commandChecks.lint, 'checks.lint', 'npm run lint'),
+      build: requireCommandCheck(commandChecks.build, 'checks.build', 'npm run build'),
+    },
   };
 }
 
@@ -212,9 +251,13 @@ export async function reportFromGithubEvidence(
     : `github actions run ${run?.id ?? 'unknown'}`;
   const succeeded = run?.conclusion === 'success';
 
+  const commandChecksPassed = doc.checks.lint.passed && doc.checks.build.passed;
   const ciGreen: CheckResult<boolean> =
     run && typeof run.conclusion === 'string'
-      ? measured(succeeded, `${runSource} → conclusion`, { conclusion: run.conclusion })
+      ? measured(succeeded && commandChecksPassed, `${runSource} → conclusion + workflow checks`, {
+          conclusion: run.conclusion,
+          checks: doc.checks,
+        })
       : unmeasured(
           false,
           runSource,

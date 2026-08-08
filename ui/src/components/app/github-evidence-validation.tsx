@@ -54,7 +54,7 @@ export function GithubEvidenceValidation({ productId }: { productId: string }) {
           <div className="flex flex-col gap-3 bg-card px-6 py-5 text-sm">
             <span className="inline-flex items-center gap-2 text-success">
               <ShieldCheck className="size-4" strokeWidth={1.5} />
-              Workflow succeeded
+              Evidence ready
             </span>
             <Field label="Request" value={result.requestId} />
             <Field label="Run" value={String(result.run.id)} />

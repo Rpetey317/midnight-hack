@@ -239,7 +239,7 @@ commitment L. That is a stronger position than any assurance vendor occupies tod
 | Component | Runs where | Responsibility |
 |---|---|---|
 | `collector` | Vendor's GitHub Actions, or the operator's machine | Run checks, emit a private report. ✅ Built. `src/github-evidence.ts` adapts a v2 workflow's `evidence.json` into the same report. |
-| `.github/workflows/attest.yml` | Vendor's GitHub Actions | **Rewritten for Master-Doc-v2 §4.** `workflow_dispatch` with a `request_id` → `npm audit --json` → `npm pack` digest → `evidence.json` uploaded as an artifact. It no longer invokes the collector and no longer calls `actions/attest`. ✅ Live — the app dispatches it. |
+| `.github/workflows/attest.yml` | Vendor's GitHub Actions | **Rewritten for Master-Doc-v2 §4.** `workflow_dispatch` with a `request_id` → `npm audit --json` + `npm run lint` + `npm run build` → `npm pack` digest → `evidence.json` uploaded as an artifact. It no longer invokes the collector and no longer calls `actions/attest`. ✅ Live — the app dispatches it. |
 | `attestor` | Vendor CI or trusted service | Validate CI inputs, normalize evidence, sign (§9), compute the commitment. ✅ Built |
 | `anchor` | Operator's server / laptop | Verify Sigstore bundle, check OIDC↔repo binding, submit `attest(leaf)` |
 | `contract` | Midnight | Anchor tree, policy registry, compliance records, nullifiers |

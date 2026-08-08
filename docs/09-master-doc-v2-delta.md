@@ -27,7 +27,7 @@ So the as-built is a **superset**. Nothing was removed.
 | 2 | v2 §7 — evidence enters through a Compact witness | `witness getEvidence(): Evidence` | ✅ already true |
 | 3 | v2 §8 — public: vendor, repo/product, policy id/version, timestamp, result | `ComplianceRecord`, unchanged | ✅ already true |
 | 4 | v2 §9 — continuous compliance, same evidence against many policies | `records` + `history`, `HistoricMerkleTree` | ✅ already true |
-| 5 | v2 §4 — workflow runs `npm audit`, emits `evidence.json`, uploads an artifact | `.github/workflows/attest.yml`, rewritten | ✅ live |
+| 5 | v2 §4 — workflow runs audit + lint + build, emits `evidence.json`, uploads an artifact | `.github/workflows/attest.yml`, rewritten | ✅ live |
 | 6 | v2 §5 — app dispatches with a `request_id`, polls, downloads, parses | `ui/src/lib/github/evidence.ts` | ✅ live |
 | 7 | v2 §4 evidence.json → the 17-field `Evidence` struct | `collector/src/github-evidence.ts` | ✅ new |
 | 8 | v2 §10 — do not *require* Sigstore, blinded commitments, attestor keys | Built anyway; v2 §12 wants them later | ✅ kept, documented |
@@ -41,7 +41,9 @@ vendor clicks Validate
         ↓
 app POSTs /actions/workflows/attest.yml/dispatches   { request_id }
         ↓
-GitHub Actions   npm audit --json  →  npm pack | sha256  →  evidence.json
+GitHub Actions   npm audit --json + npm run lint + npm run build
+                                      ↓
+                              npm pack | sha256  →  evidence.json
         ↓
 uploaded as artifact  zkuat-evidence-<request_id>
         ↓
@@ -68,7 +70,11 @@ downstream pipeline.
   "repository": "owner/name",
   "commit": "9f2a1b3c…",
   "artifactDigest": "sha256:8f739ab…",
-  "vulnerabilities": { "critical": 0, "high": 3, "moderate": 4, "low": 1, "total": 8 }
+  "vulnerabilities": { "critical": 0, "high": 3, "moderate": 4, "low": 1, "total": 8 },
+  "checks": {
+    "lint": { "command": "npm run lint", "passed": true },
+    "build": { "command": "npm run build", "passed": true }
+  }
 }
 ```
 
@@ -90,7 +96,7 @@ of a single proof.
 | `attestorId` | `github-actions` | measured |
 | `criticals` / `highs` | `vulnerabilities.critical` / `.high` | measured |
 | `vulnDeps` | `vulnerabilities.total` | measured |
-| `ciGreen` | the dispatched run's conclusion | measured |
+| `ciGreen` | the dispatched run's conclusion + lint/build results | measured |
 | `buildProvenanceVerified` | the dispatched run's conclusion, **under v2 §10's trust assumption** | measured |
 | `branchProtected` / `mfaRequired` | `gh api`, downstream of CI (`--probe`) | measured, else `unavailable` |
 | **`kev`** | — | **`unavailable`** |
