@@ -1,187 +1,71 @@
-# Build → measure → sign → attest.
-#
-# The live version of what `demo/fixtures/` contains: a vendor's own CI produces
-# authenticated private evidence about a specific build, publishes only a
-# blinded commitment, and hands the evidence to the vendor over a private
-# channel.
-#
-# ─────────────────────────────────────────────────────────────────────────────
-# THE ONE THING TO GET RIGHT
-#
-# `actions/attest` signs `predicate.json` and nothing else.
-#
-#   predicate.json   { leaf, repo, sha, schema }        → Sigstore → Rekor → PUBLIC
-#   bundle.json      { evidence, salt, leaf, signature } → private artifact
-#
-# GitHub attestations are world-readable through Rekor, which is a public
-# transparency log. Putting evidence in the predicate would publish our
-# vulnerability findings to it — leaking precisely what this protocol exists to
-# protect. The leaf is a salt-blinded commitment, so publishing it discloses
-# nothing without the salt, and the salt only ever travels in bundle.json.
-#
-# The "guard" step below fails the job if anything private reaches the
-# predicate. It is not decoration: it is the mechanized form of the privacy
-# checklist item in docs/02-threat-model.md.
-#
-# ─────────────────────────────────────────────────────────────────────────────
-# STATUS: this workflow has NOT been run green, and nothing depends on it.
-#
-# Master Doc §39 ranks CI tenth of eleven, below both UIs — a signed fixture
-# produced once by hand is indistinguishable, on stage, from one produced by a
-# live workflow, and infinitely more reliable. The demo path uses the committed
-# fixtures throughout.
-#
-# Two known obstacles, recorded so nobody rediscovers them at 03:00:
-#
-#   1. Artifact attestations are plan-gated on PRIVATE repositories. This repo
-#      is private, so `actions/attest` may fail outright with a permissions
-#      error. Making the repo public would fix it and would also make every
-#      Rekor entry public — which is fine here, because the predicate carries
-#      only the blinded leaf. That is the design working as intended.
-#   2. The local `gh` is 2.45.0 and has no `attestation` subcommand (added in
-#      2.49.0). Runners ship a current gh, so this only bites when reproducing
-#      the workflow locally.
+name: Generate Evidence
 
-name: attest
+run-name: Evidence ${{ inputs.request_id || github.sha }}
 
 on:
   workflow_dispatch:
     inputs:
-      valid_days:
-        description: How long the attestor declares the evidence valid (policy max is 30)
+      request_id:
+        description: Validation request ID
         required: false
-        default: '29'
-  push:
-    tags: ['v*']
-
-permissions:
-  contents: read
-  # Fulcio issues a signing certificate against the workflow's OIDC token. This
-  # is the trust root the whole chain terminates at: not a key we invented, but
-  # GitHub's binding of a workflow to the repository that ran it — the same root
-  # SLSA and npm provenance use.
-  id-token: write
-  attestations: write
+        default: ""
 
 jobs:
-  attest:
+  audit:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ui
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
-      # No Compact toolchain needed. contract/src/managed/audit_registry/contract/
-      # is committed precisely so that CI, a fresh clone, and the browser build
-      # can all call pureCircuits without compiling the contract first.
-      - name: Install
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run npm audit
+        run: npm audit --json > npm-audit.json || true
+
+      - name: Generate evidence
         run: |
-          npm --prefix contract  ci || npm --prefix contract  install
-          npm --prefix attestor  install
-          npm --prefix collector install
+          node <<'EOF'
+          const fs = require("fs");
 
-      - name: Build the artifact
-        id: build
-        run: |
-          # Stand-in for a real build. Replace with whatever produces the
-          # artifact a buyer actually receives — a tarball, a binary, an image.
-          ARTIFACT=contract/src/managed/audit_registry/contract/index.js
-          test -f "$ARTIFACT" || { echo "::error::no artifact at $ARTIFACT"; exit 1; }
-          echo "path=$ARTIFACT"                                    >> "$GITHUB_OUTPUT"
-          echo "digest=$(sha256sum "$ARTIFACT" | cut -d' ' -f1)"   >> "$GITHUB_OUTPUT"
+          const audit = JSON.parse(
+            fs.readFileSync("npm-audit.json", "utf8")
+          );
 
-      - name: Collect evidence
-        working-directory: collector
-        env:
-          # Lifts the GitHub advisory rate limit for the GHSA→CVE lookups that
-          # feed the KEV check.
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          npx zkuat-collect \
-            --config zkuat.collector.json \
-            --commit "$GITHUB_SHA" \
-            --out "$RUNNER_TEMP/evidence-raw.json"
+          const vulnerabilities =
+            audit.metadata?.vulnerabilities ?? {};
 
-      # The attestor key. In CI it comes from a secret; locally it is a file.
-      # A real deployment keeps it in a KMS and never lets it touch a disk —
-      # docs/02-threat-model.md is explicit that the attestor is an irreducible
-      # trust root, and this is where that trust physically lives.
-      - name: Restore the attestor key
-        env:
-          ATTESTOR_KEY: ${{ secrets.ZKUAT_ATTESTOR_KEY }}
-        run: |
-          if [ -z "$ATTESTOR_KEY" ]; then
-            echo "::warning::ZKUAT_ATTESTOR_KEY is not set; using the committed DEMO key."
-            echo "::warning::Anything signed with it is demo data, not an attestation."
-            cp demo/keys/zkuat-attestor-v1.key.json "$RUNNER_TEMP/attestor.key.json"
-          else
-            printf '%s' "$ATTESTOR_KEY" > "$RUNNER_TEMP/attestor.key.json"
-          fi
-          chmod 600 "$RUNNER_TEMP/attestor.key.json"
+          const evidence = {
+            repository: process.env.GITHUB_REPOSITORY,
+            commit: process.env.GITHUB_SHA,
+            vulnerabilities: {
+              critical: vulnerabilities.critical ?? 0,
+              high: vulnerabilities.high ?? 0,
+              moderate: vulnerabilities.moderate ?? 0,
+              low: vulnerabilities.low ?? 0,
+              total: vulnerabilities.total ?? 0
+            }
+          };
 
-      - name: Normalize and sign
-        working-directory: attestor
-        run: |
-          # --expect-* cross-checks the report against what THIS job built, so a
-          # collector that measured a stale tree or a different artifact is
-          # caught before a signature exists. Master Doc §19 puts "validate
-          # expected CI information" first for exactly this reason.
-          npx zkuat-attest \
-            --report "$RUNNER_TEMP/evidence-raw.json" \
-            --key    "$RUNNER_TEMP/attestor.key.json" \
-            --out    "$RUNNER_TEMP/out" \
-            --expect-repo   "$GITHUB_REPOSITORY" \
-            --expect-commit "$GITHUB_SHA" \
-            --expect-digest "${{ steps.build.outputs.digest }}" \
-            --allow-degraded
+          fs.writeFileSync(
+            "evidence.json",
+            JSON.stringify(evidence, null, 2)
+          );
+          EOF
 
-      # The gate. Everything above this line can be re-run; a leak past it is
-      # published to a public transparency log and cannot be withdrawn.
-      - name: Guard — the predicate must carry nothing private
-        working-directory: attestor
-        run: |
-          npx tsx -e '
-            import { loadBundle, assertNoEvidenceLeak } from "./src/index.js";
-            import { readFileSync } from "node:fs";
-            const out = process.env.RUNNER_TEMP + "/out";
-            const predicate = JSON.parse(readFileSync(out + "/predicate.json", "utf8"));
-            assertNoEvidenceLeak(predicate, loadBundle(out + "/bundle.json"));
-            console.log("predicate is public-safe:", JSON.stringify(predicate));
-          '
-
-      - name: Attest the commitment
-        uses: actions/attest@v1
-        with:
-          subject-path: ${{ steps.build.outputs.path }}
-          predicate-type: https://zkuat.dev/evidence/v2
-          # The leaf, the repo, the commit, the schema. Nothing else, ever.
-          predicate-path: ${{ runner.temp }}/out/predicate.json
-
-      # PRIVATE. Carries the salt and the full evidence. Short retention because
-      # losing control of the salt unblinds the commitment for anyone holding
-      # the public leaf; losing the salt entirely makes the evidence unprovable
-      # forever, with no recovery. The vendor downloads this and nobody else.
-      - name: Upload the private evidence bundle
+      - name: Upload evidence
         uses: actions/upload-artifact@v4
         with:
-          name: zkuat-evidence-bundle-${{ github.sha }}
-          path: ${{ runner.temp }}/out/bundle.json
+          name: evidence-${{ inputs.request_id || github.sha }}
+          path: ui/evidence.json
           retention-days: 1
-          if-no-files-found: error
-
-      - name: Summary
-        run: |
-          {
-            echo "### zkuat evidence attested"
-            echo
-            echo '```json'
-            cat "$RUNNER_TEMP/out/predicate.json"
-            echo '```'
-            echo
-            echo "The predicate above is public. The evidence it commits to is in the"
-            echo "\`zkuat-evidence-bundle\` artifact, which carries the salt and must not"
-            echo "be shared. Next: the anchor verifies this attestation and submits"
-            echo "\`attest(leaf)\` to Midnight."
-          } >> "$GITHUB_STEP_SUMMARY"
