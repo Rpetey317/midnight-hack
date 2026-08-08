@@ -57,36 +57,23 @@ export async function listGithubRepos() {
   const token = session?.provider_token;
   if (!token) return { error: "GitHub access token not available. Sign out and sign in again." };
 
-  // 100 is the GitHub maximum, so anyone with more than that needs paging —
-  // without it the extra repositories are silently missing from the picker.
-  // The cap bounds the work; past it, the picker's search is the answer.
-  const PER_PAGE = 100;
-  const MAX_PAGES = 10;
-
-  const raw: { full_name: string; private: boolean }[] = [];
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    const res = await fetch(
-      // owner + collaborator only: repositories the user owns or contributes
-      // to. `organization_member` would add every repository in every org they
-      // belong to, including ones they have no involvement with.
-      `https://api.github.com/user/repos?per_page=${PER_PAGE}&page=${page}&sort=updated&affiliation=owner,collaborator`,
-      {
-        headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: `Bearer ${token}`,
-          "GitHub-Api-Version": "2022-11-28",
-        },
+  const res = await fetch(
+    "https://api.github.com/user/repos?per_page=100&sort=updated&affiliation=owner,collaborator,organization_member",
+    {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "GitHub-Api-Version": "2022-11-28",
       },
-    );
+    },
+  );
 
-    if (!res.ok) return { error: `GitHub API ${res.status} ${res.statusText}` };
+  if (!res.ok) return { error: `GitHub API ${res.status} ${res.statusText}` };
 
-    const batch = (await res.json()) as { full_name: string; private: boolean }[];
-    raw.push(...batch);
-    if (batch.length < PER_PAGE) break;
-  }
-
-  const repos = raw.map((r) => ({ fullName: r.full_name, private: r.private }));
+  const repos = ((await res.json()) as { full_name: string; private: boolean }[]).map((r) => ({
+    fullName: r.full_name,
+    private: r.private,
+  }));
 
   const { data: existing } = await supabase.from("products").select("repo").eq("user_id", user.id);
   const taken = new Set((existing ?? []).map((p) => p.repo as string));
@@ -110,10 +97,8 @@ export async function findAuditsByRepo(repo: string) {
 
 export async function deleteProduct(formData: FormData) {
   const id = String(formData.get("id") ?? "");
-  const { supabase, user } = await requireUser();
-  // RLS already restricts writes to the owner; this states the intent in the
-  // query rather than relying on the policy alone.
-  await supabase.from("products").delete().eq("id", id).eq("user_id", user.id);
+  const { supabase } = await requireUser();
+  await supabase.from("products").delete().eq("id", id);
   revalidatePath("/dashboard");
 }
 

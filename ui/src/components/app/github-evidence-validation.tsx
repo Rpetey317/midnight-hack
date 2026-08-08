@@ -7,14 +7,6 @@ import { GithubIcon } from "@/components/app/github-icon";
 import { CopyField } from "@/components/app/copy-field";
 import { RuntimeProgress } from "@/components/app/runtime-progress";
 import { Loader } from "@/components/motion/loader";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/motion/select";
-import { POLICIES } from "@/lib/demo";
 import { requestRepositoryEvidence } from "@/app/actions";
 import {
   createRuntimeJob,
@@ -231,27 +223,20 @@ export function GithubEvidenceValidation({ productId }: { productId: string }) {
           <div className="border-t border-border px-6 py-5">
             {runtimeToken && (
               <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs text-muted-foreground">Policy</span>
-                  <Select
+                <label className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+                  Policy
+                  <select
                     value={policySlug}
-                    onValueChange={(next) => setPolicySlug(next as RuntimePolicySlug)}
+                    onChange={(event) => setPolicySlug(event.target.value as RuntimePolicySlug)}
                     disabled={runtimeBusy}
+                    className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-foreground/40"
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a policy" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {/* Derived from the bundled policies so the names and
-                          versions cannot drift from what is registered. */}
-                      {POLICIES.map((p) => (
-                        <SelectItem key={p.slug} value={p.slug}>
-                          {`${p.name} v${p.version}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <option value="npm-ci-baseline-v1">npm CI Baseline v1</option>
+                    <option value="npm-production-release-v1">npm Production Release v1</option>
+                    <option value="npm-zero-known-vulns-v1">npm Zero Known Vulnerabilities v1</option>
+                    <option value="npm-emergency-hotfix-v1">npm Emergency Hotfix v1</option>
+                  </select>
+                </label>
                 <StatefulButton
                   state={runtimeBusy ? "loading" : runtimeError ? "error" : job && isTerminalStatus(job.status) ? "success" : "idle"}
                   icon={<Cpu className="size-4" strokeWidth={1.5} />}

@@ -179,16 +179,7 @@ export async function getProduct(id: string) {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // This is the owner's view, but products and artifacts are publicly readable
-  // so the verifier flow can join through them — RLS will not scope these for
-  // us. Without the owner filter, any signed-in user could open another user's
-  // attester URL and read their repository name, digests and commits.
-  const { data: product } = await supabase
-    .from("products")
-    .select("*")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single();
+  const { data: product } = await supabase.from("products").select("*").eq("id", id).single();
   if (!product) return null;
 
   const [{ data: artifacts }, { data: proofs }] = await Promise.all([
@@ -196,7 +187,6 @@ export async function getProduct(id: string) {
       .from("artifacts")
       .select("*")
       .eq("product_id", id)
-      .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
     supabase
       .from("proof_activity")
