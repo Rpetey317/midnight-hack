@@ -1,7 +1,7 @@
-// Browser-safe display types mirroring contract schema v3. Numeric Compact
+// Browser-safe display types mirroring contract schema v4. Numeric Compact
 // fields are bigint on chain; the UI uses number for fixtures and labels only.
 
-export const EVIDENCE_SCHEMA = "zkuat.evidence.v3";
+export const EVIDENCE_SCHEMA = "zkuat.evidence.v4";
 export const MAX_U32 = 4_294_967_295;
 
 /** Private evidence. Never written to Midnight. */
@@ -15,7 +15,7 @@ export type Evidence = {
   vulns: {
     criticals: number;
     highs: number;
-    vulnerableDependencies: number;
+    totalVulnerabilities: number;
   };
   checks: {
     lintPassed: boolean;
@@ -33,7 +33,7 @@ export type Policy = {
   version: number;
   maxCriticals: number;
   maxHighs: number;
-  maxVulnDeps: number;
+  maxTotalVulnerabilities: number;
   requireLint: boolean;
   requireBuild: boolean;
   maxAgeSeconds: number;
@@ -80,17 +80,17 @@ export function policyRequirements(policy: Policy): Requirement[] {
       expr: `highVulnerabilities <= ${policy.maxHighs}`,
     });
   }
-  if (policy.maxVulnDeps < MAX_U32) {
+  if (policy.maxTotalVulnerabilities < MAX_U32) {
     requirements.push({
-      id: "vulnerableDependencies",
+      id: "totalVulnerabilities",
       label:
-        policy.maxVulnDeps === 0
-          ? "No vulnerable dependencies"
-          : `At most ${policy.maxVulnDeps} vulnerable dependencies`,
+        policy.maxTotalVulnerabilities === 0
+          ? "No known vulnerabilities"
+          : `At most ${policy.maxTotalVulnerabilities} total vulnerabilities`,
       expr:
-        policy.maxVulnDeps === 0
-          ? "vulnerableDependencies == 0"
-          : `vulnerableDependencies <= ${policy.maxVulnDeps}`,
+        policy.maxTotalVulnerabilities === 0
+          ? "totalVulnerabilities == 0"
+          : `totalVulnerabilities <= ${policy.maxTotalVulnerabilities}`,
     });
   }
   if (policy.requireLint)
@@ -109,7 +109,7 @@ export function evaluate(evidence: Evidence, policy: Policy): boolean {
   return (
     evidence.vulns.criticals <= policy.maxCriticals &&
     evidence.vulns.highs <= policy.maxHighs &&
-    evidence.vulns.vulnerableDependencies <= policy.maxVulnDeps &&
+    evidence.vulns.totalVulnerabilities <= policy.maxTotalVulnerabilities &&
     (!policy.requireLint || evidence.checks.lintPassed) &&
     (!policy.requireBuild || evidence.checks.buildPassed)
   );

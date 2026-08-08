@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 const PRIVATE_ROWS = [
   { label: "Critical vulnerabilities", value: EVIDENCE.vulns.criticals },
   { label: "High vulnerabilities", value: EVIDENCE.vulns.highs },
-  { label: "Vulnerable dependencies", value: EVIDENCE.vulns.vulnerableDependencies },
+  { label: "Total vulnerabilities", value: EVIDENCE.vulns.totalVulnerabilities },
 ];
 
 export function Asymmetry() {

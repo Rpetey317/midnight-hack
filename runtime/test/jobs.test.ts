@@ -21,7 +21,7 @@ const input: RuntimeJobInput = {
   requestId,
   run: { id: 42, url: 'https://github.com/acme/payment-engine/actions/runs/42', status: 'completed', conclusion: 'success' },
   artifact: { id: 9, name: `zkuat-evidence-${requestId}` },
-  policySlug: 'bank-v1',
+  policySlug: 'npm-ci-baseline-v1',
 };
 
 function waitForTerminal(manager: JobManager, id: string): Promise<PublicJob> {

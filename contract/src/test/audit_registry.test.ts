@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { deriveAnchorSecret } from '../anchor-secret.js';
 import {
+  BUNDLED_POLICIES,
   EVIDENCE_SCHEMA,
-  POLICY_BANK_ID,
-  POLICY_BANK_V1,
-  POLICY_ENTERPRISE_ID,
-  POLICY_ENTERPRISE_V1,
+  POLICY_CI_BASELINE_ID,
+  POLICY_CI_BASELINE_V1,
+  POLICY_EMERGENCY_HOTFIX_ID,
+  POLICY_PRODUCTION_RELEASE_ID,
+  POLICY_ZERO_KNOWN_VULNS_ID,
   encodeArtifactDigest,
   encodeEvidence,
   policyId,
@@ -18,17 +20,18 @@ import {
 import { ComplianceRegistrySimulator } from './simulator.js';
 import {
   ANCHOR_SECRET,
-  BANK_ONLY,
+  BASELINE_ONLY,
   DIGEST_A,
   DIGEST_B,
-  ENTERPRISE_ONLY,
-  FAILS_BOTH,
+  FAILS_ALL,
+  HOTFIX_ONLY,
   IMPOSTOR_SECRET,
   NO_BUILD,
   NO_LINT,
   OTHER_ARTIFACT,
   OVERLONG_WINDOW,
-  PASSES_BOTH,
+  PASSES_ALL,
+  PRODUCTION_NOT_ZERO,
   PRODUCT,
   REFRESHED,
   SALT_A,
@@ -44,8 +47,7 @@ const ARTIFACT_A = encodeArtifactDigest(DIGEST_A);
 
 function deployed(): ComplianceRegistrySimulator {
   const sim = new ComplianceRegistrySimulator(ANCHOR_SECRET);
-  sim.registerPolicy(POLICY_BANK_ID, POLICY_BANK_V1);
-  sim.registerPolicy(POLICY_ENTERPRISE_ID, POLICY_ENTERPRISE_V1);
+  for (const { id, policy } of BUNDLED_POLICIES) sim.registerPolicy(id, policy);
   return sim;
 }
 
@@ -56,7 +58,7 @@ function attested(evidence: Evidence, salt = SALT_A): ComplianceRegistrySimulato
   return sim.asProver(evidence, salt, sim.pathFor(leaf));
 }
 
-function prove(sim: ComplianceRegistrySimulator, policy = POLICY_BANK_ID): boolean {
+function prove(sim: ComplianceRegistrySimulator, policy = POLICY_CI_BASELINE_ID): boolean {
   return sim.proveCompliance(VENDOR_ID, PRODUCT_ID, ARTIFACT_A, policy);
 }
 
@@ -73,21 +75,21 @@ describe('deployment and anchor authorization', () => {
 
   it('rejects policy registration from a different secret', () => {
     const sim = deployed().withPrivateState({ secretKey: IMPOSTOR_SECRET });
-    expect(() => sim.registerPolicy(policyId('rogue'), POLICY_BANK_V1)).toThrow('not anchor');
+    expect(() => sim.registerPolicy(policyId('rogue'), POLICY_CI_BASELINE_V1)).toThrow('not anchor');
   });
 });
 
 describe('policy evaluation', () => {
   it('records compliant evidence', () => {
-    const sim = attested(PASSES_BOTH);
+    const sim = attested(PASSES_ALL);
     expect(prove(sim)).toBe(true);
-    expect(sim.record(recordKey(DIGEST_A, 'bank-v1'))?.compliant).toBe(true);
+    expect(sim.record(recordKey(DIGEST_A, 'npm-ci-baseline-v1'))?.compliant).toBe(true);
   });
 
   it('records a negative verdict instead of reverting', () => {
-    const sim = attested(FAILS_BOTH);
+    const sim = attested(FAILS_ALL);
     expect(prove(sim)).toBe(false);
-    expect(sim.record(recordKey(DIGEST_A, 'bank-v1'))?.compliant).toBe(false);
+    expect(sim.record(recordKey(DIGEST_A, 'npm-ci-baseline-v1'))?.compliant).toBe(false);
   });
 
   it.each([
@@ -98,15 +100,21 @@ describe('policy evaluation', () => {
   });
 
   it('allows the same evidence to produce different policy verdicts', () => {
-    const sim = attested(BANK_ONLY);
-    expect(prove(sim, POLICY_BANK_ID)).toBe(true);
-    expect(prove(sim, POLICY_ENTERPRISE_ID)).toBe(false);
+    const sim = attested(BASELINE_ONLY);
+    expect(prove(sim, POLICY_CI_BASELINE_ID)).toBe(true);
+    expect(prove(sim, POLICY_PRODUCTION_RELEASE_ID)).toBe(false);
   });
 
-  it('mirrors the policy contrast for high-severity findings', () => {
-    const sim = attested(ENTERPRISE_ONLY);
-    expect(prove(sim, POLICY_BANK_ID)).toBe(false);
-    expect(prove(sim, POLICY_ENTERPRISE_ID)).toBe(true);
+  it('distinguishes production from zero-known-vulnerability requirements', () => {
+    const sim = attested(PRODUCTION_NOT_ZERO);
+    expect(prove(sim, POLICY_PRODUCTION_RELEASE_ID)).toBe(true);
+    expect(prove(sim, POLICY_ZERO_KNOWN_VULNS_ID)).toBe(false);
+  });
+
+  it('allows the emergency policy to omit lint while retaining the build gate', () => {
+    const sim = attested(HOTFIX_ONLY);
+    expect(prove(sim, POLICY_CI_BASELINE_ID)).toBe(false);
+    expect(prove(sim, POLICY_EMERGENCY_HOTFIX_ID)).toBe(true);
   });
 
   it('rejects validity windows longer than the policy', () => {
@@ -117,52 +125,52 @@ describe('policy evaluation', () => {
 describe('evidence binding and replay protection', () => {
   it('binds vendor, product, and artifact public inputs', () => {
     expect(() =>
-      attested(PASSES_BOTH).proveCompliance(
+      attested(PASSES_ALL).proveCompliance(
         vendorId('somebody-else'),
         PRODUCT_ID,
         ARTIFACT_A,
-        POLICY_BANK_ID,
+        POLICY_CI_BASELINE_ID,
       ),
     ).toThrow('vendor mismatch');
 
     expect(() =>
-      attested(PASSES_BOTH).proveCompliance(
+      attested(PASSES_ALL).proveCompliance(
         VENDOR_ID,
         productId('other-product'),
         ARTIFACT_A,
-        POLICY_BANK_ID,
+        POLICY_CI_BASELINE_ID,
       ),
     ).toThrow('product mismatch');
 
     expect(() =>
-      attested(PASSES_BOTH).proveCompliance(
+      attested(PASSES_ALL).proveCompliance(
         VENDOR_ID,
         PRODUCT_ID,
         encodeArtifactDigest(DIGEST_B),
-        POLICY_BANK_ID,
+        POLICY_CI_BASELINE_ID,
       ),
     ).toThrow('artifact mismatch');
   });
 
   it('rejects a path belonging to different private evidence', () => {
     const sim = deployed();
-    const leaf = pureCircuits.leafOf(PASSES_BOTH, SALT_A);
+    const leaf = pureCircuits.leafOf(PASSES_ALL, SALT_A);
     sim.attest(leaf);
     sim.asProver(OTHER_ARTIFACT, SALT_A, sim.pathFor(leaf));
     expect(() => prove(sim)).toThrow('path/leaf mismatch');
   });
 
   it('prevents proving the same leaf twice for one policy', () => {
-    const sim = attested(PASSES_BOTH);
+    const sim = attested(PASSES_ALL);
     expect(prove(sim)).toBe(true);
     expect(() => prove(sim)).toThrow('already proven');
   });
 
   it('allows refreshed evidence for the same artifact', () => {
     const sim = deployed();
-    const first = pureCircuits.leafOf(PASSES_BOTH, SALT_A);
+    const first = pureCircuits.leafOf(PASSES_ALL, SALT_A);
     sim.attest(first);
-    sim.asProver(PASSES_BOTH, SALT_A, sim.pathFor(first));
+    sim.asProver(PASSES_ALL, SALT_A, sim.pathFor(first));
     expect(prove(sim)).toBe(true);
 
     const refreshed = pureCircuits.leafOf(REFRESHED, SALT_B);
@@ -175,11 +183,11 @@ describe('evidence binding and replay protection', () => {
 
   it('accepts a path against a historic root after another insert', () => {
     const sim = deployed();
-    const first = pureCircuits.leafOf(PASSES_BOTH, SALT_A);
+    const first = pureCircuits.leafOf(PASSES_ALL, SALT_A);
     sim.attest(first);
     const oldPath = sim.pathFor(first);
     sim.attest(pureCircuits.leafOf(OTHER_ARTIFACT, SALT_B));
-    sim.asProver(PASSES_BOTH, SALT_A, oldPath);
+    sim.asProver(PASSES_ALL, SALT_A, oldPath);
     expect(prove(sim)).toBe(true);
   });
 });

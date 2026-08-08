@@ -19,7 +19,7 @@ export default async function PolicyDetail({ params }: PageProps<"/policies/[id]
   const thresholds: { label: string; value: string }[] = [
     { label: "Max criticals", value: String(policy.maxCriticals) },
     { label: "Max highs", value: unbounded(policy.maxHighs) },
-    { label: "Max vulnerable deps", value: unbounded(policy.maxVulnDeps) },
+    { label: "Max total vulnerabilities", value: unbounded(policy.maxTotalVulnerabilities) },
     { label: "Lint", value: yesNo(policy.requireLint) },
     { label: "Build", value: yesNo(policy.requireBuild) },
     { label: "Max evidence age", value: `${Math.round(policy.maxAgeSeconds / 86400)} days` },

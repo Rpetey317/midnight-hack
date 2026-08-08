@@ -14,9 +14,9 @@ function metricsOf(ev: Evidence): Metric[] {
     { label: "Critical", value: ev.vulns.criticals, hint: "Critical-severity advisories" },
     { label: "High", value: ev.vulns.highs, hint: "High-severity advisories" },
     {
-      label: "Vulnerable deps",
-      value: ev.vulns.vulnerableDependencies,
-      hint: "Dependencies with an open advisory",
+      label: "Total vulnerabilities",
+      value: ev.vulns.totalVulnerabilities,
+      hint: "All vulnerabilities reported by npm audit",
     },
   ];
 }

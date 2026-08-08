@@ -1,14 +1,21 @@
 import { randomBytes } from 'node:crypto';
 
 import {
+  BUNDLED_POLICIES,
+  BUNDLED_POLICY_SLUGS,
   encodeEvidence,
   pureCircuits,
+  type BundledPolicySlug,
   type CanonicalEvidence,
 } from '@zkuat/contract';
 import { canonicalEvidenceFromGithub, parseGithubEvidence } from './github-evidence.js';
 
-export const POLICY_SLUGS = ['bank-v1', 'enterprise-v1'] as const;
-export type PolicySlug = (typeof POLICY_SLUGS)[number];
+export const POLICY_SLUGS = BUNDLED_POLICY_SLUGS;
+export type PolicySlug = BundledPolicySlug;
+
+const POLICY_VALID_DAYS = Object.fromEntries(
+  BUNDLED_POLICIES.map(({ slug, validDays }) => [slug, validDays]),
+) as Record<PolicySlug, number>;
 
 export interface RuntimeJobInput {
   evidence: unknown;
@@ -84,6 +91,7 @@ export function prepareEvidence(input: RuntimeJobInput, receivedAt: number): Pre
   }
   const evidence = canonicalEvidenceFromGithub(parsed, {
     receivedAt,
+    validDays: POLICY_VALID_DAYS[input.policySlug],
     run: {
       id: input.run.id,
       url: input.run.url,

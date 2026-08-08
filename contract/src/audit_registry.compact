@@ -25,7 +25,7 @@ import CompactStandardLibrary;
 //
 // Field order is load-bearing: it determines the commitment. Reordering or
 // inserting a field changes every leaf and requires a new deployment.
-// Schema v3 — see ../../docs/03-evidence-schema.md.
+// Schema v4 — see ../../docs/03-evidence-schema.md.
 
 struct Evidence {
   // ── identity ──
@@ -43,7 +43,7 @@ struct Evidence {
   // ── vulnerability facts ──
   criticals:               Uint<32>;
   highs:                   Uint<32>;
-  vulnDeps:                Uint<32>;    // dependencies carrying known vulns
+  totalVulnerabilities:    Uint<32>;    // npm audit's total vulnerability count
 
   // ── workflow command results ──
   lintPassed:              Boolean;
@@ -58,7 +58,7 @@ struct Policy {
   issuer:                  Bytes<32>;   // stringIdOf(issuing organisation)
   maxCriticals:            Uint<32>;
   maxHighs:                Uint<32>;
-  maxVulnDeps:             Uint<32>;
+  maxTotalVulnerabilities: Uint<32>;
   requireLint:             Boolean;
   requireBuild:            Boolean;
   maxAgeSeconds:           Uint<64>;    // longest validity window the policy allows
@@ -273,7 +273,7 @@ export circuit proveCompliance(
   const ok = disclose(
     ev.criticals <= p.maxCriticals &&
     ev.highs     <= p.maxHighs     &&
-    ev.vulnDeps  <= p.maxVulnDeps  &&
+    ev.totalVulnerabilities <= p.maxTotalVulnerabilities &&
     (!p.requireLint  || ev.lintPassed) &&
     (!p.requireBuild || ev.buildPassed)
   );

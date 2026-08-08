@@ -19,14 +19,14 @@ class _Policy_0 {
       issuer: _descriptor_0.fromValue(value_0),
       maxCriticals: _descriptor_1.fromValue(value_0),
       maxHighs: _descriptor_1.fromValue(value_0),
-      maxVulnDeps: _descriptor_1.fromValue(value_0),
+      maxTotalVulnerabilities: _descriptor_1.fromValue(value_0),
       requireLint: _descriptor_2.fromValue(value_0),
       requireBuild: _descriptor_2.fromValue(value_0),
       maxAgeSeconds: _descriptor_3.fromValue(value_0)
     }
   }
   toValue(value_0) {
-    return _descriptor_1.toValue(value_0.version).concat(_descriptor_0.toValue(value_0.issuer).concat(_descriptor_1.toValue(value_0.maxCriticals).concat(_descriptor_1.toValue(value_0.maxHighs).concat(_descriptor_1.toValue(value_0.maxVulnDeps).concat(_descriptor_2.toValue(value_0.requireLint).concat(_descriptor_2.toValue(value_0.requireBuild).concat(_descriptor_3.toValue(value_0.maxAgeSeconds))))))));
+    return _descriptor_1.toValue(value_0.version).concat(_descriptor_0.toValue(value_0.issuer).concat(_descriptor_1.toValue(value_0.maxCriticals).concat(_descriptor_1.toValue(value_0.maxHighs).concat(_descriptor_1.toValue(value_0.maxTotalVulnerabilities).concat(_descriptor_2.toValue(value_0.requireLint).concat(_descriptor_2.toValue(value_0.requireBuild).concat(_descriptor_3.toValue(value_0.maxAgeSeconds))))))));
   }
 }
 
@@ -125,13 +125,13 @@ class _Evidence_0 {
       validUntil: _descriptor_3.fromValue(value_0),
       criticals: _descriptor_1.fromValue(value_0),
       highs: _descriptor_1.fromValue(value_0),
-      vulnDeps: _descriptor_1.fromValue(value_0),
+      totalVulnerabilities: _descriptor_1.fromValue(value_0),
       lintPassed: _descriptor_2.fromValue(value_0),
       buildPassed: _descriptor_2.fromValue(value_0)
     }
   }
   toValue(value_0) {
-    return _descriptor_0.toValue(value_0.vendorId).concat(_descriptor_0.toValue(value_0.productId).concat(_descriptor_0.toValue(value_0.artifactDigest).concat(_descriptor_0.toValue(value_0.commitId).concat(_descriptor_3.toValue(value_0.generatedAt).concat(_descriptor_3.toValue(value_0.validUntil).concat(_descriptor_1.toValue(value_0.criticals).concat(_descriptor_1.toValue(value_0.highs).concat(_descriptor_1.toValue(value_0.vulnDeps).concat(_descriptor_2.toValue(value_0.lintPassed).concat(_descriptor_2.toValue(value_0.buildPassed)))))))))));
+    return _descriptor_0.toValue(value_0.vendorId).concat(_descriptor_0.toValue(value_0.productId).concat(_descriptor_0.toValue(value_0.artifactDigest).concat(_descriptor_0.toValue(value_0.commitId).concat(_descriptor_3.toValue(value_0.generatedAt).concat(_descriptor_3.toValue(value_0.validUntil).concat(_descriptor_1.toValue(value_0.criticals).concat(_descriptor_1.toValue(value_0.highs).concat(_descriptor_1.toValue(value_0.totalVulnerabilities).concat(_descriptor_2.toValue(value_0.lintPassed).concat(_descriptor_2.toValue(value_0.buildPassed)))))))))));
   }
 }
 
@@ -311,11 +311,11 @@ export class Contract {
                                      'Bytes<32>',
                                      policyId_0)
         }
-        if (!(typeof(policy_0) === 'object' && typeof(policy_0.version) === 'bigint' && policy_0.version >= 0n && policy_0.version <= 4294967295n && policy_0.issuer.buffer instanceof ArrayBuffer && policy_0.issuer.BYTES_PER_ELEMENT === 1 && policy_0.issuer.length === 32 && typeof(policy_0.maxCriticals) === 'bigint' && policy_0.maxCriticals >= 0n && policy_0.maxCriticals <= 4294967295n && typeof(policy_0.maxHighs) === 'bigint' && policy_0.maxHighs >= 0n && policy_0.maxHighs <= 4294967295n && typeof(policy_0.maxVulnDeps) === 'bigint' && policy_0.maxVulnDeps >= 0n && policy_0.maxVulnDeps <= 4294967295n && typeof(policy_0.requireLint) === 'boolean' && typeof(policy_0.requireBuild) === 'boolean' && typeof(policy_0.maxAgeSeconds) === 'bigint' && policy_0.maxAgeSeconds >= 0n && policy_0.maxAgeSeconds <= 18446744073709551615n)) {
+        if (!(typeof(policy_0) === 'object' && typeof(policy_0.version) === 'bigint' && policy_0.version >= 0n && policy_0.version <= 4294967295n && policy_0.issuer.buffer instanceof ArrayBuffer && policy_0.issuer.BYTES_PER_ELEMENT === 1 && policy_0.issuer.length === 32 && typeof(policy_0.maxCriticals) === 'bigint' && policy_0.maxCriticals >= 0n && policy_0.maxCriticals <= 4294967295n && typeof(policy_0.maxHighs) === 'bigint' && policy_0.maxHighs >= 0n && policy_0.maxHighs <= 4294967295n && typeof(policy_0.maxTotalVulnerabilities) === 'bigint' && policy_0.maxTotalVulnerabilities >= 0n && policy_0.maxTotalVulnerabilities <= 4294967295n && typeof(policy_0.requireLint) === 'boolean' && typeof(policy_0.requireBuild) === 'boolean' && typeof(policy_0.maxAgeSeconds) === 'bigint' && policy_0.maxAgeSeconds >= 0n && policy_0.maxAgeSeconds <= 18446744073709551615n)) {
           __compactRuntime.typeError('registerPolicy',
                                      'argument 2 (argument 3 as invoked from Typescript)',
                                      'audit_registry.compact line 206 char 1',
-                                     'struct Policy<version: Uint<0..4294967296>, issuer: Bytes<32>, maxCriticals: Uint<0..4294967296>, maxHighs: Uint<0..4294967296>, maxVulnDeps: Uint<0..4294967296>, requireLint: Boolean, requireBuild: Boolean, maxAgeSeconds: Uint<0..18446744073709551616>>',
+                                     'struct Policy<version: Uint<0..4294967296>, issuer: Bytes<32>, maxCriticals: Uint<0..4294967296>, maxHighs: Uint<0..4294967296>, maxTotalVulnerabilities: Uint<0..4294967296>, requireLint: Boolean, requireBuild: Boolean, maxAgeSeconds: Uint<0..18446744073709551616>>',
                                      policy_0)
         }
         const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
@@ -621,11 +621,11 @@ export class Contract {
     const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.currentQueryContext.state), context.currentPrivateState, context.currentQueryContext.address);
     const [nextPrivateState_0, result_0] = this.witnesses.getEvidence(witnessContext_0);
     context.currentPrivateState = nextPrivateState_0;
-    if (!(typeof(result_0) === 'object' && result_0.vendorId.buffer instanceof ArrayBuffer && result_0.vendorId.BYTES_PER_ELEMENT === 1 && result_0.vendorId.length === 32 && result_0.productId.buffer instanceof ArrayBuffer && result_0.productId.BYTES_PER_ELEMENT === 1 && result_0.productId.length === 32 && result_0.artifactDigest.buffer instanceof ArrayBuffer && result_0.artifactDigest.BYTES_PER_ELEMENT === 1 && result_0.artifactDigest.length === 32 && result_0.commitId.buffer instanceof ArrayBuffer && result_0.commitId.BYTES_PER_ELEMENT === 1 && result_0.commitId.length === 32 && typeof(result_0.generatedAt) === 'bigint' && result_0.generatedAt >= 0n && result_0.generatedAt <= 18446744073709551615n && typeof(result_0.validUntil) === 'bigint' && result_0.validUntil >= 0n && result_0.validUntil <= 18446744073709551615n && typeof(result_0.criticals) === 'bigint' && result_0.criticals >= 0n && result_0.criticals <= 4294967295n && typeof(result_0.highs) === 'bigint' && result_0.highs >= 0n && result_0.highs <= 4294967295n && typeof(result_0.vulnDeps) === 'bigint' && result_0.vulnDeps >= 0n && result_0.vulnDeps <= 4294967295n && typeof(result_0.lintPassed) === 'boolean' && typeof(result_0.buildPassed) === 'boolean')) {
+    if (!(typeof(result_0) === 'object' && result_0.vendorId.buffer instanceof ArrayBuffer && result_0.vendorId.BYTES_PER_ELEMENT === 1 && result_0.vendorId.length === 32 && result_0.productId.buffer instanceof ArrayBuffer && result_0.productId.BYTES_PER_ELEMENT === 1 && result_0.productId.length === 32 && result_0.artifactDigest.buffer instanceof ArrayBuffer && result_0.artifactDigest.BYTES_PER_ELEMENT === 1 && result_0.artifactDigest.length === 32 && result_0.commitId.buffer instanceof ArrayBuffer && result_0.commitId.BYTES_PER_ELEMENT === 1 && result_0.commitId.length === 32 && typeof(result_0.generatedAt) === 'bigint' && result_0.generatedAt >= 0n && result_0.generatedAt <= 18446744073709551615n && typeof(result_0.validUntil) === 'bigint' && result_0.validUntil >= 0n && result_0.validUntil <= 18446744073709551615n && typeof(result_0.criticals) === 'bigint' && result_0.criticals >= 0n && result_0.criticals <= 4294967295n && typeof(result_0.highs) === 'bigint' && result_0.highs >= 0n && result_0.highs <= 4294967295n && typeof(result_0.totalVulnerabilities) === 'bigint' && result_0.totalVulnerabilities >= 0n && result_0.totalVulnerabilities <= 4294967295n && typeof(result_0.lintPassed) === 'boolean' && typeof(result_0.buildPassed) === 'boolean')) {
       __compactRuntime.typeError('getEvidence',
                                  'return value',
                                  'audit_registry.compact line 124 char 1',
-                                 'struct Evidence<vendorId: Bytes<32>, productId: Bytes<32>, artifactDigest: Bytes<32>, commitId: Bytes<32>, generatedAt: Uint<0..18446744073709551616>, validUntil: Uint<0..18446744073709551616>, criticals: Uint<0..4294967296>, highs: Uint<0..4294967296>, vulnDeps: Uint<0..4294967296>, lintPassed: Boolean, buildPassed: Boolean>',
+                                 'struct Evidence<vendorId: Bytes<32>, productId: Bytes<32>, artifactDigest: Bytes<32>, commitId: Bytes<32>, generatedAt: Uint<0..18446744073709551616>, validUntil: Uint<0..18446744073709551616>, criticals: Uint<0..4294967296>, highs: Uint<0..4294967296>, totalVulnerabilities: Uint<0..4294967296>, lintPassed: Boolean, buildPassed: Boolean>',
                                  result_0)
     }
     partialProofData.privateTranscriptOutputs.push({
@@ -886,7 +886,8 @@ export class Contract {
                  &&
                  (t_3 = ev_0.highs, t_3 <= p_0.maxHighs)
                  &&
-                 (t_2 = ev_0.vulnDeps, t_2 <= p_0.maxVulnDeps)
+                 (t_2 = ev_0.totalVulnerabilities,
+                  t_2 <= p_0.maxTotalVulnerabilities)
                  &&
                  (!p_0.requireLint || ev_0.lintPassed)
                  &&
@@ -1552,11 +1553,11 @@ export const pureCircuits = {
     }
     const ev_0 = args_0[0];
     const salt_0 = args_0[1];
-    if (!(typeof(ev_0) === 'object' && ev_0.vendorId.buffer instanceof ArrayBuffer && ev_0.vendorId.BYTES_PER_ELEMENT === 1 && ev_0.vendorId.length === 32 && ev_0.productId.buffer instanceof ArrayBuffer && ev_0.productId.BYTES_PER_ELEMENT === 1 && ev_0.productId.length === 32 && ev_0.artifactDigest.buffer instanceof ArrayBuffer && ev_0.artifactDigest.BYTES_PER_ELEMENT === 1 && ev_0.artifactDigest.length === 32 && ev_0.commitId.buffer instanceof ArrayBuffer && ev_0.commitId.BYTES_PER_ELEMENT === 1 && ev_0.commitId.length === 32 && typeof(ev_0.generatedAt) === 'bigint' && ev_0.generatedAt >= 0n && ev_0.generatedAt <= 18446744073709551615n && typeof(ev_0.validUntil) === 'bigint' && ev_0.validUntil >= 0n && ev_0.validUntil <= 18446744073709551615n && typeof(ev_0.criticals) === 'bigint' && ev_0.criticals >= 0n && ev_0.criticals <= 4294967295n && typeof(ev_0.highs) === 'bigint' && ev_0.highs >= 0n && ev_0.highs <= 4294967295n && typeof(ev_0.vulnDeps) === 'bigint' && ev_0.vulnDeps >= 0n && ev_0.vulnDeps <= 4294967295n && typeof(ev_0.lintPassed) === 'boolean' && typeof(ev_0.buildPassed) === 'boolean')) {
+    if (!(typeof(ev_0) === 'object' && ev_0.vendorId.buffer instanceof ArrayBuffer && ev_0.vendorId.BYTES_PER_ELEMENT === 1 && ev_0.vendorId.length === 32 && ev_0.productId.buffer instanceof ArrayBuffer && ev_0.productId.BYTES_PER_ELEMENT === 1 && ev_0.productId.length === 32 && ev_0.artifactDigest.buffer instanceof ArrayBuffer && ev_0.artifactDigest.BYTES_PER_ELEMENT === 1 && ev_0.artifactDigest.length === 32 && ev_0.commitId.buffer instanceof ArrayBuffer && ev_0.commitId.BYTES_PER_ELEMENT === 1 && ev_0.commitId.length === 32 && typeof(ev_0.generatedAt) === 'bigint' && ev_0.generatedAt >= 0n && ev_0.generatedAt <= 18446744073709551615n && typeof(ev_0.validUntil) === 'bigint' && ev_0.validUntil >= 0n && ev_0.validUntil <= 18446744073709551615n && typeof(ev_0.criticals) === 'bigint' && ev_0.criticals >= 0n && ev_0.criticals <= 4294967295n && typeof(ev_0.highs) === 'bigint' && ev_0.highs >= 0n && ev_0.highs <= 4294967295n && typeof(ev_0.totalVulnerabilities) === 'bigint' && ev_0.totalVulnerabilities >= 0n && ev_0.totalVulnerabilities <= 4294967295n && typeof(ev_0.lintPassed) === 'boolean' && typeof(ev_0.buildPassed) === 'boolean')) {
       __compactRuntime.typeError('leafOf',
                                  'argument 1',
                                  'audit_registry.compact line 141 char 1',
-                                 'struct Evidence<vendorId: Bytes<32>, productId: Bytes<32>, artifactDigest: Bytes<32>, commitId: Bytes<32>, generatedAt: Uint<0..18446744073709551616>, validUntil: Uint<0..18446744073709551616>, criticals: Uint<0..4294967296>, highs: Uint<0..4294967296>, vulnDeps: Uint<0..4294967296>, lintPassed: Boolean, buildPassed: Boolean>',
+                                 'struct Evidence<vendorId: Bytes<32>, productId: Bytes<32>, artifactDigest: Bytes<32>, commitId: Bytes<32>, generatedAt: Uint<0..18446744073709551616>, validUntil: Uint<0..18446744073709551616>, criticals: Uint<0..4294967296>, highs: Uint<0..4294967296>, totalVulnerabilities: Uint<0..4294967296>, lintPassed: Boolean, buildPassed: Boolean>',
                                  ev_0)
     }
     if (!(salt_0.buffer instanceof ArrayBuffer && salt_0.BYTES_PER_ELEMENT === 1 && salt_0.length === 32)) {

@@ -10,7 +10,7 @@ export type Witnesses<PS> = {
                                                                             validUntil: bigint,
                                                                             criticals: bigint,
                                                                             highs: bigint,
-                                                                            vulnDeps: bigint,
+                                                                            totalVulnerabilities: bigint,
                                                                             lintPassed: boolean,
                                                                             buildPassed: boolean
                                                                           }];
@@ -31,7 +31,7 @@ export type ImpureCircuits<PS> = {
                              issuer: Uint8Array,
                              maxCriticals: bigint,
                              maxHighs: bigint,
-                             maxVulnDeps: bigint,
+                             maxTotalVulnerabilities: bigint,
                              requireLint: boolean,
                              requireBuild: boolean,
                              maxAgeSeconds: bigint
@@ -51,7 +51,7 @@ export type ProvableCircuits<PS> = {
                              issuer: Uint8Array,
                              maxCriticals: bigint,
                              maxHighs: bigint,
-                             maxVulnDeps: bigint,
+                             maxTotalVulnerabilities: bigint,
                              requireLint: boolean,
                              requireBuild: boolean,
                              maxAgeSeconds: bigint
@@ -72,7 +72,7 @@ export type PureCircuits = {
                  validUntil: bigint,
                  criticals: bigint,
                  highs: bigint,
-                 vulnDeps: bigint,
+                 totalVulnerabilities: bigint,
                  lintPassed: boolean,
                  buildPassed: boolean
                },
@@ -93,7 +93,7 @@ export type Circuits<PS> = {
                  validUntil: bigint,
                  criticals: bigint,
                  highs: bigint,
-                 vulnDeps: bigint,
+                 totalVulnerabilities: bigint,
                  lintPassed: boolean,
                  buildPassed: boolean
                },
@@ -113,7 +113,7 @@ export type Circuits<PS> = {
                              issuer: Uint8Array,
                              maxCriticals: bigint,
                              maxHighs: bigint,
-                             maxVulnDeps: bigint,
+                             maxTotalVulnerabilities: bigint,
                              requireLint: boolean,
                              requireBuild: boolean,
                              maxAgeSeconds: bigint
@@ -143,7 +143,7 @@ export type Ledger = {
                                  issuer: Uint8Array,
                                  maxCriticals: bigint,
                                  maxHighs: bigint,
-                                 maxVulnDeps: bigint,
+                                 maxTotalVulnerabilities: bigint,
                                  requireLint: boolean,
                                  requireBuild: boolean,
                                  maxAgeSeconds: bigint
@@ -152,7 +152,7 @@ export type Ledger = {
   issuer: Uint8Array,
   maxCriticals: bigint,
   maxHighs: bigint,
-  maxVulnDeps: bigint,
+  maxTotalVulnerabilities: bigint,
   requireLint: boolean,
   requireBuild: boolean,
   maxAgeSeconds: bigint

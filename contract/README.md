@@ -1,7 +1,7 @@
 # `@zkuat/contract`
 
 This package is the single source of truth for zkuat's Compact compliance
-registry, evidence encoding, witness shape, identifier derivations, and the two
+registry, evidence encoding, witness shape, identifier derivations, and the four
 policies deployed by `@zkuat/runtime`.
 
 Generated JavaScript bindings, declarations, and compiler metadata are committed
@@ -13,7 +13,7 @@ Proving keys and ZKIR are intentionally ignored and must be generated locally.
 | Path | Purpose |
 | --- | --- |
 | `src/audit_registry.compact` | Ledger schema, witnesses, pure derivations, constructor, and callable circuits |
-| `src/encoding.ts` | Canonical `zkuat.evidence.v3` encoding, string/digest helpers, record keys, and bundled policies |
+| `src/encoding.ts` | Canonical `zkuat.evidence.v4` encoding, string/digest helpers, record keys, and bundled policies |
 | `src/anchor-secret.ts` | Domain-separated HKDF from sponsor seed to the 32-byte Compact anchor witness |
 | `src/witnesses.ts` | Runtime-loaded private state and witness implementations |
 | `src/types.ts` | Types derived from generated Compact signatures and ledger readers |
@@ -60,12 +60,13 @@ currently expired.
 
 | Slug | Requirements |
 | --- | --- |
-| `bank-v1` | 0 criticals, at most 5 highs, lint passed, build passed, validity window at most 30 days |
-| `enterprise-v1` | 0 criticals, 0 values in the current `vulnDeps` field, lint passed, build passed, validity window at most 30 days |
+| `npm-ci-baseline-v1` | 0 criticals, at most 5 highs, lint and build passed, validity window at most 30 days |
+| `npm-production-release-v1` | 0 criticals/highs, at most 5 total vulnerabilities, lint and build passed, validity window at most 7 days |
+| `npm-zero-known-vulns-v1` | 0 criticals/highs/total vulnerabilities, lint and build passed, validity window at most 3 days |
+| `npm-emergency-hotfix-v1` | 0 criticals, at most 2 highs, build passed, validity window at most 2 days; lint optional |
 
-The runtime currently maps `npm audit`'s `vulnerabilities.total` into
-`vulnDeps`; see [the evidence schema](../docs/03-evidence-schema.md) for this MVP
-naming caveat.
+The runtime maps `npm audit`'s `vulnerabilities.total` directly into the private
+`totalVulnerabilities` evidence field.
 
 ## Anchor and private state
 

@@ -90,8 +90,8 @@ For each job the runtime:
 
 1. validates the forwarded JSON and self-consistency of request, run URL/ID,
    artifact name/ID, repository, completion status, and policy slug;
-2. maps the artifact into canonical `zkuat.evidence.v3`;
-3. sets `generatedAt` to local receipt time and `validUntil` to 29 days later;
+2. maps the artifact into canonical `zkuat.evidence.v4`;
+3. sets `generatedAt` to local receipt time and `validUntil` from the selected policy;
 4. creates a fresh random salt and Compact commitment;
 5. persists the full private job below `~/.zkuat/runtime`;
 6. starts the local Docker proof server;
@@ -136,7 +136,7 @@ or replay claims fail the transaction.
 
 ## 8. Implemented policies
 
-`bank-v1` requires:
+`npm-ci-baseline-v1` requires:
 
 ```text
 critical == 0
@@ -146,19 +146,25 @@ build passed
 validity window <= 30 days
 ```
 
-`enterprise-v1` requires:
+`npm-production-release-v1` requires:
 
 ```text
 critical == 0
-vulnDeps == 0
+high == 0
+totalVulnerabilities <= 5
 lint passed
 build passed
-validity window <= 30 days
+validity window <= 7 days
 ```
 
-The current runtime maps `npm audit`'s `vulnerabilities.total` into `vulnDeps`.
-That naming/measurement mismatch is known and documented; the actual contract
-predicate is unambiguous.
+`npm-zero-known-vulns-v1` requires zero critical, high, and total
+vulnerabilities, both checks, and a window of at most 3 days.
+
+`npm-emergency-hotfix-v1` permits at most 2 highs and skipped lint, but requires
+zero criticals, a successful build, and a window of at most 2 days.
+
+The runtime maps `npm audit`'s `vulnerabilities.total` into
+`totalVulnerabilities`.
 
 ## 9. Public and private data
 
@@ -230,7 +236,7 @@ than providing independent live-chain verification.
 6. Add a repository that carries the compatible evidence workflow.
 7. Request evidence and wait for the successful Actions artifact.
 8. Pair the browser with the local runtime.
-9. Select one of the two policies and generate the proof.
+9. Select one of the four policies and generate the proof.
 10. Observe the `attest` and `proveCompliance` transaction IDs and the final
     indexed `verified` or `rejected` record.
 
@@ -257,10 +263,9 @@ while strengthening integration and provenance:
 3. replace UI policy fixtures with ledger reads;
 4. move GitHub artifact retrieval/verification into the local runtime or add a
    signed provenance envelope;
-5. rename or correctly compute `vulnDeps` in the next evidence-schema version;
-6. add Supabase migrations and reproducible frontend deployment configuration;
-7. add live-network integration tests and operational diagnostics;
-8. later add richer scanners, SBOM/provenance inputs, and policy governance.
+5. add Supabase migrations and reproducible frontend deployment configuration;
+6. add live-network integration tests and operational diagnostics;
+7. later add richer scanners, SBOM/provenance inputs, and policy governance.
 
 The core product remains:
 

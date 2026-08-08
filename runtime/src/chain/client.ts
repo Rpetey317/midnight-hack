@@ -3,11 +3,8 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
+  BUNDLED_POLICIES,
   Contract,
-  POLICY_BANK_ID,
-  POLICY_BANK_V1,
-  POLICY_ENTERPRISE_ID,
-  POLICY_ENTERPRISE_V1,
   deriveAnchorSecret,
   emptyPrivateState,
   encodeArtifactDigest,
@@ -302,10 +299,7 @@ export class ChainClient {
     await this.providers.privateStateProvider.setContractAddress(contractAddress);
     await this.providers.privateStateProvider.set(PRIVATE_STATE_ID, anchorState);
     const policyTxIds: string[] = [];
-    for (const [id, policy] of [
-      [POLICY_BANK_ID, POLICY_BANK_V1],
-      [POLICY_ENTERPRISE_ID, POLICY_ENTERPRISE_V1],
-    ] as const) {
+    for (const { id, policy } of BUNDLED_POLICIES) {
       const tx = await retryDust(() => deployed.callTx.registerPolicy(id, policy));
       policyTxIds.push(String(tx.public.txId));
     }

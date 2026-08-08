@@ -1,6 +1,10 @@
 import "client-only";
 
-export type RuntimePolicySlug = "bank-v1" | "enterprise-v1";
+export type RuntimePolicySlug =
+  | "npm-ci-baseline-v1"
+  | "npm-production-release-v1"
+  | "npm-zero-known-vulns-v1"
+  | "npm-emergency-hotfix-v1";
 
 export type RuntimeJobStatus =
   | "queued"

@@ -16,7 +16,7 @@ import type {
 
 export type { Ledger, Witnesses } from './managed/audit_registry/contract/index.js';
 
-/** The private evidence struct (schema v3). Field order determines the commitment. */
+/** The private evidence struct (schema v4). Field order determines the commitment. */
 export type Evidence = Parameters<PureCircuits['leafOf']>[0];
 
 /** Public policy thresholds, stored in ledger state so buyers can read them. */

@@ -87,8 +87,8 @@ npm --prefix runtime run deploy
 ```
 
 Deployment starts the proof server, deploys the contract with the derived anchor
-identity, and submits two policy-registration calls for `bank-v1` and
-`enterprise-v1`. Copy the printed address into `ZKUAT_CONTRACT_ADDRESS`. The
+identity, and submits four policy-registration calls for the bundled npm
+reference policies. Copy the printed address into `ZKUAT_CONTRACT_ADDRESS`. The
 runtime must continue using the same network and seed.
 
 ## Start and proof-server commands

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const ABSENT = [
   "criticals",
   "highs",
-  "vulnDeps",
+  "totalVulnerabilities",
   "lintPassed",
   "buildPassed",
   "salt",

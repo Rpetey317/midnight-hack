@@ -33,7 +33,7 @@ hackathon trust model accepts GitHub Actions as the measurement environment.
 3. The browser pairs with `http://127.0.0.1:4317` using the six-digit code printed
    by the local runtime.
 4. The runtime validates the evidence and supplied GitHub metadata, records a
-   receipt-time-based 29-day validity window, adds a fresh salt, and persists the
+   policy-specific validity window, adds a fresh salt, and persists the
    private job with owner-only filesystem permissions.
 5. The runtime starts or reuses its labeled Docker proof-server container and
    synchronizes the sponsor wallet.
@@ -59,7 +59,7 @@ Each proof job makes exactly two contract calls:
 The final verification is an indexer read, not a third transaction. On a
 sponsor wallet's first use, the wallet SDK may also submit a one-time NIGHT UTXO
 registration transaction so the wallet can generate DUST. Initial deployment is
-one contract deployment plus two `registerPolicy` transactions.
+one contract deployment plus four `registerPolicy` transactions.
 
 ## Quick start
 
@@ -119,7 +119,7 @@ npm --prefix ui run build
   yet copied into the UI's `artifacts` or `proof_activity` tables.
 - The UI contains a demo seeder with synthetic transaction hashes. The local
   runtime's indexer verification is the authoritative check for a real job.
-- Policy registration is fixed to `bank-v1` and `enterprise-v1` during deploy.
+- Policy registration is fixed to the four bundled npm reference policies during deploy.
 - One local sponsor wallet and one serialized filesystem-backed job queue are
   intentional hackathon tradeoffs.
 

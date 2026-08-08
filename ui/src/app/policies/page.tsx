@@ -28,7 +28,7 @@ export default async function Policies() {
           <Stat
             icon={ShieldCheck}
             label="Evidence schema"
-            value="zkuat.evidence.v3"
+            value="zkuat.evidence.v4"
             mono
           />
         </div>
@@ -36,9 +36,9 @@ export default async function Policies() {
         <PolicyList className="mt-8" />
 
         <p className="mt-8 text-xs leading-5 text-muted-foreground">
-          The same evidence bundle proves against every policy here. The scanner that measured it
-          never knew these policies existed — which is the argument for evaluating predicates in a
-          circuit rather than having the scanner sign a verdict.
+          The same GitHub artifact can be prepared and proved against every policy here. The scanner
+          that measured it never knew these policies existed — which is the argument for evaluating
+          predicates in a circuit rather than having the scanner sign a verdict.
         </p>
       </main>
     </>

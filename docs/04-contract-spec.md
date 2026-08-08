@@ -12,7 +12,7 @@ Private `Evidence`:
 ```text
 vendorId, productId, artifactDigest, commitId,
 generatedAt, validUntil,
-criticals, highs, vulnDeps,
+criticals, highs, totalVulnerabilities,
 lintPassed, buildPassed
 ```
 
@@ -20,7 +20,7 @@ Public `Policy`:
 
 ```text
 version, issuer,
-maxCriticals, maxHighs, maxVulnDeps,
+maxCriticals, maxHighs, maxTotalVulnerabilities,
 requireLint, requireBuild,
 maxAgeSeconds
 ```
@@ -93,8 +93,8 @@ call and waits for the hosted indexer to expose a matching Merkle path afterward
 1. calls `requireAnchor()`;
 2. inserts or replaces the public policy under the supplied ID.
 
-The current deploy command registers `bank-v1` and `enterprise-v1`. There is no
-UI/API for arbitrary policy administration.
+The current deploy command registers four bundled npm reference policies. There
+is no UI/API for arbitrary policy administration.
 
 ## `proveCompliance(...)`
 
@@ -108,7 +108,7 @@ The circuit:
 5. computes a `(leaf, policyId)` nullifier and rejects reuse;
 6. loads the public policy;
 7. requires `validUntil <= generatedAt + maxAgeSeconds`;
-8. evaluates critical/high/`vulnDeps` thresholds and lint/build requirements;
+8. evaluates critical/high/total-vulnerability thresholds and lint/build requirements;
 9. writes the public record to `records` and pushes it onto `history`;
 10. returns the one boolean verdict.
 
@@ -132,10 +132,12 @@ entry for the same artifact/policy key while `history` preserves every record.
 
 ## Bundled policy values
 
-| Policy | Criticals | Highs | `vulnDeps` | Lint | Build | Max window |
+| Policy | Criticals | Highs | Total vulnerabilities | Lint | Build | Max window |
 | --- | ---: | ---: | ---: | --- | --- | ---: |
-| `bank-v1` | 0 | 5 | unconstrained (`Uint<32>` max) | required | required | 30 days |
-| `enterprise-v1` | 0 | unconstrained | 0 | required | required | 30 days |
+| `npm-ci-baseline-v1` | 0 | 5 | unconstrained (`Uint<32>` max) | required | required | 30 days |
+| `npm-production-release-v1` | 0 | 0 | 5 | required | required | 7 days |
+| `npm-zero-known-vulns-v1` | 0 | 0 | 0 | required | required | 3 days |
+| `npm-emergency-hotfix-v1` | 0 | 2 | unconstrained (`Uint<32>` max) | optional | required | 2 days |
 
-The runtime currently gives evidence a 29-day validity window. See the evidence
-schema for the current mapping of `npm audit` total into `vulnDeps`.
+The runtime gives evidence the selected policy's validity window. The private
+`totalVulnerabilities` field is populated from `npm audit`'s `vulnerabilities.total`.

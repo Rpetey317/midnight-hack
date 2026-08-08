@@ -30,7 +30,7 @@ export function GithubEvidenceValidation({ productId }: { productId: string }) {
   const [runtimeToken, setRuntimeToken] = useState<string | null>(null);
   const [runtimeBusy, setRuntimeBusy] = useState(false);
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
-  const [policySlug, setPolicySlug] = useState<RuntimePolicySlug>("bank-v1");
+  const [policySlug, setPolicySlug] = useState<RuntimePolicySlug>("npm-ci-baseline-v1");
   const [job, setJob] = useState<RuntimeJob | null>(null);
 
   const retrieve = () => {
@@ -187,8 +187,10 @@ export function GithubEvidenceValidation({ productId }: { productId: string }) {
                     disabled={runtimeBusy}
                     className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-foreground/40"
                   >
-                    <option value="bank-v1">Bank v1</option>
-                    <option value="enterprise-v1">Enterprise v1</option>
+                    <option value="npm-ci-baseline-v1">npm CI Baseline v1</option>
+                    <option value="npm-production-release-v1">npm Production Release v1</option>
+                    <option value="npm-zero-known-vulns-v1">npm Zero Known Vulnerabilities v1</option>
+                    <option value="npm-emergency-hotfix-v1">npm Emergency Hotfix v1</option>
                   </select>
                 </label>
                 <StatefulButton

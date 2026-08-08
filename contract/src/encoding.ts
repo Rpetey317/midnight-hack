@@ -1,5 +1,5 @@
 /**
- * Canonical GitHub Actions evidence → Evidence struct encoding (schema v3).
+ * Canonical GitHub Actions evidence → Evidence struct encoding (schema v4).
  *
  * ../../docs/03-evidence-schema.md names encoding drift between the tracks as the
  * highest-risk item in the project: four components encode this struct, and if
@@ -29,7 +29,7 @@ export const MAX_U32 = 4_294_967_295n;
 /** `Uint<64>` ceiling, used for timestamps. */
 export const MAX_U64 = 18_446_744_073_709_551_615n;
 
-export const EVIDENCE_SCHEMA = 'zkuat.evidence.v3';
+export const EVIDENCE_SCHEMA = 'zkuat.evidence.v4';
 
 /** The canonical private evidence produced from the GitHub Actions artifact. */
 export interface CanonicalEvidence {
@@ -44,7 +44,7 @@ export interface CanonicalEvidence {
   vulns: {
     criticals: number;
     highs: number;
-    vulnerableDependencies: number;
+    totalVulnerabilities: number;
   };
   checks: {
     lintPassed: boolean;
@@ -149,10 +149,10 @@ export function encodeEvidence(input: CanonicalEvidence): Evidence {
     validUntil,
     criticals: clamp(input.vulns.criticals, MAX_U32, 'vulns.criticals'),
     highs: clamp(input.vulns.highs, MAX_U32, 'vulns.highs'),
-    vulnDeps: clamp(
-      input.vulns.vulnerableDependencies,
+    totalVulnerabilities: clamp(
+      input.vulns.totalVulnerabilities,
       MAX_U32,
-      'vulns.vulnerableDependencies',
+      'vulns.totalVulnerabilities',
     ),
     lintPassed: input.checks.lintPassed,
     buildPassed: input.checks.buildPassed,
@@ -164,42 +164,106 @@ export function recordKey(artifactDigest: string, policySlug: string): Uint8Arra
   return pureCircuits.recordKeyOf(encodeArtifactDigest(artifactDigest), policyId(policySlug));
 }
 
-// ─── The two shipped policies ──────────────────────────────────────────────────
+// ─── Shipped reference policies ────────────────────────────────────────────────
 //
-// Both are evaluated over the *same* private evidence. That contrast — one
-// evidence set, two independent buyer policies, two independent verdicts, and
-// the buyer still sees no findings — is the strongest argument for programmable
-// ZK over a fixed verdict produced by one scanner.
-//
-/** 30 days, the longest validity window either policy grants. */
-export const THIRTY_DAYS_SECONDS = 30n * 24n * 60n * 60n;
+// All are evaluated over the same private GitHub artifact shape. The selected
+// policy controls the validity window the runtime adds before encoding.
 
-export const POLICY_BANK_SLUG = 'bank-v1';
-export const POLICY_ENTERPRISE_SLUG = 'enterprise-v1';
+const DAY_SECONDS = 24n * 60n * 60n;
 
-/** criticals == 0, highs <= 5, and both workflow commands passed. */
-export const POLICY_BANK_V1: Policy = {
+/** 30 days, the longest validity window any bundled policy grants. */
+export const THIRTY_DAYS_SECONDS = 30n * DAY_SECONDS;
+
+export const POLICY_CI_BASELINE_SLUG = 'npm-ci-baseline-v1';
+export const POLICY_PRODUCTION_RELEASE_SLUG = 'npm-production-release-v1';
+export const POLICY_ZERO_KNOWN_VULNS_SLUG = 'npm-zero-known-vulns-v1';
+export const POLICY_EMERGENCY_HOTFIX_SLUG = 'npm-emergency-hotfix-v1';
+
+/** General CI baseline: no criticals, at most five highs, lint and build pass. */
+export const POLICY_CI_BASELINE_V1: Policy = {
   version: 1n,
-  issuer: issuerId('first-national-bank'),
+  issuer: issuerId('zkuat-reference'),
   maxCriticals: 0n,
   maxHighs: 5n,
-  maxVulnDeps: MAX_U32,
+  maxTotalVulnerabilities: MAX_U32,
   requireLint: true,
   requireBuild: true,
   maxAgeSeconds: THIRTY_DAYS_SECONDS,
 };
 
-/** criticals == 0, no vulnerable dependencies, and both workflow commands passed. */
-export const POLICY_ENTERPRISE_V1: Policy = {
+/** Production release: no critical/high findings, at most five findings total. */
+export const POLICY_PRODUCTION_RELEASE_V1: Policy = {
   version: 1n,
-  issuer: issuerId('globex-corp'),
+  issuer: issuerId('zkuat-reference'),
   maxCriticals: 0n,
-  maxHighs: MAX_U32, // unconstrained: this policy does not care
-  maxVulnDeps: 0n,
+  maxHighs: 0n,
+  maxTotalVulnerabilities: 5n,
   requireLint: true,
   requireBuild: true,
-  maxAgeSeconds: THIRTY_DAYS_SECONDS,
+  maxAgeSeconds: 7n * DAY_SECONDS,
 };
 
-export const POLICY_BANK_ID = policyId(POLICY_BANK_SLUG);
-export const POLICY_ENTERPRISE_ID = policyId(POLICY_ENTERPRISE_SLUG);
+/** Strict release: npm audit reported no known vulnerabilities of any severity. */
+export const POLICY_ZERO_KNOWN_VULNS_V1: Policy = {
+  version: 1n,
+  issuer: issuerId('zkuat-reference'),
+  maxCriticals: 0n,
+  maxHighs: 0n,
+  maxTotalVulnerabilities: 0n,
+  requireLint: true,
+  requireBuild: true,
+  maxAgeSeconds: 3n * DAY_SECONDS,
+};
+
+/** Emergency hotfix: limited highs, lint optional, successful build required. */
+export const POLICY_EMERGENCY_HOTFIX_V1: Policy = {
+  version: 1n,
+  issuer: issuerId('zkuat-reference'),
+  maxCriticals: 0n,
+  maxHighs: 2n,
+  maxTotalVulnerabilities: MAX_U32,
+  requireLint: false,
+  requireBuild: true,
+  maxAgeSeconds: 2n * DAY_SECONDS,
+};
+
+export const POLICY_CI_BASELINE_ID = policyId(POLICY_CI_BASELINE_SLUG);
+export const POLICY_PRODUCTION_RELEASE_ID = policyId(POLICY_PRODUCTION_RELEASE_SLUG);
+export const POLICY_ZERO_KNOWN_VULNS_ID = policyId(POLICY_ZERO_KNOWN_VULNS_SLUG);
+export const POLICY_EMERGENCY_HOTFIX_ID = policyId(POLICY_EMERGENCY_HOTFIX_SLUG);
+
+export const BUNDLED_POLICY_SLUGS = [
+  POLICY_CI_BASELINE_SLUG,
+  POLICY_PRODUCTION_RELEASE_SLUG,
+  POLICY_ZERO_KNOWN_VULNS_SLUG,
+  POLICY_EMERGENCY_HOTFIX_SLUG,
+] as const;
+
+export type BundledPolicySlug = (typeof BUNDLED_POLICY_SLUGS)[number];
+
+export const BUNDLED_POLICIES = [
+  {
+    slug: POLICY_CI_BASELINE_SLUG,
+    id: POLICY_CI_BASELINE_ID,
+    policy: POLICY_CI_BASELINE_V1,
+    validDays: 30,
+  },
+  {
+    slug: POLICY_PRODUCTION_RELEASE_SLUG,
+    id: POLICY_PRODUCTION_RELEASE_ID,
+    policy: POLICY_PRODUCTION_RELEASE_V1,
+    validDays: 7,
+  },
+  {
+    slug: POLICY_ZERO_KNOWN_VULNS_SLUG,
+    id: POLICY_ZERO_KNOWN_VULNS_ID,
+    policy: POLICY_ZERO_KNOWN_VULNS_V1,
+    validDays: 3,
+  },
+  {
+    slug: POLICY_EMERGENCY_HOTFIX_SLUG,
+    id: POLICY_EMERGENCY_HOTFIX_ID,
+    policy: POLICY_EMERGENCY_HOTFIX_V1,
+    validDays: 2,
+  },
+] as const;

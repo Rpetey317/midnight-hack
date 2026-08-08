@@ -6,7 +6,7 @@
 import { EVIDENCE_SCHEMA, type CanonicalEvidence } from '@zkuat/contract';
 
 const WORKFLOW = '.github/workflows/generate-evidence.yml';
-const DEFAULT_VALID_DAYS = 29;
+const DEFAULT_VALID_DAYS = 30;
 
 export interface GithubEvidenceDocument {
   repository: string;
@@ -157,7 +157,7 @@ export function canonicalEvidenceFromGithub(
     vulns: {
       criticals: doc.vulnerabilities.critical,
       highs: doc.vulnerabilities.high,
-      vulnerableDependencies: doc.vulnerabilities.total,
+      totalVulnerabilities: doc.vulnerabilities.total,
     },
     checks: {
       lintPassed: doc.checks.lint.passed,

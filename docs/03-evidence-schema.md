@@ -4,7 +4,7 @@ The evidence protocol has three distinct shapes:
 
 1. the JSON emitted by GitHub Actions;
 2. transport metadata supplied by the UI to the runtime;
-3. the canonical `zkuat.evidence.v3` values encoded into the Compact `Evidence`
+3. the canonical `zkuat.evidence.v4` values encoded into the Compact `Evidence`
    struct.
 
 There is no zkuat evidence signature, attestor key, signed envelope, or
@@ -57,7 +57,7 @@ policySlug
 
 The runtime requires:
 
-- policy slug `bank-v1` or `enterprise-v1`;
+- one of the four bundled npm policy slugs;
 - a UUID-like hexadecimal/hyphen request ID;
 - positive safe-integer run and artifact IDs;
 - run status `completed` and conclusion `success`;
@@ -84,17 +84,14 @@ At job creation, the runtime maps the validated artifact as follows:
 | `artifactDigest` | normalized lower-case SHA-256 string |
 | `commit` | lower-case full SHA |
 | local receipt time | `generatedAt` Unix seconds |
-| receipt time + 29 days | `validUntil` Unix seconds |
+| receipt time + selected policy window | `validUntil` Unix seconds |
 | `vulnerabilities.critical` | `vulns.criticals` |
 | `vulnerabilities.high` | `vulns.highs` |
-| `vulnerabilities.total` | `vulns.vulnerableDependencies` |
+| `vulnerabilities.total` | `vulns.totalVulnerabilities` |
 | lint/build booleans | `checks.lintPassed` / `checks.buildPassed` |
 
-The current `vulnDeps` field name predates the workflow mapping. In this MVP it
-contains `npm audit`'s total vulnerability count, not a separately calculated
-count of vulnerable dependency packages. Policy/UI text should be interpreted
-with that caveat until the schema is renamed or the collector computes the
-intended metric.
+The selected policy determines whether the runtime sets a 30-, 7-, 3-, or
+2-day validity window. The workflow artifact itself is unchanged.
 
 `moderate` and `low` are validated but are not included in the Compact evidence
 struct or evaluated by the bundled policies.
@@ -122,7 +119,7 @@ Each job creates a cryptographically random 32-byte salt and stores:
 ```text
 schema = zkuat.runtime-evidence.v1
 GitHub metadata
-canonical zkuat.evidence.v3 values
+canonical zkuat.evidence.v4 values
 saltHex
 leafHex
 ```

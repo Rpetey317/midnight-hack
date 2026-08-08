@@ -84,8 +84,7 @@ This command:
 2. derives the sponsor wallet and waits for synchronization/DUST;
 3. derives the Compact anchor witness from the same seed;
 4. submits the contract deployment;
-5. submits `registerPolicy` for `bank-v1`;
-6. submits `registerPolicy` for `enterprise-v1`.
+5. submits `registerPolicy` for each of the four bundled npm reference policies.
 
 Copy the printed address into the env file:
 
@@ -97,7 +96,7 @@ Keep the same network and seed. The contract's sealed anchor identity makes a
 different seed unable to attest or administer policies.
 
 On first wallet use the SDK may submit a separate NIGHT UTXO registration
-transaction before these three contract transactions and then wait for DUST to
+transaction before these five contract transactions and then wait for DUST to
 accrue.
 
 ## Start and pair
@@ -119,7 +118,7 @@ restart or page reload requires a new pairing.
 
 After evidence retrieval and pairing:
 
-1. select `bank-v1` or `enterprise-v1`;
+1. select one of the four bundled npm policies;
 2. click **Generate proof**;
 3. keep the tab and runtime process open while the job polls;
 4. inspect the displayed anchor transaction, proof transaction, and final

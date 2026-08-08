@@ -8,9 +8,9 @@ const t = (iso: string) => Math.floor(Date.parse(iso) / 1000);
 const DAY = 86400;
 
 /**
- * The two policies registered on-chain by `@zkuat/runtime deploy`.
+ * The four policies registered on-chain by `@zkuat/runtime deploy`.
  *
- * ⚠️ Mirrors `POLICY_BANK_V1` / `POLICY_ENTERPRISE_V1` in
+ * ⚠️ Mirrors the bundled policy constants in
  * `contract/src/encoding.ts` — see the note on `Policy` in `./types`. The ids
  * are `stringIdOf(slug)` and therefore identical across every deployment; they
  * were read off the contract, not invented.
@@ -21,32 +21,60 @@ const DAY = 86400;
  */
 export const POLICIES: Policy[] = [
   {
-    id: "8eb066f1ff82c34bf459108e1854b511a5327f6a1181a72b7bcb14922a695cc6",
-    slug: "bank-v1",
-    name: "Security Policy",
-    issuer: "Example Bank",
-    issuerSlug: "first-national-bank",
+    id: "68e2e475be3b5cf8a0148f290a48468856c5ad4731760aca421ff95f172d9018",
+    slug: "npm-ci-baseline-v1",
+    name: "npm CI Baseline",
+    issuer: "zkuat Reference",
+    issuerSlug: "zkuat-reference",
     version: 1,
     maxCriticals: 0,
     maxHighs: 5,
-    maxVulnDeps: 4_294_967_295,
+    maxTotalVulnerabilities: 4_294_967_295,
     requireLint: true,
     requireBuild: true,
     maxAgeSeconds: 30 * DAY,
   },
   {
-    id: "65bb1b975c97115919de8beba5b451602ab917c4813e6cff1ac4bcdaf274c3e5",
-    slug: "enterprise-v1",
-    name: "Supply Chain Policy",
-    issuer: "Example Enterprise",
-    issuerSlug: "globex-corp",
+    id: "c65a4bcdd2d77a8a85115cca4f738ef5b8cd2cbd07b93a3e766e406e545cff71",
+    slug: "npm-production-release-v1",
+    name: "npm Production Release",
+    issuer: "zkuat Reference",
+    issuerSlug: "zkuat-reference",
     version: 1,
     maxCriticals: 0,
-    maxHighs: 4_294_967_295, // unconstrained
-    maxVulnDeps: 0,
+    maxHighs: 0,
+    maxTotalVulnerabilities: 5,
     requireLint: true,
     requireBuild: true,
-    maxAgeSeconds: 30 * DAY,
+    maxAgeSeconds: 7 * DAY,
+  },
+  {
+    id: "b1a71e0fa2fd2dd57ddb3a1d2208ffd5b9ebeeb935c2360ae0e7ec36ac025890",
+    slug: "npm-zero-known-vulns-v1",
+    name: "npm Zero Known Vulnerabilities",
+    issuer: "zkuat Reference",
+    issuerSlug: "zkuat-reference",
+    version: 1,
+    maxCriticals: 0,
+    maxHighs: 0,
+    maxTotalVulnerabilities: 0,
+    requireLint: true,
+    requireBuild: true,
+    maxAgeSeconds: 3 * DAY,
+  },
+  {
+    id: "dec6878d0531719ff6484f2c5061e817defe3816e1bcd1cc08de7003f5f40e2a",
+    slug: "npm-emergency-hotfix-v1",
+    name: "npm Emergency Hotfix",
+    issuer: "zkuat Reference",
+    issuerSlug: "zkuat-reference",
+    version: 1,
+    maxCriticals: 0,
+    maxHighs: 2,
+    maxTotalVulnerabilities: 4_294_967_295,
+    requireLint: false,
+    requireBuild: true,
+    maxAgeSeconds: 2 * DAY,
   },
 ];
 
@@ -64,7 +92,7 @@ export const EVIDENCE: Evidence = {
     "sha256:3d8f21a90b47c6e5d21f89a03c74b6e18d95f2a7c40b83e619d7a52f8c03b41e",
   generatedAt: t("2026-08-05T09:14:00Z"),
   validUntil: t("2026-09-04T09:14:00Z"),
-  vulns: { criticals: 0, highs: 3, vulnerableDependencies: 0 },
+  vulns: { criticals: 0, highs: 0, totalVulnerabilities: 3 },
   checks: { lintPassed: true, buildPassed: true },
 };
 
@@ -74,7 +102,7 @@ export const EVIDENCE_FAILING: Evidence = {
   commit: "41b7e0c9d2a8f36514e7b02c9d38a71f60e4c825",
   artifactDigest:
     "sha256:b71c04e93a58d26f0c8471b3e95d20a6f83c17d4e09a625f34c08d71e926a3fb",
-  vulns: { criticals: 2, highs: 7, vulnerableDependencies: 11 },
+  vulns: { criticals: 2, highs: 7, totalVulnerabilities: 11 },
   generatedAt: t("2026-08-06T11:02:00Z"),
   validUntil: t("2026-09-05T11:02:00Z"),
 };
@@ -103,7 +131,7 @@ export const RECORDS: ComplianceRecord[] = [
     productId: "repo-name",
     artifactDigest: EVIDENCE.artifactDigest,
     policyId: POLICIES[0].id,
-    policySlug: "bank-v1",
+    policySlug: "npm-ci-baseline-v1",
     policyVersion: 1,
     provenAt: t("2026-08-05T09:41:00Z"),
     validUntil: EVIDENCE.validUntil,
@@ -115,10 +143,10 @@ export const RECORDS: ComplianceRecord[] = [
     productId: "repo-name",
     artifactDigest: EVIDENCE.artifactDigest,
     policyId: POLICIES[1].id,
-    policySlug: "enterprise-v1",
+    policySlug: "npm-production-release-v1",
     policyVersion: 1,
     provenAt: t("2026-08-05T09:52:00Z"),
-    validUntil: EVIDENCE.validUntil,
+    validUntil: t("2026-08-12T09:14:00Z"),
     compliant: true,
     txHash: "0x1d7c93a05e28f4b6c07d13e9a852f0b4d69c31e785a04f2b6c9d31708e45a2f6",
   },
@@ -128,7 +156,7 @@ export const RECORDS: ComplianceRecord[] = [
     artifactDigest:
       "sha256:5c19e73b0a284df61c93b70e5a8d42f07b16c9e30d54a821f7b0c6e39d25a814",
     policyId: POLICIES[0].id,
-    policySlug: "bank-v1",
+    policySlug: "npm-ci-baseline-v1",
     policyVersion: 1,
     provenAt: t("2026-07-08T14:20:00Z"),
     validUntil: t("2026-08-07T14:20:00Z"),

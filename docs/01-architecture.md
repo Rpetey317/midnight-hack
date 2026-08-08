@@ -55,8 +55,8 @@ the local proof server.
 4. The user starts `@zkuat/runtime`; it binds to loopback and prints a random
    six-digit pairing code.
 5. The browser exchanges the code for an in-memory bearer token and sends the
-   evidence, request/run/artifact metadata, and one of the two policy slugs.
-6. The runtime validates the payload, maps it into `zkuat.evidence.v3`, derives a
+   evidence, request/run/artifact metadata, and one of the four policy slugs.
+6. The runtime validates the payload, maps it into `zkuat.evidence.v4`, derives a
    fresh 32-byte salt and leaf with the contract's generated pure circuit, and
    writes the private job to disk.
 7. The proof server is started if necessary. The sponsor wallet synchronizes,
@@ -125,7 +125,7 @@ A normal proof job submits two contract transactions:
 
 Indexer confirmation is read-only. A sponsor wallet may submit a separate,
 first-use NIGHT registration transaction to begin DUST generation. Initial
-deployment makes one deploy transaction and two policy-registration
+deployment makes one deploy transaction and four policy-registration
 transactions.
 
 ## Current hackathon tradeoffs
@@ -133,7 +133,7 @@ transactions.
 - one local sponsor wallet;
 - one serialized local job queue;
 - filesystem persistence instead of a service database;
-- two policies fixed at deployment time;
+- four npm reference policies fixed at deployment time;
 - GitHub Actions trusted without signed provenance;
 - Vercel/browser evidence handoff rather than direct runtime download;
 - Supabase-backed public UI not yet synchronized with real chain records;

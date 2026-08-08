@@ -71,7 +71,7 @@
                 }
               },
               {
-                "name": "vulnDeps",
+                "name": "totalVulnerabilities",
                 "type": {
                   "type-name": "Uint",
                   "maxval": 4294967295
@@ -257,7 +257,7 @@
                 }
               },
               {
-                "name": "maxVulnDeps",
+                "name": "maxTotalVulnerabilities",
                 "type": {
                   "type-name": "Uint",
                   "maxval": 4294967295
@@ -406,7 +406,7 @@
             }
           },
           {
-            "name": "vulnDeps",
+            "name": "totalVulnerabilities",
             "type": {
               "type-name": "Uint",
               "maxval": 4294967295
@@ -545,7 +545,7 @@
             }
           },
           {
-            "name": "maxVulnDeps",
+            "name": "maxTotalVulnerabilities",
             "type": {
               "type-name": "Uint",
               "maxval": 4294967295

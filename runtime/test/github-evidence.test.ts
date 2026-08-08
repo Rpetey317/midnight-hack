@@ -68,21 +68,21 @@ describe('parseGithubEvidence', () => {
 });
 
 describe('canonicalEvidenceFromGithub', () => {
-  it('maps the unchanged artifact directly into schema v3 contract input', () => {
+  it('maps the unchanged artifact directly into schema v4 contract input', () => {
     const evidence = canonicalEvidenceFromGithub(doc(), {
       ...succeeded,
       receivedAt: 1_754_582_400,
     });
     expect(evidence).toMatchObject({
-      schema: 'zkuat.evidence.v3',
+      schema: 'zkuat.evidence.v4',
       vendor: 'acme-software',
       product: 'payment-engine',
       artifactDigest: DIGEST,
       commit: COMMIT,
-      vulns: { criticals: 0, highs: 3, vulnerableDependencies: 8 },
+      vulns: { criticals: 0, highs: 3, totalVulnerabilities: 8 },
       checks: { lintPassed: true, buildPassed: true },
     });
-    expect(evidence.validUntil - evidence.generatedAt).toBe(29 * 24 * 60 * 60);
+    expect(evidence.validUntil - evidence.generatedAt).toBe(30 * 24 * 60 * 60);
   });
 
   it('rejects a failed run before producing contract input', () => {
