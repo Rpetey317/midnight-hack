@@ -66,14 +66,14 @@ one contract deployment plus four `registerPolicy` transactions.
 Requirements:
 
 - Docker Compose with host networking enabled and permission to mount its socket;
-- a Preview or Preprod sponsor seed with unshielded NIGHT available for DUST.
+- a Preview or Preprod sponsor wallet with a 24-word recovery phrase and
+  unshielded NIGHT available for DUST.
 
 From the repository root:
 
 ```bash
-mkdir -p ~/.zkuat/runtime
-cp runtime/.env.example ~/.zkuat/runtime/.env
-chmod 600 ~/.zkuat/runtime/.env
+cp runtime/.env.example runtime/.env
+chmod 600 runtime/.env
 ```
 
 Set `ZKUAT_NETWORK` and `ZKUAT_SPONSOR_WALLET_SEED` in the private env file.
@@ -92,8 +92,8 @@ docker compose up
 
 Keep this attached command running: its stdout contains `PAIRING CODE: 123456`.
 Open <https://zkuat.works/>, request evidence, enter that code, select a policy,
-and start the proof job. The sponsor seed stays in
-`~/.zkuat/runtime/.env`; never put it in Vercel or a `NEXT_PUBLIC_*` variable.
+and start the proof job. The sponsor recovery phrase stays in the gitignored
+`runtime/.env`; never put it in Vercel or a `NEXT_PUBLIC_*` variable.
 
 ## Verification during development
 

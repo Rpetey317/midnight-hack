@@ -26,7 +26,7 @@ on:
       platforms:
         description: Target platforms
         required: false
-        default: linux/amd64
+        default: linux/amd64,linux/arm64
         type: choice
         options:
           - linux/amd64
@@ -125,7 +125,7 @@ jobs:
 
       # Register arm64 emulation before Buildx creates its builder.
       - name: Set up QEMU
-        if: contains(inputs.platforms, 'arm64')
+        if: contains(inputs.platforms || 'linux/amd64,linux/arm64', 'arm64')
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Buildx
@@ -154,15 +154,15 @@ jobs:
         with:
           context: .
           file: runtime/Dockerfile
-          platforms: ${{ inputs.platforms || 'linux/amd64' }}
+          platforms: ${{ inputs.platforms || 'linux/amd64,linux/arm64' }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           # This repo deliberately ships no attestations — see the trust
-          # boundaries in docs/01-architecture.md. Keeping provenance off also
-          # leaves a plain single-arch manifest for the default build.
+          # boundaries in docs/01-architecture.md. Keeping provenance off avoids
+          # extra attestation manifests alongside the platform images.
           provenance: false
 
       - name: Summarize

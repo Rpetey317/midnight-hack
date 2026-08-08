@@ -39,8 +39,8 @@ the local proof server.
 | --- | --- | --- |
 | `ui/` server actions | Vercel | GitHub OAuth provider token during the request, downloaded evidence JSON, run/artifact metadata |
 | `ui/` browser | Vendor's browser | Evidence JSON, pairing token, selected policy, redacted runtime job state |
-| Supabase | Hosted | Repository, artifact, and proof-activity read-model rows; never the sponsor seed |
-| `runtime/` | Vendor's machine | Sponsor seed, wallet state, raw prepared evidence, salt, Merkle path, job receipts |
+| Supabase | Hosted | Repository, artifact, and proof-activity read-model rows; never the sponsor recovery phrase or seed |
+| `runtime/` | Vendor's machine | Sponsor recovery phrase and decoded seed, wallet state, raw prepared evidence, salt, Merkle path, job receipts |
 | Docker proof server | Vendor's machine | ZK proving request and compiled circuit assets during proving |
 | Midnight ledger/indexer | Hosted network | Public policies, attestation tree state, nullifiers, compliance records/history, transactions |
 
@@ -85,8 +85,9 @@ itself. A compromised paired frontend could fabricate a self-consistent payload.
 This is an explicit hackathon trust boundary.
 
 The contract separately authorizes `attest` and `registerPolicy` through a
-sealed anchor identity. Both deployment and runtime derive its private witness
-from the sponsor seed. The raw sponsor seed is never a Compact witness.
+sealed anchor identity. Both deployment and runtime decode the sponsor recovery
+phrase to its original seed and derive the private witness from that seed.
+Neither the recovery phrase nor raw sponsor seed is ever a Compact witness.
 
 ## Privacy boundary
 

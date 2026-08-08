@@ -23,9 +23,9 @@
 #
 #   docker compose up
 #
-# The mounted ~/.zkuat/runtime carries .env (mode 0600), jobs/, and the
-# private-state LevelDB. It holds the sponsor seed and raw prepared evidence —
-# treat it as sensitive; never bake it into an image layer.
+# Compose loads runtime/.env into the process environment and mounts
+# ~/.zkuat/runtime separately for jobs and private state. Both contain sensitive
+# material; never bake either into an image layer.
 
 ARG NODE_VERSION=22-bookworm-slim
 ARG DOCKER_CLI_VERSION=27.5.1

@@ -8,7 +8,7 @@ indexer services remain hosted.
 - Docker Compose running with host networking and callable by the current user;
 - permission to mount `/var/run/docker.sock` so the runtime container can manage
   the sibling proof-server container;
-- a Preview or Preprod sponsor-wallet seed;
+- a Preview or Preprod sponsor-wallet 24-word recovery phrase;
 - unshielded NIGHT in that wallet so the SDK can register it and generate DUST;
 - a deployed compatible evidence workflow in each repository used through the
   UI.
@@ -45,26 +45,28 @@ npm --prefix ui ci
 ## Create the private runtime configuration
 
 ```bash
-mkdir -p ~/.zkuat/runtime
-cp runtime/.env.example ~/.zkuat/runtime/.env
-chmod 600 ~/.zkuat/runtime/.env
+cp runtime/.env.example runtime/.env
+chmod 600 runtime/.env
 ```
 
 Before deployment, set at least:
 
 ```dotenv
 ZKUAT_NETWORK=preview
-ZKUAT_SPONSOR_WALLET_SEED=<hex-seed>
+ZKUAT_SPONSOR_WALLET_SEED="<24-word-English-BIP-39-recovery-phrase>"
 ZKUAT_RUNTIME_URL=http://127.0.0.1:4317
 ZKUAT_ALLOWED_ORIGIN=https://zkuat.works
 ZKUAT_PROOF_SERVER_URL=http://127.0.0.1:6300
 ZKUAT_PROOF_SERVER_IMAGE=midnightntwrk/proof-server:8.1.0
 ```
 
-The seed must contain 16–64 bytes represented as hex. An optional `0x` prefix is
-accepted. `ZKUAT_RUNTIME_URL` combines host and port; there are no separate
-runtime host/port variables. Runtime and proof-server URLs must remain loopback
-HTTP origins.
+The value must be a valid 24-word English BIP-39 recovery phrase. Keep it quoted
+so dotenv and Compose preserve the spaces. The runtime validates its checksum
+and decodes it to the original 32-byte wallet seed. The phrase grants control of
+the sponsor wallet, so use a dedicated wallet and never commit or share this
+file. `ZKUAT_RUNTIME_URL` combines host and port; there are no separate runtime
+host/port variables. Runtime and proof-server URLs must remain loopback HTTP
+origins.
 
 For frontend development at `http://localhost:3000`, change the allowed origin:
 
@@ -156,7 +158,6 @@ Default state:
 
 ```text
 ~/.zkuat/runtime/
-├── .env
 ├── jobs/
 ├── private-state/
 ├── wallet-state/
@@ -167,9 +168,9 @@ Only one runtime process may hold the lock. A stale lock is removed when its PID
 no longer exists. Nonterminal jobs are re-queued on startup; terminal jobs remain
 available through the authenticated API.
 
-Back up the seed separately using an appropriate secret-storage mechanism. Job
-files contain raw prepared evidence and salts, so do not upload the runtime
-directory or put it in the repository.
+The gitignored `runtime/.env` contains the sponsor recovery phrase; back it up
+separately using an appropriate secret-storage mechanism. Job files contain raw
+prepared evidence and salts, so do not upload the runtime state directory.
 
 ## Health and troubleshooting
 
@@ -182,8 +183,8 @@ curl http://127.0.0.1:4317/v1/health
 Common failures:
 
 - **contract address missing**: set the hexadecimal address printed by deploy;
-- **anchor identity mismatch**: the configured seed does not match the deployer
-  seed for that contract;
+- **anchor identity mismatch**: the configured recovery phrase does not restore
+  the sponsor wallet used to deploy that contract;
 - **proof assets missing**: pull the current published image; for a source build,
   regenerate the assets with `npm --prefix contract run compile:keys` first;
 - **proof server not ready**: inspect Docker and the named container, then use the

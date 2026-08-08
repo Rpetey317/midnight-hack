@@ -41,12 +41,12 @@ or an image you built from trusted source.
 
 ## Configuration
 
-The default configuration file is `~/.zkuat/runtime/.env`. Process environment
-variables override values in the file.
+The default configuration file is `runtime/.env`. Compose loads that file into
+the runtime process environment.
 
 ```dotenv
 ZKUAT_NETWORK=preview
-ZKUAT_SPONSOR_WALLET_SEED=<32-to-128-hex-characters>
+ZKUAT_SPONSOR_WALLET_SEED="<24-word-English-BIP-39-recovery-phrase>"
 ZKUAT_CONTRACT_ADDRESS=<deployed-contract-address>
 ZKUAT_RUNTIME_URL=http://127.0.0.1:4317
 ZKUAT_ALLOWED_ORIGIN=https://zkuat.works
@@ -57,7 +57,7 @@ ZKUAT_PROOF_SERVER_IMAGE=midnightntwrk/proof-server:8.1.0
 | Variable | Required | Meaning |
 | --- | --- | --- |
 | `ZKUAT_NETWORK` | Yes | `preview` or `preprod` |
-| `ZKUAT_SPONSOR_WALLET_SEED` | Yes | 16–64 bytes encoded as hex; optional `0x` prefix is accepted |
+| `ZKUAT_SPONSOR_WALLET_SEED` | Yes | Valid 24-word English BIP-39 recovery phrase; quote it in dotenv files |
 | `ZKUAT_CONTRACT_ADDRESS` | For `start` | Hexadecimal address printed by `deploy` |
 | `ZKUAT_RUNTIME_URL` | No | Loopback HTTP origin containing both bind host and port; default `http://127.0.0.1:4317` |
 | `ZKUAT_ALLOWED_ORIGIN` | No | Exact browser origin allowed by CORS; default `https://zkuat.works` |
@@ -69,20 +69,20 @@ ZKUAT_PROOF_SERVER_IMAGE=midnightntwrk/proof-server:8.1.0
 | `ZKUAT_STORAGE_DIR` | No | State root; default `~/.zkuat/runtime` |
 
 Both local service URLs must use plain HTTP on `127.0.0.1`, `localhost`, or
-loopback IPv6. Keep the env file mode `0600`. Never copy the seed into Vercel,
-Supabase, browser storage, or source control.
+loopback IPv6. Keep the env file mode `0600`. The recovery phrase grants control
+of the sponsor wallet: use a dedicated wallet and never copy the phrase into
+Vercel, Supabase, browser storage, or source control.
 
 ## Configure and deploy
 
 From the repository root:
 
 ```bash
-mkdir -p ~/.zkuat/runtime
-cp runtime/.env.example ~/.zkuat/runtime/.env
-chmod 600 ~/.zkuat/runtime/.env
+cp runtime/.env.example runtime/.env
+chmod 600 runtime/.env
 ```
 
-After setting the network and seed, deploy once:
+After setting the network and recovery phrase, deploy once:
 
 ```bash
 docker compose run --rm runtime deploy
@@ -178,7 +178,7 @@ All remaining routes require `Authorization: Bearer <paired-token>`:
 
 The job-creation body contains `evidence`, `requestId`, completed GitHub run
 metadata, artifact metadata, and `policySlug`. Public job responses omit the raw
-evidence, salt, Merkle path, and sponsor seed.
+evidence, salt, Merkle path, recovery phrase, and derived sponsor seed.
 
 ## Local state
 
@@ -186,7 +186,6 @@ The default state tree is:
 
 ```text
 ~/.zkuat/runtime/
-├── .env
 ├── jobs/<uuid>.json
 ├── private-state/zkuat/
 ├── wallet-state/<network>.json
@@ -194,10 +193,10 @@ The default state tree is:
 ```
 
 Directories are forced to mode `0700`; JSON files and the process lock are mode
-`0600`. Job files intentionally contain the prepared evidence, salt, and leaf,
-so treat the entire storage directory as sensitive. Wallet state is a sync
-cache, while Compact private state is password-protected using a value derived
-from the sponsor seed.
+`0600`. The sponsor recovery phrase stays separately in `runtime/.env`. Job files
+intentionally contain the prepared evidence, salt, and leaf, so treat the entire
+storage directory as sensitive. Wallet state is a sync cache, while Compact
+private state is password-protected using a value derived from the sponsor seed.
 
 ## Development checks
 

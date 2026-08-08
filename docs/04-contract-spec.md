@@ -76,9 +76,10 @@ runtime does not duplicate protocol hashes.
 
 The constructor stores `anchorIdOf(localSecret())` in the sealed `anchor` field.
 `requireAnchor()` compares that immutable value with the current private witness.
-The runtime derives the witness with domain-separated HKDF from the sponsor
-wallet seed. Changing the configured seed or network does not migrate the
-contract; a different seed fails the identity check.
+The runtime decodes the configured sponsor recovery phrase to its wallet seed,
+then derives the witness with domain-separated HKDF. Changing the configured
+phrase or network does not migrate the contract; a different wallet seed fails
+the identity check.
 
 ## `attest(leaf)`
 
