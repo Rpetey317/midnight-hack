@@ -1,8 +1,11 @@
 # 07 — Alignment Delta (Master Doc → as-built)
 
-> **Purpose.** [`Master-Doc.md`](../Master-Doc.md) is the source of truth for this project. Track A was
-> built against an earlier framing. This document is the register of every place they disagreed, what
-> had to change, and what survived untouched.
+> **Purpose.** [`Master-Doc.md`](Master-Doc.md) — v1 — is what Track A was realigned to. This document
+> is the register of every place they disagreed, what had to change, and what survived untouched. Bare
+> §N references point at v1.
+>
+> The authoritative document is now [`Master-Doc-v2.md`](Master-Doc-v2.md). It does not reopen anything
+> below; its register is [09-master-doc-v2-delta.md](09-master-doc-v2-delta.md).
 >
 > **Status: the contract half of this register is closed.** `contract/` migrated to schema v2 on
 > 2026-08-07 — 87 tests green. Items 1–8, 10, and 12 are resolved in code. Items 9 and 11 are

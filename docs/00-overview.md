@@ -1,7 +1,9 @@
 # 00 — Overview
 
-> Derived from [`Master-Doc.md`](../Master-Doc.md), the project's source of truth. Section references
-> like §4 point there.
+> Derived from [`Master-Doc.md`](Master-Doc.md) (v1). Bare section references like §4 point there.
+> The authoritative document is now [`Master-Doc-v2.md`](Master-Doc-v2.md), which simplifies rather
+> than redirects — nothing on this page changed under it. See
+> [09-master-doc-v2-delta.md](09-master-doc-v2-delta.md).
 
 ## The problem
 

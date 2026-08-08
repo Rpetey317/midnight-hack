@@ -1,8 +1,13 @@
 # 01 — Architecture
 
-> Aligned to [`Master-Doc.md`](../Master-Doc.md). The ledger state and circuit signature below are the
-> **target** design; `contract/` implements an earlier version. See
-> [07-alignment-delta.md](07-alignment-delta.md) for the exact gap.
+> Aligned to [`Master-Doc.md`](Master-Doc.md) (v1); bare §N references point there. The ledger state
+> and circuit signature below are **as-built** — `contract/` runs schema v2. See
+> [07-alignment-delta.md](07-alignment-delta.md) for how it got here.
+>
+> [`Master-Doc-v2.md`](Master-Doc-v2.md) is now authoritative and **defers** the Sigstore/anchor
+> machinery described below (v2 §10) rather than contradicting it — v2 §12 lists it as the intended
+> upgrade path. It stays. The live evidence path under v2 is
+> [09-master-doc-v2-delta.md](09-master-doc-v2-delta.md).
 
 ## Four actors
 
@@ -233,8 +238,8 @@ commitment L. That is a stronger position than any assurance vendor occupies tod
 
 | Component | Runs where | Responsibility |
 |---|---|---|
-| `collector` | Vendor's GitHub Actions | Run checks, emit a private report. ✅ Built |
-| `.github/workflows/attest.yml` | Vendor's GitHub Actions | Invoke collector, sign via `actions/attest`, upload private artifact. ✅ Written, not green |
+| `collector` | Vendor's GitHub Actions, or the operator's machine | Run checks, emit a private report. ✅ Built. `src/github-evidence.ts` adapts a v2 workflow's `evidence.json` into the same report. |
+| `.github/workflows/attest.yml` | Vendor's GitHub Actions | **Rewritten for Master-Doc-v2 §4.** `workflow_dispatch` with a `request_id` → `npm audit --json` → `npm pack` digest → `evidence.json` uploaded as an artifact. It no longer invokes the collector and no longer calls `actions/attest`. ✅ Live — the app dispatches it. |
 | `attestor` | Vendor CI or trusted service | Validate CI inputs, normalize evidence, sign (§9), compute the commitment. ✅ Built |
 | `anchor` | Operator's server / laptop | Verify Sigstore bundle, check OIDC↔repo binding, submit `attest(leaf)` |
 | `contract` | Midnight | Anchor tree, policy registry, compliance records, nullifiers |

@@ -3,7 +3,7 @@
 Target: **2 minutes 30 seconds.** Judging weighs technology, innovation, completion, real-world
 application, and Midnight developer-experience feedback.
 
-Sequence follows [`Master-Doc.md`](../Master-Doc.md) §28. Rehearse three times — the third rehearsal is
+Sequence follows [`Master-Doc.md`](Master-Doc.md) §28. Rehearse three times — the third rehearsal is
 where you find the broken thing.
 
 ## The organising principle

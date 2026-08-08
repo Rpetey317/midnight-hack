@@ -3,21 +3,25 @@
 **Deadline: 13:00 ART, Saturday 8 August 2026.** Roughly **21 hours** from this revision (15:45 ART
 Friday), including sleep. Four people.
 
-Track A is done. The plan below is reordered against [`Master-Doc.md`](../Master-Doc.md) §39, which
+Track A is done. The plan below is reordered against [`Master-Doc.md`](Master-Doc.md) §39, which
 ranks priorities differently from the original plan — see [Priority inversion](#priority-inversion).
+
+> [`Master-Doc-v2.md`](Master-Doc-v2.md) is now authoritative. It does not change the track structure;
+> it replaces the *evidence source* for Track B with a dispatched GitHub workflow (v2 §4–§5). See
+> [09-master-doc-v2-delta.md](09-master-doc-v2-delta.md).
 
 ## Where we are
 
 | Component | State |
 |---|---|
-| `docs/` | ✅ Realigned to the Master Doc |
+| `docs/` | ✅ Realigned to `Master-Doc-v2.md` |
 | `app/` | ✅ Minimal `hello-world` scaffold (SDK 4.1.1), deps installed |
 | `contract/` | ✅ **Schema v2, 87 tests green, real keys, deployed to local devnet.** Full attest → prove → read round trip works. |
-| `collector/`, `attestor/` | ✅ **11 checks, DSSE signing, 165 tests green.** Four signed fixtures anchored and proven on the devnet. |
+| `collector/`, `attestor/` | ✅ **11 checks, DSSE signing, 186 tests green.** Four signed fixtures anchored and proven on the devnet. Plus `collector/src/github-evidence.ts`, the v2 §4–§5 adapter. |
 | `demo/fixtures/` | ✅ Committed and verifying |
-| `.github/workflows/attest.yml` | ✅ Written, not green (private repo — attestations plan-gated). Nothing depends on it. |
+| `.github/workflows/attest.yml` | ✅ **Replaced with the Master-Doc-v2 §4 evidence job** — dispatch → `npm audit` → `npm pack` digest → `evidence.json` artifact. **The app depends on it**: `ui/src/lib/github/evidence.ts` dispatches it by name. It no longer runs the collector or `actions/attest`. |
 | `anchor/`, `cli/` | ✅ **Trust boundary + `anchor`/`prove`/`status`, 12 tests.** Two fixtures anchored and proven end to end on the devnet. Sigstore path written, comparator tested, never run against a real Fulcio cert. |
-| `ui/` (vendor + buyer) | ⬜ |
+| `ui/` (vendor + buyer) | 🟡 Four routes, Supabase GitHub auth, and the workflow dispatch → poll → artifact download path. **Proving is simulated** and the verifier view reads `lib/demo.ts` fixtures, not the chain. |
 
 **Track C is done; Track D is unblocked twice over** — by A's generated types and now by B's signed bundles. `@zkuat/contract` exports the v2 encoding, both policies, and the
 pure circuits that make the leaf, nullifier, and record key. Import them; do not reimplement.
@@ -183,11 +187,28 @@ Four things the rest of the team needs to know:
    yields new leaves and nullifiers, which is how to rehearse more than once without hitting the
    replay guard.
 
-The live workflow is written but **not green and not depended on** — §39 ranks CI tenth, and the repo
-is private, where artifact attestations are plan-gated. The demo path uses committed fixtures.
+**The workflow was since replaced, and this changed.** `.github/workflows/attest.yml` no longer runs
+the collector or `actions/attest`; it is the Master-Doc-v2 §4 job — `workflow_dispatch` with a
+`request_id`, `npm audit --json`, an `npm pack` digest, and `evidence.json` uploaded as
+`zkuat-evidence-<request_id>`. The application dispatches it by name, so it **is** depended on now, and
+none of the Sigstore/predicate machinery below runs in CI any more.
+
+Both paths remain valid and produce the same `CollectorReport`:
+
+| Path | Evidence source | Trust root |
+|---|---|---|
+| Signed (v1) | `collector` → `attestor` → DSSE bundle → `anchor` (Sigstore) | our attestor key + GitHub OIDC |
+| Live (v2) | dispatched workflow → `evidence.json` → `collector/src/github-evidence.ts` | GitHub Actions, trusted per v2 §10 |
+
+The demo path still uses committed fixtures — a signed fixture is indistinguishable on stage and far
+more reliable. Details and the honest gaps in the live path:
+[09-master-doc-v2-delta.md](09-master-doc-v2-delta.md).
 
 <details>
-<summary>Original plan for this track, kept for the check table</summary>
+<summary>Original plan for this track, kept for the check table (describes the SUPERSEDED workflow)</summary>
+
+> ⚠️ The workflow described at the end of this block no longer exists — see above. The check table
+> is still accurate for `collector/`'s own checks.
 
 **Produce a signed v2 fixture in the first hour.** Everything downstream unblocks on the existence of a
 valid signed evidence bundle, and nothing downstream cares whether a workflow or a human produced it.
