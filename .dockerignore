@@ -20,6 +20,7 @@ runtime/runtime-data/
 # Not part of the runtime image.
 ui/
 docs/
+slides/
 .git/
 .github/
 .claude/

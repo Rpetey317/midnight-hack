@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.slidev/
+
+# Export artifacts — regenerate with `npm run export`.
+export/
+*.pptx
+*.pdf
+*.png

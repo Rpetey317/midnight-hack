@@ -1,0 +1,22 @@
+{
+  "name": "@zkuat/slides",
+  "private": true,
+  "type": "module",
+  "description": "zkuat judge pitch deck — Hack Buenos Aires 2026",
+  "scripts": {
+    "dev": "slidev --open",
+    "build": "slidev build",
+    "export": "slidev export --format pptx --with-clicks --scale 2 --timeout 60000 --wait 1500",
+    "export:flat": "slidev export --format pptx --scale 2 --timeout 60000 --wait 1500 --output zkuat-pitch-flat.pptx",
+    "export:pdf": "slidev export --format pdf --with-clicks --scale 2 --timeout 60000 --wait 1500",
+    "export:png": "slidev export --format png --with-clicks --scale 2 --timeout 60000 --wait 1500 --output export/frame"
+  },
+  "dependencies": {
+    "@slidev/cli": "^52.19.0",
+    "@slidev/theme-default": "^0.25.0",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "playwright-chromium": "^1.62.1"
+  }
+}

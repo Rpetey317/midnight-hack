@@ -1,0 +1,112 @@
+/*
+ * zkuat deck styles.
+ *
+ * Tokens are copied verbatim from `ui/src/app/globals.css` `:root` (the light
+ * theme) with exactly one deviation, documented at `--border` below. Anything
+ * that disagrees with `ui/design-system.md` is a bug.
+ *
+ * There are deliberately NO base rules for h1/h2/h3/p here. theme-default
+ * styles those through `.slidev-layout h1 { … }` (specificity 0,1,1), which
+ * beats every UnoCSS utility (0,1,0) — so a base rule of ours would have to
+ * match that specificity to win, and would then swallow the utilities too. The
+ * deck sidesteps the whole fight by using `<div>`/`<span>` with the type
+ * shortcuts in uno.config.ts. Keep it that way.
+ */
+
+:root {
+  --background: #fcfcfc;
+  --foreground: #0b0b0b;
+  --card: #f5f5f5;
+  --muted-foreground: #636363;
+  --accent: #00c5c7;
+  --destructive: #ee343b;
+  --success: #00be6a;
+  --warning: #f9a300;
+  --violet: #a672ff;
+
+  /*
+   * DEVIATION — the UI ships `rgba(11,11,11,0.06)`.
+   *
+   * A 6% hairline is the design system's "expensive" lever on a monitor at
+   * arm's length. Through a projector's crushed dynamic range at 3-10m it
+   * disappears entirely, and so does the 3% step between --card (#f5f5f5) and
+   * --background (#fcfcfc) that would otherwise define a panel. The deck
+   * therefore strengthens this one value and leans on the border rather than
+   * the fill for panel definition. Every other token is unchanged.
+   */
+  --border: rgba(11, 11, 11, 0.14);
+
+  --gradient-accent: linear-gradient(135deg, #00dfe1 0%, #a672ff 100%);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* --- Canvas -------------------------------------------------------------
+ * 980 x 551.25 at aspectRatio 16/9. Content box is therefore 868 x 459 — the
+ * number the `min-h-[459px]` on the cover and closing slides is derived from.
+ */
+
+.slidev-layout {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  padding: 44px 56px 48px;
+}
+
+/* --- Code ---------------------------------------------------------------
+ * The one snippet in the deck is hand-built (components/DiscloseSnippet.vue)
+ * so its emphasis is deliberate rather than whatever a syntax theme decides —
+ * design-system.md §9 has no decorative-colour palette. These rules only exist
+ * so a stray markdown fence does not render as an unstyled slab.
+ */
+
+.slidev-layout .slidev-code-wrapper {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.slidev-layout pre.slidev-code {
+  background: var(--card) !important;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px !important;
+  font-family: 'Geist Mono', ui-monospace, SFMono-Regular, monospace;
+  font-size: 12px !important;
+  line-height: 1.6 !important;
+  overflow: visible;
+}
+
+/* --- The one gradient mark, used once per slide, on the cover and close --- */
+
+.zk-mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--gradient-accent);
+  color: #0b0b0b;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+/* --- Click steps --------------------------------------------------------
+ * Each step becomes its own page in the pptx export, so the transition is
+ * only for presenting from Slidev itself.
+ */
+
+.slidev-vclick-target {
+  transition: opacity 250ms var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
