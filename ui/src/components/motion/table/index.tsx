@@ -102,6 +102,9 @@ export function Table<T>({
       onSelectionChange,
     });
 
+  // TanStack Virtual deliberately returns imperative functions that the React
+  // Compiler cannot memoize; keeping the hook here is its supported API.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: sortedRows.length,
     getScrollElement: () => scrollRef.current,

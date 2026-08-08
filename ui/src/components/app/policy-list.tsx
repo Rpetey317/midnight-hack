@@ -76,10 +76,7 @@ export function PolicyList({ className }: { className?: string }) {
 
                     <dl className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2">
                       <Meta label="Policy id" value={shortDigest(p.id, 14, 8)} />
-                      <Meta
-                        label="Required attestor"
-                        value={p.requiredAttestor ?? "any registered"}
-                      />
+                      <Meta label="Issuer" value={p.issuer} />
                     </dl>
 
                     <Link

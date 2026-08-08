@@ -26,6 +26,11 @@ export interface AgentCodeToken {
 
 export type AgentCodeTokenLines = AgentCodeToken[][];
 
+export interface AgentCodeSourceLine {
+  content: string;
+  offset: number;
+}
+
 export interface AgentCodeProps {
   code: string;
   language?: AgentCodeLanguage;
@@ -57,6 +62,15 @@ function tokenCacheKey(code: string, language: AgentCodeLanguage) {
   return `${language}\u0000${code}`;
 }
 
+export function splitAgentCodeLines(code: string): AgentCodeSourceLine[] {
+  let offset = 0;
+  return code.split("\n").map((content) => {
+    const line = { content, offset };
+    offset += content.length + 1;
+    return line;
+  });
+}
+
 export function useAgentCodeTokens(
   code: string,
   language: AgentCodeLanguage,
@@ -71,11 +85,7 @@ export function useAgentCodeTokens(
   } | null>(cached ? { key, code, language, lines: cached } : null);
 
   useEffect(() => {
-    const current = tokenCache.get(key);
-    if (current) {
-      setResult({ key, code, language, lines: current });
-      return;
-    }
+    if (cached) return;
 
     let cancelled = false;
     getAgentCodeHighlighter().then((highlighter) => {
@@ -102,8 +112,9 @@ export function useAgentCodeTokens(
     return () => {
       cancelled = true;
     };
-  }, [code, key, language]);
+  }, [cached, code, key, language]);
 
+  if (cached) return cached;
   if (result?.key === key) return result.lines;
   if (result?.language === language && code.startsWith(result.code)) {
     return result.lines;
@@ -144,12 +155,7 @@ export function AgentCode({
   className,
 }: AgentCodeProps) {
   const tokens = useAgentCodeTokens(code, language);
-  let offset = 0;
-  const lines = code.split("\n").map((content) => {
-    const line = { content, offset };
-    offset += content.length + 1;
-    return line;
-  });
+  const lines = splitAgentCodeLines(code);
 
   return (
     <pre

@@ -21,6 +21,7 @@ coverage/
 
 # Environment variables
 .env*
+!.env.example
 
 # App contract artifacts and deployment info
 app/contracts/managed/

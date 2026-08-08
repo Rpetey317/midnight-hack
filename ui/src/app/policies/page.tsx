@@ -28,7 +28,7 @@ export default async function Policies() {
           <Stat
             icon={ShieldCheck}
             label="Evidence schema"
-            value="zkuat.evidence.v2"
+            value="zkuat.evidence.v3"
             mono
           />
         </div>

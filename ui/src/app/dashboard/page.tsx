@@ -34,7 +34,7 @@ export default async function Dashboard() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Repositories</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Evidence is generated and proven locally — nothing here holds a finding.
+              Evidence is retrieved from GitHub and proven by the paired local runtime — nothing here stores a finding.
             </p>
           </div>
           {products.length > 0 && <AddRepoDialog />}

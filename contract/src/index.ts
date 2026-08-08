@@ -1,8 +1,8 @@
 /**
  * zkuat contract package — the integration surface for every other track.
  *
- * Tracks B (collector/attestor), C (anchor/CLI), and D (vendor + buyer views)
- * import from here. In particular they call `pureCircuits.leafOf`,
+ * The runtime and read-only clients import from here. In particular they call
+ * `pureCircuits.leafOf`,
  * `nullifierOf`, and `recordKeyOf` rather than reimplementing the commitment
  * scheme: those are compiled from the same Compact source `proveCompliance`
  * runs, so what TypeScript computes is byte for byte what the circuit checks.
@@ -48,10 +48,13 @@ export type {
 // Witness implementations and the private state they read.
 export { emptyPrivateState, witnesses, type AuditPrivateState } from './witnesses.js';
 
+// One deterministic, domain-separated derivation used by deployment and the
+// local runtime. The raw wallet seed is never passed to Compact.
+export { deriveAnchorSecret } from './anchor-secret.js';
+
 // Canonical JSON → Evidence encoding, identifier derivation, and the two shipped
 // policies. The single implementation; do not reimplement it downstream.
 export {
-  attestorId,
   encodeArtifactDigest,
   encodeCommit,
   encodeEvidence,
@@ -62,10 +65,8 @@ export {
   recordKey,
   stringId,
   vendorId,
-  ANY_ATTESTOR,
   EVIDENCE_SCHEMA,
   HASH_BYTES,
-  MAX_COVERAGE,
   MAX_U32,
   MAX_U64,
   POLICY_BANK_ID,

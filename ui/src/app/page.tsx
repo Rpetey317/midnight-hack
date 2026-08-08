@@ -22,12 +22,12 @@ const STEPS = [
   {
     icon: ScanLine,
     title: "Your CI measures",
-    body: "The repository's own workflow runs the checks and writes a canonical evidence bundle. It never leaves the repository.",
+    body: "The repository's own workflow runs the checks and writes a small evidence artifact for the requested commit.",
   },
   {
     icon: GitBranch,
-    title: "GitHub signs a commitment",
-    body: "A salted commitment to that evidence is signed under the repo's OIDC identity — the same trust root SLSA and npm provenance use.",
+    title: "The local runtime commits",
+    body: "The paired runtime validates the GitHub run and artifact, adds a private salt, and derives the exact Compact commitment.",
   },
   {
     icon: Lock,
@@ -124,7 +124,7 @@ export default async function Home() {
           <ScrollReveal>
             <p className="text-xs uppercase tracking-wider text-muted-foreground">How it works</p>
             <h2 className="mt-3 max-w-2xl text-2xl font-semibold tracking-tight sm:text-3xl">
-              Four steps, and the evidence never moves.
+              Four steps, with findings kept off chain.
             </h2>
           </ScrollReveal>
 
@@ -171,7 +171,7 @@ export default async function Home() {
                 />
                 <Reason
                   title="Local proving"
-                  body="Proofs are generated on the developer's machine. No third party ever receives the evidence — which is the entire point."
+                  body="Proofs are generated on the developer's machine. The chain receives only public identifiers and the policy verdict."
                 />
               </div>
             </div>
@@ -208,8 +208,8 @@ export default async function Home() {
                 Attest your first repository
               </h2>
               <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                Sign in with GitHub. Your evidence stays on your machine — we only ever see a
-                commitment.
+                Sign in with GitHub. The workflow artifact is passed to your paired local runtime;
+                only a commitment and verdict reach Midnight.
               </p>
             </div>
             <GithubSignIn label="Sign in with GitHub" />

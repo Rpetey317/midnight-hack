@@ -9,7 +9,6 @@ import {
 } from "motion/react";
 import {
   cloneElement,
-  isValidElement,
   type ReactElement,
   type ReactNode,
   useCallback,
@@ -186,24 +185,19 @@ export function Tooltip({
     () => (reduce ? REDUCED_VARIANTS : buildVariants(side)),
     [reduce, side],
   );
-
-  if (!isValidElement(children)) return children;
-
   const trigger = cloneElement(
-    children as ReactElement<Record<string, unknown>>,
-    {
-      onMouseEnter: show,
-      onMouseLeave: hide,
-      onFocus: show,
-      onBlur: hide,
-      "aria-describedby": id,
-    },
+    children as ReactElement<{ "aria-describedby"?: string }>,
+    { "aria-describedby": id },
   );
 
   return (
     <>
       <span
         ref={anchorRef}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={hide}
         className={cn("relative inline-flex align-middle", wrapperClassName)}
       >
         {trigger}

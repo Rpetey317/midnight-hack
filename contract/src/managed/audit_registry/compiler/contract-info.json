@@ -43,13 +43,6 @@
                 }
               },
               {
-                "name": "attestorId",
-                "type": {
-                  "type-name": "Bytes",
-                  "length": 32
-                }
-              },
-              {
                 "name": "generatedAt",
                 "type": {
                   "type-name": "Uint",
@@ -78,20 +71,6 @@
                 }
               },
               {
-                "name": "kev",
-                "type": {
-                  "type-name": "Uint",
-                  "maxval": 4294967295
-                }
-              },
-              {
-                "name": "forbiddenDeps",
-                "type": {
-                  "type-name": "Uint",
-                  "maxval": 4294967295
-                }
-              },
-              {
                 "name": "vulnDeps",
                 "type": {
                   "type-name": "Uint",
@@ -99,34 +78,15 @@
                 }
               },
               {
-                "name": "mfaRequired",
+                "name": "lintPassed",
                 "type": {
                   "type-name": "Boolean"
                 }
               },
               {
-                "name": "branchProtected",
+                "name": "buildPassed",
                 "type": {
                   "type-name": "Boolean"
-                }
-              },
-              {
-                "name": "buildProvenanceVerified",
-                "type": {
-                  "type-name": "Boolean"
-                }
-              },
-              {
-                "name": "ciGreen",
-                "type": {
-                  "type-name": "Boolean"
-                }
-              },
-              {
-                "name": "coverage",
-                "type": {
-                  "type-name": "Uint",
-                  "maxval": 4294967295
                 }
               }
             ]
@@ -297,42 +257,22 @@
                 }
               },
               {
-                "name": "maxKev",
+                "name": "maxVulnDeps",
                 "type": {
                   "type-name": "Uint",
                   "maxval": 4294967295
                 }
               },
               {
-                "name": "maxForbiddenDeps",
-                "type": {
-                  "type-name": "Uint",
-                  "maxval": 4294967295
-                }
-              },
-              {
-                "name": "requireMfa",
+                "name": "requireLint",
                 "type": {
                   "type-name": "Boolean"
                 }
               },
               {
-                "name": "requireBranchProtection",
+                "name": "requireBuild",
                 "type": {
                   "type-name": "Boolean"
-                }
-              },
-              {
-                "name": "requireBuildProvenance",
-                "type": {
-                  "type-name": "Boolean"
-                }
-              },
-              {
-                "name": "requiredAttestor",
-                "type": {
-                  "type-name": "Bytes",
-                  "length": 32
                 }
               },
               {
@@ -438,13 +378,6 @@
             }
           },
           {
-            "name": "attestorId",
-            "type": {
-              "type-name": "Bytes",
-              "length": 32
-            }
-          },
-          {
             "name": "generatedAt",
             "type": {
               "type-name": "Uint",
@@ -473,20 +406,6 @@
             }
           },
           {
-            "name": "kev",
-            "type": {
-              "type-name": "Uint",
-              "maxval": 4294967295
-            }
-          },
-          {
-            "name": "forbiddenDeps",
-            "type": {
-              "type-name": "Uint",
-              "maxval": 4294967295
-            }
-          },
-          {
             "name": "vulnDeps",
             "type": {
               "type-name": "Uint",
@@ -494,34 +413,15 @@
             }
           },
           {
-            "name": "mfaRequired",
+            "name": "lintPassed",
             "type": {
               "type-name": "Boolean"
             }
           },
           {
-            "name": "branchProtected",
+            "name": "buildPassed",
             "type": {
               "type-name": "Boolean"
-            }
-          },
-          {
-            "name": "buildProvenanceVerified",
-            "type": {
-              "type-name": "Boolean"
-            }
-          },
-          {
-            "name": "ciGreen",
-            "type": {
-              "type-name": "Boolean"
-            }
-          },
-          {
-            "name": "coverage",
-            "type": {
-              "type-name": "Uint",
-              "maxval": 4294967295
             }
           }
         ]
@@ -645,42 +545,22 @@
             }
           },
           {
-            "name": "maxKev",
+            "name": "maxVulnDeps",
             "type": {
               "type-name": "Uint",
               "maxval": 4294967295
             }
           },
           {
-            "name": "maxForbiddenDeps",
-            "type": {
-              "type-name": "Uint",
-              "maxval": 4294967295
-            }
-          },
-          {
-            "name": "requireMfa",
+            "name": "requireLint",
             "type": {
               "type-name": "Boolean"
             }
           },
           {
-            "name": "requireBranchProtection",
+            "name": "requireBuild",
             "type": {
               "type-name": "Boolean"
-            }
-          },
-          {
-            "name": "requireBuildProvenance",
-            "type": {
-              "type-name": "Boolean"
-            }
-          },
-          {
-            "name": "requiredAttestor",
-            "type": {
-              "type-name": "Bytes",
-              "length": 32
             }
           },
           {

@@ -19,13 +19,10 @@ export default async function PolicyDetail({ params }: PageProps<"/policies/[id]
   const thresholds: { label: string; value: string }[] = [
     { label: "Max criticals", value: String(policy.maxCriticals) },
     { label: "Max highs", value: unbounded(policy.maxHighs) },
-    { label: "Max KEV", value: String(policy.maxKev) },
-    { label: "Max forbidden deps", value: unbounded(policy.maxForbiddenDeps) },
-    { label: "MFA required", value: yesNo(policy.requireMfa) },
-    { label: "Branch protection", value: yesNo(policy.requireBranchProtection) },
-    { label: "Build provenance", value: yesNo(policy.requireBuildProvenance) },
+    { label: "Max vulnerable deps", value: unbounded(policy.maxVulnDeps) },
+    { label: "Lint", value: yesNo(policy.requireLint) },
+    { label: "Build", value: yesNo(policy.requireBuild) },
     { label: "Max evidence age", value: `${Math.round(policy.maxAgeSeconds / 86400)} days` },
-    { label: "Required attestor", value: policy.requiredAttestor ?? "any registered" },
     { label: "Version", value: `v${policy.version}` },
   ];
 

@@ -14,6 +14,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { EASE_OUT } from "@/lib/ease";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { cn } from "@/lib/utils";
 
 export type CommandItem = {
@@ -80,8 +81,7 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   // Portal target only exists client-side; render nothing during SSR/hydration.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useHydrated();
   const uid = useId();
   const reduce = useReducedMotion();
   const updateQuery = useCallback((value: string) => {
@@ -111,11 +111,12 @@ export function CommandPalette({
   }, [open, shortcut, setOpen]);
 
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => {
       updateQuery("");
-      setActive(0);
-      requestAnimationFrame(() => inputRef.current?.focus());
-    }
+      inputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
   }, [open, updateQuery]);
 
   useEffect(() => {

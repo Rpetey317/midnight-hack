@@ -2,8 +2,8 @@
  * Witness implementations for the zkuat compliance registry.
  *
  * Everything here runs on the prover's own machine and never leaves it. The
- * private state carries the evidence, its salt, and its Merkle path for a
- * vendor; the anchor operator carries only a secret key.
+ * private state carries the evidence, its salt, and its Merkle path; the
+ * runtime derives the anchor secret from its sponsor wallet seed.
  */
 import type { Witnesses } from './managed/audit_registry/contract/index.js';
 import type { AuditPath, Evidence } from './types.js';
@@ -58,7 +58,7 @@ export const witnesses: Witnesses<AuditPrivateState> = {
     required(
       privateState.evidence,
       'evidence',
-      'load the signed evidence bundle produced by the attestor',
+      'load the prepared GitHub Actions evidence',
     ),
   ],
 
@@ -67,7 +67,7 @@ export const witnesses: Witnesses<AuditPrivateState> = {
     required(
       privateState.salt,
       'salt',
-      'the salt travels with the evidence in the private bundle',
+      'load the salt persisted with the private evidence',
     ),
   ],
 

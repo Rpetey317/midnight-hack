@@ -6,9 +6,7 @@ export default defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    // Existing UI primitives predate the React Compiler lint rules. Keep these
-    // findings visible while adopting lint. The npm script caps the baseline
-    // at 24 warnings, so adding another warning still fails the CI check.
+    // Keep React Compiler findings visible and fail lint on every warning.
     rules: {
       "@typescript-eslint/no-empty-object-type": "warn",
       "react-hooks/immutability": "warn",
