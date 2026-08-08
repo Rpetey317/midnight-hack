@@ -2,6 +2,7 @@
 theme: default
 title: zkuat — prove your security posture, disclose nothing
 author: zkuat
+favicon: /icon.svg
 colorSchema: light
 aspectRatio: 16/9
 canvasWidth: 980
@@ -28,7 +29,7 @@ transition: none
 <div class="flex min-h-[459px] flex-col justify-between">
 
 <!-- <div class="flex items-center gap-2.5">
-  <span class="zk-mark">zk</span>
+  <ZkMark />
   <span class="text-[17px] font-semibold tracking-tight">zkuat</span>
 </div> -->
 
@@ -331,7 +332,7 @@ Naming the gap yourself is worth more than a judge finding it.
 <div class="flex min-h-[459px] flex-col justify-between">
 
 <div class="flex items-center gap-2.5">
-  <span class="zk-mark">zk</span>
+  <ZkMark />
   <span class="text-[17px] font-semibold tracking-tight">zkuat</span>
 </div>
 

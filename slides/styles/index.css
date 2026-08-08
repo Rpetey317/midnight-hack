@@ -78,20 +78,8 @@
   overflow: visible;
 }
 
-/* --- The one gradient mark, used once per slide, on the cover and close --- */
-
-.zk-mark {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  background: var(--gradient-accent);
-  color: #0b0b0b;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-}
+/* The gradient mark now lives in components/ZkMark.vue, which carries its own
+ * geometry so the same artwork serves the deck and the favicon. */
 
 /* --- Click steps --------------------------------------------------------
  * Each step becomes its own page in the pptx export, so the transition is
