@@ -173,11 +173,7 @@ async function getEvidenceArtifact(token: string, repo: GithubRepo, runId: numbe
     token,
     `/repos/${repo.owner}/${repo.name}/actions/runs/${runId}/artifacts?per_page=100`,
   );
-  // Must match `.github/workflows/attest.yml`'s upload step verbatim:
-  //   name: evidence-${{ inputs.request_id || github.sha }}
-  // A mismatch here is not a soft failure — every retrieval throws
-  // "did not produce artifact …" after waiting out the whole workflow run.
-  const name = `evidence-${requestId}`;
+  const name = `zquat-evidence-${requestId}`;
   const artifact = res.artifacts.find((item) => item.name === name);
   if (!artifact) throw new Error(`Workflow run ${runId} did not produce artifact ${name}.`);
   if (artifact.expired) throw new Error(`Workflow run ${runId} produced an expired artifact ${artifact.name}.`);
