@@ -37,6 +37,8 @@ jobs:
         run: |
           node <<'EOF'
           const fs = require("fs");
+          const crypto = require("crypto");
+          const { execSync } = require("child_process");
 
           const audit = JSON.parse(
             fs.readFileSync("npm-audit.json", "utf8")
@@ -45,9 +47,31 @@ jobs:
           const vulnerabilities =
             audit.metadata?.vulnerabilities ?? {};
 
+          // Every claim downstream is a claim about *these bytes*. `npm pack`
+          // produces the tarball this package would publish; its sha256 is the
+          // artifact identity the ZK circuit binds the proof to.
+          //
+          // This does NOT need to be reproducible across runs. The circuit only
+          // requires the same 32 bytes in the private evidence and in the public
+          // input of one proof, so tarball mtime jitter is irrelevant here.
+          const tarball = execSync("npm pack --silent")
+            .toString()
+            .trim()
+            .split("\n")
+            .filter(Boolean)
+            .pop();
+
+          const artifactDigest =
+            "sha256:" +
+            crypto
+              .createHash("sha256")
+              .update(fs.readFileSync(tarball))
+              .digest("hex");
+
           const evidence = {
             repository: process.env.GITHUB_REPOSITORY,
             commit: process.env.GITHUB_SHA,
+            artifactDigest,
             vulnerabilities: {
               critical: vulnerabilities.critical ?? 0,
               high: vulnerabilities.high ?? 0,

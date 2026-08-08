@@ -135,3 +135,17 @@ export async function collect(
 export { hashConfig, loadConfig, type CollectorConfig } from './config.js';
 export { fetchJson, ghApi, parseJson, run } from './exec.js';
 export { sha256File } from './checks/artifact.js';
+
+// The Master-Doc-v2 §4–§5 path: the application dispatches the repository's own
+// workflow and gets back a small `evidence.json` instead of running the checks
+// itself. Same report type, so the attestor, anchor, and prover are unchanged.
+export {
+  GITHUB_ADAPTER_NAME,
+  GITHUB_ADAPTER_VERSION,
+  GITHUB_ATTESTOR_SLUG,
+  parseGithubEvidence,
+  reportFromGithubEvidence,
+  type GithubEvidenceDocument,
+  type GithubEvidenceOptions,
+  type GithubRunContext,
+} from './github-evidence.js';
