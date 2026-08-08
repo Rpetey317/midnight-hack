@@ -79,21 +79,13 @@ From the repository root:
 
 ```bash
 cp runtime/.env.example runtime/.env
-chmod 600 runtime/.env
 ```
 
 Set `ZKUAT_NETWORK` and the quoted 24-word `ZKUAT_SPONSOR_WALLET_SEED` in this
 gitignored private file. Compose reads `runtime/.env`; it is separate from the
 persistent state under `~/.zkuat/runtime`.
 
-Deploy once:
-
-```bash
-docker compose run --rm runtime deploy
-```
-
-Copy the printed hexadecimal address into `ZKUAT_CONTRACT_ADDRESS`, then start
-the companion:
+Start the companion:
 
 ```bash
 docker compose up
