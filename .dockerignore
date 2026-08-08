@@ -1,0 +1,29 @@
+# Build context for runtime/Dockerfile — the repository root, because
+# runtime/ resolves @zkuat/contract through file:../contract.
+#
+# Note what is deliberately NOT ignored: contract/src/managed/audit_registry/
+# keys/ and zkir/ are gitignored but must reach the image, otherwise the runtime
+# cannot prove.
+
+**/node_modules
+
+# Secrets and local state. The sponsor seed and raw prepared evidence live here;
+# they belong in a bind mount at run time, never in an image layer.
+**/.env
+**/.env.*
+!**/.env.example
+.zkuat/
+contract/midnight-level-db/
+contract/.zkuat-devnet.json
+runtime/runtime-data/
+
+# Not part of the runtime image.
+ui/
+docs/
+.git/
+.github/
+.claude/
+.vercel/
+**/coverage
+**/*.log
+**/.DS_Store
