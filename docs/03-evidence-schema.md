@@ -21,7 +21,7 @@ The existing workflow artifact contains:
 }
 ```
 
-`@zkuat/collector` validates this untrusted JSON and maps it directly to
+The runtime validates this untrusted JSON and maps it directly to
 `zkuat.evidence.v3`:
 
 - `repository` becomes lower-case `vendor` and `product` identifiers;

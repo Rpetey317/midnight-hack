@@ -5,19 +5,12 @@
  */
 import { EVIDENCE_SCHEMA, type CanonicalEvidence } from '@zkuat/contract';
 
-/** The workflow that produces the document. */
 const WORKFLOW = '.github/workflows/attest.yml';
-
-/** Long enough to be useful, inside the 30 days both shipped policies grant. */
 const DEFAULT_VALID_DAYS = 29;
 
-/** The document `.github/workflows/attest.yml` uploads. */
 export interface GithubEvidenceDocument {
-  /** `owner/name`. */
   repository: string;
-  /** 40-char hex git SHA — `GITHUB_SHA`. */
   commit: string;
-  /** `sha256:…` of the `npm pack` tarball. */
   artifactDigest: string;
   vulnerabilities: {
     critical: number;
@@ -37,21 +30,16 @@ export interface GithubCommandCheck {
   passed: boolean;
 }
 
-/** What the application learned about the run that produced the document. */
 export interface GithubRunContext {
   id?: number;
   url?: string;
-  /** `success`, `failure`, … — `null` while still running. */
   conclusion?: string | null;
-  /** The `request_id` input the application dispatched with. */
   requestId?: string;
 }
 
 export interface GithubContractEvidenceOptions {
   run?: GithubRunContext;
-  /** Unix seconds. Defaults to receipt time in the local runtime. */
   receivedAt?: number;
-  /** Defaults to 29 days, within both shipped policies' 30-day maximum. */
   validDays?: number;
 }
 
@@ -84,12 +72,7 @@ function requireCommandCheck(
   return { command: expectedCommand, passed: check.passed };
 }
 
-/**
- * Validate an untrusted `evidence.json`.
- *
- * This function is network-free: the application parses a ZIP entry from
- * GitHub, then the runtime treats every field as untrusted input.
- */
+/** Validate the untrusted, network-fetched workflow artifact. */
 export function parseGithubEvidence(input: unknown): GithubEvidenceDocument {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     throw new Error('zkuat: evidence.json must be a JSON object');
@@ -147,20 +130,14 @@ export function parseGithubEvidence(input: unknown): GithubEvidenceDocument {
   };
 }
 
-/**
- * Strictly map the unchanged workflow artifact into the contract's private
- * Evidence input. No envelope, signature, key, or attestor identity exists in
- * this path.
- */
+/** Map a validated workflow artifact directly into private contract input. */
 export function canonicalEvidenceFromGithub(
   input: unknown,
   options: GithubContractEvidenceOptions = {},
 ): CanonicalEvidence {
   const doc = parseGithubEvidence(input);
   if (options.run && options.run.conclusion !== 'success') {
-    throw new Error(
-      `zkuat: GitHub Actions run ${options.run.id ?? 'unknown'} did not succeed`,
-    );
+    throw new Error(`zkuat: GitHub Actions run ${options.run.id ?? 'unknown'} did not succeed`);
   }
   const [vendor, product] = doc.repository.toLowerCase().split('/') as [string, string];
   const generatedAt = options.receivedAt ?? Math.floor(Date.now() / 1000);

@@ -4,7 +4,7 @@ import { encodeEvidence, pureCircuits } from '@zkuat/contract';
 import {
   canonicalEvidenceFromGithub,
   parseGithubEvidence,
-} from '../github-evidence.js';
+} from '../src/github-evidence.js';
 
 const COMMIT = '9f2a1b3c4d5e6f708192a3b4c5d6e7f809a1b2c3';
 const DIGEST = `sha256:${'8f739ab'.padEnd(64, '0')}`;

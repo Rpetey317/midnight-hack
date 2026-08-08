@@ -8,7 +8,6 @@ only for the local proof server.
 ```bash
 npm --prefix contract install
 npm --prefix contract run compile:keys
-npm --prefix collector install
 npm --prefix runtime install
 ```
 

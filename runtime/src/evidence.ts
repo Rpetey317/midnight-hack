@@ -1,11 +1,11 @@
 import { randomBytes } from 'node:crypto';
 
-import { canonicalEvidenceFromGithub, parseGithubEvidence } from '@zkuat/collector';
 import {
   encodeEvidence,
   pureCircuits,
   type CanonicalEvidence,
 } from '@zkuat/contract';
+import { canonicalEvidenceFromGithub, parseGithubEvidence } from './github-evidence.js';
 
 export const POLICY_SLUGS = ['bank-v1', 'enterprise-v1'] as const;
 export type PolicySlug = (typeof POLICY_SLUGS)[number];

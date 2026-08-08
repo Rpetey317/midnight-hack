@@ -15,8 +15,7 @@ the local Docker proof server, private evidence, and transaction submission.
 | Path | Purpose |
 | --- | --- |
 | `ui/` | Existing Next.js application deployed at <https://zkuat.works/> |
-| `runtime/` | Local sponsor runtime, proof-server lifecycle, jobs, wallet, chain calls, verification API |
-| `collector/` | Strict parser from the unchanged GitHub artifact to schema-v3 contract evidence |
+| `runtime/` | Evidence validation, local proof server, jobs, sponsor wallet, chain calls, and verification API |
 | `contract/` | Compact contract, witnesses, canonical encoding, policies, and generated contract code |
 
 The former signing, anchor-service, relayer, and standalone CLI packages have
@@ -31,7 +30,6 @@ wallet seed.
 ```bash
 npm --prefix contract install
 npm --prefix contract run compile:keys
-npm --prefix collector install
 npm --prefix runtime install
 
 mkdir -p ~/.zkuat/runtime

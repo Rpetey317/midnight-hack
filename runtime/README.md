@@ -2,6 +2,7 @@
 
 The runtime is a local, loopback-only companion for <https://zkuat.works/>. It
 owns the sponsor wallet, starts the Docker proof server, persists private jobs,
+strictly validates and maps the GitHub artifact into private contract input,
 submits both blockchain transactions, and verifies the resulting transaction
 and compliance record through the hosted indexer.
 
