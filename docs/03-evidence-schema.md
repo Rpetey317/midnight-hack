@@ -330,7 +330,26 @@ outstanding proofs do not break when new evidence is anchored.
       and signs; both import `@zkuat/contract` and call `pureCircuits.leafOf`. Four signed fixtures
       committed under `demo/fixtures/`, 138 + 27 tests green (2026-08-07). Bundle format below.
 - [x] Track C (anchor/CLI) — imports `@zkuat/contract`, no reimplementation
-- [ ] Track D (vendor + buyer views) — imports `@zkuat/contract`, no reimplementation
+- [~] Track D (vendor + buyer views) — **cannot import `@zkuat/contract`, and duplicates instead.**
+      See below.
+
+### The one place the no-reimplementation rule does not hold
+
+`ui/` is the exception, and it is deliberate rather than an oversight. Importing `@zkuat/contract` into
+a Next.js build pulls `@midnight-ntwrk/compact-runtime` and its WASM, which is the
+`onchain-runtime-v3` duplication [08-local-setup.md](08-local-setup.md) §2 documents — the failure that
+kills the *first circuit call* while deployment still succeeds.
+
+So `ui/src/lib/types.ts` restates the schema and `ui/src/lib/demo.ts` restates both policies. **They had
+drifted** — the UI carried `bank-v1` at version 3 with `requireMfa`/`requireBranchProtection` true, and
+`enterprise-v1` with `maxKev: 0` and a 14-day window, none of which match
+`contract/src/encoding.ts`. Because `evaluate()` in `ui/src/lib/types.ts` mirrors the circuit predicate,
+that drift makes the UI show ✓ while the chain writes `compliant: false`. Corrected, with the constraint
+written into both files.
+
+The rule for anything that *can* import the package is unchanged: nobody reimplements. Where the WASM
+boundary forbids it, the duplicate must name `contract/src/encoding.ts` as its source and be checked by
+eye when either side changes.
 
 ---
 

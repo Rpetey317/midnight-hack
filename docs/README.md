@@ -5,14 +5,32 @@ network** on Midnight.
 
 ## Source of truth
 
-**[`../Master-Doc.md`](../Master-Doc.md) is authoritative.** Everything in `docs/` is derived from it and
-cites it by section (§4, §37, …). Where a doc and the Master Doc disagree, the Master Doc wins and the
-doc is wrong — say so rather than working around it.
+**[`Master-Doc-v2.md`](Master-Doc-v2.md) is authoritative.** [`Master-Doc.md`](Master-Doc.md) is the
+superseded v1 and is kept because the rest of this folder cites it heavily.
 
-The docs in this folder were realigned to the Master Doc on 2026-08-07, and `contract/` was migrated to
-match on the same day. **Code and docs now agree.** [07-alignment-delta.md](07-alignment-delta.md) is the
-register of what changed and why — worth reading before editing the contract, because several entries
-explain non-obvious design choices.
+### How to read a section reference
+
+- A bare **§N** — §4, §37 — means **v1** (`Master-Doc.md`). Every existing citation in these docs
+  resolves against it, and they were deliberately left unrenumbered.
+- **v2 §N** means `Master-Doc-v2.md`.
+
+Where a doc and the authoritative doc disagree, the doc is wrong — say so rather than working around it.
+
+### v2 simplifies; it does not redirect
+
+v2's core model is what `contract/` already implements: buyer policies as public contract state,
+evidence as a private witness, a ZK verdict, a public time-bound record, continuous compliance. What it
+**adds** is the application↔GitHub loop (v2 §5) and `npm audit` as the first real evidence tool (v2 §4).
+What it **defers** — Sigstore/Rekor, blinded commitments, attestor keys, SLSA (v2 §10) — this repo
+already built, and v2 §12 lists the same items as the intended upgrades. The as-built is a **superset**,
+and it stays.
+
+Two registers record the history:
+
+- [07-alignment-delta.md](07-alignment-delta.md) — v1 → as-built. Mostly closed; several entries explain
+  non-obvious contract design choices and are worth reading before editing it.
+- [09-master-doc-v2-delta.md](09-master-doc-v2-delta.md) — **v2 → as-built.** Read this one first if you
+  are working on the GitHub evidence path.
 
 ## Read in this order
 
@@ -25,10 +43,14 @@ explain non-obvious design choices.
 | [04-contract-spec.md](04-contract-spec.md) | Ledger state, circuits, disclosure decisions, testing | Tracks A, C, D |
 | [05-implementation-plan.md](05-implementation-plan.md) | Track assignments, timeline, cut list | Everyone |
 | [06-demo-script.md](06-demo-script.md) | The 2½-minute pitch and the DX feedback | Whoever presents |
-| [07-alignment-delta.md](07-alignment-delta.md) | Master Doc → as-built register, now mostly resolved | Track A |
+| [07-alignment-delta.md](07-alignment-delta.md) | v1 Master Doc → as-built register, now mostly resolved | Track A |
 | [08-local-setup.md](08-local-setup.md) | **Setting this up on a fresh machine**, verified end to end | Anyone new |
+| [09-master-doc-v2-delta.md](09-master-doc-v2-delta.md) | **Master-Doc-v2 → as-built.** The GitHub evidence path and its honest gaps | Everyone |
 
 ## The reframing in one paragraph
+
+*(This describes the v1 realignment. v2 did not disturb it — see
+[09](09-master-doc-v2-delta.md).)*
 
 Track A built an **anonymous repo-badge protocol** — a repo proves *some attested repo* satisfies a
 policy, revealing nothing, not even which repo. The Master Doc specifies an **identified B2B software
@@ -61,11 +83,21 @@ of 2026-08-07 on schema v2: identity binding, both buyer policies, compliance re
 the historic-root property that validates the core design.
 
 `collector/` + `attestor/` — 11 supply-chain checks with a labelled degradation path for each, canonical
-JSON, ed25519 DSSE signing, and the predicate leak guard. **165 tests green.** Four signed fixtures in
+JSON, ed25519 DSSE signing, and the predicate leak guard. **186 tests green.** Four signed fixtures in
 `demo/fixtures/` were anchored and proven on the local devnet with real ZK proofs, producing exactly the
 verdict matrix the demo script depends on. Package READMEs:
 [`../attestor/README.md`](../attestor/README.md), [`../collector/README.md`](../collector/README.md),
 [`../demo/README.md`](../demo/README.md).
+
+`collector/src/github-evidence.ts` — the **v2 §4–§5 adapter**: the `evidence.json` a dispatched workflow
+produces, mapped to the same `CollectorReport` the full collector emits, so normalize → sign → anchor →
+prove is unchanged. The facts `npm audit` cannot establish come back `unavailable`, never a measured
+zero. See [09-master-doc-v2-delta.md](09-master-doc-v2-delta.md).
+
+`ui/` — Next.js app with Supabase GitHub auth and four routes (`/dashboard`, `/attester/[product]`,
+`/verify`, `/policies`), plus the workflow dispatch → poll → artifact download path in
+`ui/src/lib/github/evidence.ts`. **Proving is still simulated** (`prove-panel.tsx`) and the verifier
+view reads `lib/demo.ts` fixtures rather than the chain — that wiring is in flight.
 
 **Real proving keys are generated and the contract is deployed to a local devnet.** A full
 attest → proveCompliance → read-record round trip runs with real ZK proofs, including the two-policy

@@ -7,38 +7,52 @@ const t = (iso: string) => Math.floor(Date.parse(iso) / 1000);
 
 const DAY = 86400;
 
+/**
+ * The two policies registered on-chain by `npm run devnet:deploy`.
+ *
+ * ⚠️ Mirrors `POLICY_BANK_V1` / `POLICY_ENTERPRISE_V1` in
+ * `contract/src/encoding.ts` — see the note on `Policy` in `./types`. The ids
+ * are `stringIdOf(slug)` and therefore identical across every deployment; they
+ * were read off the contract, not invented.
+ *
+ * Note what each policy does *not* constrain. A field the contract leaves at
+ * `MAX_U32` means "unconstrained", not "at most zero" — writing 0 here would
+ * make the UI reject evidence the chain accepts.
+ */
 export const POLICIES: Policy[] = [
   {
-    id: "0x7c1e9a3f5b2d84c60ae1f7d928b34c05e6a91f2d7b8c34e05a1d9f62c73b8e40",
+    id: "8eb066f1ff82c34bf459108e1854b511a5327f6a1181a72b7bcb14922a695cc6",
     slug: "bank-v1",
     name: "ACME Bank Procurement",
-    issuer: "ACME Bank N.A.",
-    version: 3,
+    issuer: "First National Bank",
+    issuerSlug: "first-national-bank",
+    version: 1,
     maxCriticals: 0,
     maxHighs: 5,
     maxKev: 0,
-    maxForbiddenDeps: 4_294_967_295,
-    requireMfa: true,
-    requireBranchProtection: true,
+    maxForbiddenDeps: 4_294_967_295, // unconstrained: this policy does not care
+    requireMfa: false,
+    requireBranchProtection: false,
     requireBuildProvenance: true,
     requiredAttestor: null,
     maxAgeSeconds: 30 * DAY,
   },
   {
-    id: "0x2f48d6b1c09e735a8d4c1b6e70f92a35c8d47e1b06a95f3c2e7d814a06c9d51b",
+    id: "65bb1b975c97115919de8beba5b451602ab917c4813e6cff1ac4bcdaf274c3e5",
     slug: "enterprise-v1",
-    name: "Federal Supplier Baseline",
-    issuer: "National Cyber Agency",
+    name: "Globex Supplier Baseline",
+    issuer: "Globex Corporation",
+    issuerSlug: "globex-corp",
     version: 1,
     maxCriticals: 0,
-    maxHighs: 4_294_967_295,
-    maxKev: 0,
+    maxHighs: 4_294_967_295, // unconstrained
+    maxKev: 4_294_967_295, // unconstrained
     maxForbiddenDeps: 0,
     requireMfa: false,
     requireBranchProtection: true,
     requireBuildProvenance: true,
     requiredAttestor: null,
-    maxAgeSeconds: 14 * DAY,
+    maxAgeSeconds: 30 * DAY,
   },
 ];
 

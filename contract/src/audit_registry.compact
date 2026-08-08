@@ -15,7 +15,7 @@
 //
 // Design docs: ../../docs/04-contract-spec.md (circuits),
 // ../../docs/03-evidence-schema.md (encoding), ../../docs/02-threat-model.md
-// (what this does and does not prove), ../../Master-Doc.md (the product).
+// (what this does and does not prove), ../../docs/Master-Doc-v2.md (the product).
 
 pragma language_version >= 0.23;
 

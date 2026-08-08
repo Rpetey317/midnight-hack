@@ -95,6 +95,20 @@ worthless (§35).
 collector v1.2.0 with config hash 0xabc…". `Policy.requiredAttestor` is the first step; version and
 config pinning is the same pattern and is cut for time.
 
+**This is the live risk on the Master-Doc-v2 path, and it is not hypothetical.** The v2 workflow runs
+`npm audit` only. It establishes no KEV fact and evaluates no prohibited-package list, yet the
+`Evidence` struct has a slot for each. Writing `0` into them would put "no known-exploited
+vulnerabilities" — the exact claim `bank-v1` checks — into a public compliance record on the strength
+of a measurement that never happened.
+
+`collector/src/github-evidence.ts` therefore marks both `unavailable` rather than measured, and
+`zkuat-attest` refuses to sign a degraded report without `--allow-degraded`. **The number still reaches
+the commitment**; the status does not, because `Evidence` commits to the value and not its provenance.
+So this is surfaced-to-a-human, not enforced. Anyone signing a v2-path bundle is accepting that the
+KEV and forbidden-dependency predicates are vacuous. Named in
+[09-master-doc-v2-delta.md](09-master-doc-v2-delta.md), and the reason the adapter has tests asserting
+the statuses rather than only the values.
+
 ## Known gaps
 
 Real, and we say so out loud.
@@ -214,11 +228,18 @@ nobody wrote an assertion for is caught automatically.
 - [x] Salt never published anywhere
 - [x] `proveCompliance` publishes **only** the intended set: vendor, product, artifact digest, policy
       id/version, verdict, timestamps, nullifier, record key
-- [x] Evidence bundle is private, not attached to the public attestation predicate — *Track B*.
+- [~] Evidence bundle is private, not attached to the public attestation predicate — *Track B*.
       Mechanized as `assertNoEvidenceLeak()` in `attestor/src/predicate.ts`: the predicate's key set
       must be exactly `{leaf, repo, sha, schema}`, and no private evidence field name or value may
       appear in any of them. Allowlist-shaped, so a new `Evidence` field is guarded without anyone
-      editing it. `.github/workflows/attest.yml` runs it as a gate before `actions/attest`.
+      editing it.
+
+      **Partially ticked, deliberately.** The guard is implemented and unit-tested, and `anchor/` runs
+      it before submitting. It is **no longer a CI gate**: `.github/workflows/attest.yml` used to run
+      it before `actions/attest`, and that workflow was replaced with the Master-Doc-v2 §4 evidence
+      job, which publishes no predicate at all. So the leak this guards against is currently
+      unreachable through CI — but the *mechanized* claim only holds on the anchor path, not on the
+      live GitHub path. See [09-master-doc-v2-delta.md](09-master-doc-v2-delta.md).
 - [ ] The buyer view renders no private value, including in error states and tooltips — *Track D*
 
 ### Check ledger state, not just the transcript

@@ -26,12 +26,28 @@ export type Evidence = {
   coverage: number;
 };
 
-/** Public ledger state. Buyers read this to know what a record means. */
+/**
+ * Public ledger state. Buyers read this to know what a record means.
+ *
+ * ⚠️ Every threshold below must equal `POLICY_BANK_V1` / `POLICY_ENTERPRISE_V1`
+ * in `contract/src/encoding.ts`. That file is the source of truth; this is a
+ * deliberate duplicate, not a second implementation — `ui/` cannot import
+ * `@zkuat/contract` because it pulls the `@midnight-ntwrk/*` WASM runtime and
+ * the `onchain-runtime-v3` duplication documented in `docs/08-local-setup.md`.
+ *
+ * The duplication has teeth: `evaluate()` below mirrors the circuit predicate,
+ * so a drifted threshold makes the UI show ✓ while the chain writes
+ * `compliant: false`. Change one, change both.
+ */
 export type Policy = {
+  /** `stringIdOf(slug)` — deterministic, identical across deployments. */
   id: string;
   slug: string;
+  /** Display only. The on-chain identity is `issuerSlug`. */
   name: string;
   issuer: string;
+  /** The slug actually hashed into `Policy.issuer` on-chain. */
+  issuerSlug: string;
   version: number;
   maxCriticals: number;
   maxHighs: number;

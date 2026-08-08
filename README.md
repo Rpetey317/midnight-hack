@@ -45,26 +45,29 @@ The two properties that make this more than "hide a CI report":
 
 ## Start here
 
-**[`Master-Doc.md`](Master-Doc.md)** is the project's source of truth.
-**[docs/](docs/README.md)** is the design documentation derived from it.
+**[`docs/Master-Doc-v2.md`](docs/Master-Doc-v2.md)** is the project's source of truth.
+[`docs/Master-Doc.md`](docs/Master-Doc.md) is the superseded v1, kept because the design docs cite it
+heavily — a bare **§N** in `docs/` means v1, **v2 §N** means v2.
+**[docs/](docs/README.md)** is the design documentation derived from both.
 
 Fastest path for a new team member:
 1. [docs/00-overview.md](docs/00-overview.md) — the idea, the actors, why it needs Midnight
 2. [docs/03-evidence-schema.md](docs/03-evidence-schema.md) — the integration contract
-3. [docs/05-implementation-plan.md](docs/05-implementation-plan.md) — your track
+3. [docs/09-master-doc-v2-delta.md](docs/09-master-doc-v2-delta.md) — where v2 and the code differ
+4. [docs/05-implementation-plan.md](docs/05-implementation-plan.md) — your track
 
 ## Repo state
 
 | Path | Status |
 |---|---|
-| `docs/` | ✅ Realigned to `Master-Doc.md` (2026-08-07) |
+| `docs/` | ✅ Realigned to `Master-Doc-v2.md` |
 | `app/` | ✅ Minimal `hello-world` scaffold (SDK 4.1.1), deps installed |
 | `contract/` | ✅ **v2, 87 tests, real keys, deployed to local devnet.** Full attest → prove → read round trip. |
-| `collector/`, `attestor/` | ✅ **11 checks, DSSE-signed bundles, 165 tests.** Four signed fixtures anchored and proven on the devnet with real ZK proofs. |
+| `collector/`, `attestor/` | ✅ **11 checks, DSSE-signed bundles, 186 tests.** Four signed fixtures anchored and proven on the devnet with real ZK proofs. Plus the v2 GitHub-evidence adapter. |
 | `demo/fixtures/` | ✅ Committed, verifying, and consumable by `--bundle` |
-| `.github/workflows/attest.yml` | ✅ Written; not green (the repo is private, where artifact attestations are plan-gated). Nothing depends on it. |
+| `.github/workflows/attest.yml` | ✅ **The Master-Doc-v2 §4 evidence job** — dispatch → `npm audit` → `npm pack` digest → `evidence.json` artifact. The app dispatches it by name. |
 | `anchor/`, `cli/` | ✅ **Trust boundary + `anchor`/`prove`/`status`, 12 tests.** Two fixtures anchored and proven on the devnet with real ZK proofs; Sigstore repo binding written and unit-tested, never exercised against a real Fulcio cert (the repo is private). |
-| `ui/` (vendor + buyer) | ⬜ |
+| `ui/` (vendor + buyer) | 🟡 Four routes, Supabase GitHub auth, live workflow dispatch → artifact download. **Proving is simulated; the verifier view reads fixtures, not the chain.** |
 
 Try the whole thing without a chain:
 
@@ -91,6 +94,12 @@ asserted by the prover.
 
 **[docs/07-alignment-delta.md](docs/07-alignment-delta.md) records every gap and its resolution.** The
 two still open are scope decisions, not code: UI priority and standards grounding.
+
+`Master-Doc-v2.md` then **simplified** the trust model rather than redirecting it: GitHub Actions is
+taken as the trusted evidence environment, and the Sigstore/attestor-key machinery becomes optional
+(v2 §10) rather than wrong — v2 §12 lists it as the intended upgrade. Both paths are live and produce
+the same report type. **[docs/09-master-doc-v2-delta.md](docs/09-master-doc-v2-delta.md)** is that
+register, including which facts the live path cannot measure.
 
 Real proving keys are generated and the contract runs on a local devnet — `npm run devnet:demo`
 executes the whole protocol with real ZK proofs. Setting this up on another machine:
