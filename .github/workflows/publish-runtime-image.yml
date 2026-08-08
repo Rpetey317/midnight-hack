@@ -1,0 +1,164 @@
+name: Publish Runtime Image
+
+run-name: Runtime image ${{ inputs.tag || github.ref_name }}
+
+# Builds runtime/Dockerfile and pushes to GHCR. The build context is the
+# repository root because runtime/ resolves @zkuat/contract through
+# file:../contract.
+#
+# The interesting part is the Compact toolchain: contract/src/managed/
+# audit_registry/{keys,zkir} are gitignored (~15 MB of PLONK proving keys) and
+# the Dockerfile refuses to build without them, so this workflow installs the
+# compiler and runs `compile:keys` before the image build. The image itself
+# never needs the compiler.
+#
+# No secret reaches the image. The sponsor seed lives only in
+# ~/.zkuat/runtime/.env on the operator's machine and is bind-mounted at run
+# time.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Extra image tag (in addition to the git SHA)
+        required: false
+        default: latest
+      platforms:
+        description: Target platforms
+        required: false
+        default: linux/amd64
+        type: choice
+        options:
+          - linux/amd64
+          - linux/amd64,linux/arm64
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: publish-runtime-image-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/zkuat-runtime
+  # Pin the toolchain. `compact update` with no argument tracks latest, and a
+  # compiler bump changes the generated bindings and the proving keys.
+  COMPACT_VERSION: "0.31.1"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # The toolchain is a few hundred MB and versioned, so a hit skips both the
+      # installer and the compiler download.
+      - name: Cache Compact toolchain
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.compact
+            ~/.local/bin/compact
+          key: compact-${{ runner.os }}-${{ env.COMPACT_VERSION }}
+
+      - name: Install Compact toolchain
+        env:
+          # Both the installer and `compact update` query the GitHub API;
+          # unauthenticated runners share an IP and hit the rate limit.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMPACT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMPACT_NO_MODIFY_PATH: "1"
+        run: |
+          if [ ! -x "$HOME/.local/bin/compact" ]; then
+            curl --proto '=https' --tlsv1.2 -LsSf \
+              https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
+          fi
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Select compiler version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          compact --version
+          compact update "$COMPACT_VERSION"
+
+      # Bindings, proving keys, and ZKIR. Slow (PLONK key generation), and the
+      # only reason this job needs the compiler at all.
+      - name: Compile contract with proving keys
+        run: npm --prefix contract run compile:keys
+
+      # The Dockerfile checks this too, but failing here points at the real
+      # cause instead of at a COPY three stages later.
+      - name: Verify ZK assets
+        run: |
+          assets=contract/src/managed/audit_registry
+          test -d "$assets/keys" || { echo "missing $assets/keys" >&2; exit 1; }
+          test -d "$assets/zkir" || { echo "missing $assets/zkir" >&2; exit 1; }
+          du -sh "$assets/keys" "$assets/zkir"
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Only needed for the arm64 leg; harmless otherwise.
+      - name: Set up QEMU
+        if: contains(inputs.platforms, 'arm64')
+        uses: docker/setup-qemu-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=short
+            type=ref,event=tag
+            type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: runtime/Dockerfile
+          platforms: ${{ inputs.platforms || 'linux/amd64' }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # This repo deliberately ships no attestations — see the trust
+          # boundaries in docs/01-architecture.md. Keeping provenance off also
+          # leaves a plain single-arch manifest for the default build.
+          provenance: false
+
+      - name: Summarize
+        run: |
+          {
+            echo "### Pushed"
+            echo
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+            echo
+            echo "Packages are private by default — publish the package under"
+            echo "https://github.com/users/${{ github.repository_owner }}/packages to make it pullable."
+          } >> "$GITHUB_STEP_SUMMARY"
