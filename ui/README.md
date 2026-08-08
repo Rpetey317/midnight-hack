@@ -1,36 +1,128 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# zkuat web application
 
-## Getting Started
+This is the Next.js 16 frontend deployed at <https://zkuat.works/>. It handles
+GitHub authentication, repository selection, evidence-workflow orchestration,
+local-runtime pairing, proof-job progress, policy presentation, and the current
+Supabase-backed dashboard/verifier experience.
 
-First, run the development server:
+It never contains the sponsor wallet seed and does not connect a browser wallet.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Current routes
+
+| Route | Purpose |
+| --- | --- |
+| `/` | Product explanation and GitHub sign-in |
+| `/dashboard` | Authenticated repository workspace backed by Supabase |
+| `/attester/[product]` | Dispatch evidence, inspect the returned JSON, pair the local runtime, select a policy, and run a proof job |
+| `/policies` and `/policies/[id]` | Display the two bundled policy fixtures mirrored from `contract/src/encoding.ts` |
+| `/verify` and `/verify/[id]` | Public lookup over Supabase `proof_activity` rows |
+| `/auth/callback` | Supabase GitHub OAuth callback |
+
+## Evidence and runtime flow
+
+The `requestRepositoryEvidence` server action uses the signed-in user's GitHub
+provider token to:
+
+1. dispatch `generate-evidence.yml` on the repository's default branch with a
+   request UUID;
+2. poll the matching `workflow_dispatch` run for up to ten minutes;
+3. require a successful conclusion;
+4. download `zkuat-evidence-<request-id>`;
+5. extract and parse `evidence.json` from the ZIP response.
+
+The JSON and run/artifact metadata are returned to the vendor's browser. After
+pairing, the browser sends them directly to the local runtime and polls the job
+until `verified`, `rejected`, `failed`, or `cancelled`.
+
+The browser stores the pairing token only in React state. A page reload or
+runtime restart requires pairing again.
+
+## Required target-repository workflow
+
+Every repository selected in the UI must expose a compatible workflow file,
+normally `.github/workflows/generate-evidence.yml`. It must:
+
+- accept the optional `workflow_dispatch` input `request_id`;
+- include the request ID in the run name so the UI can find the run;
+- upload an artifact named `zkuat-evidence-<request-id>`;
+- put `evidence.json` at the ZIP root;
+- emit the exact schema accepted by `runtime/src/github-evidence.ts`.
+
+This repository's workflow audits the `ui/` package. A different target
+repository may adapt the measurement steps but must preserve the handoff schema.
+`GITHUB_EVIDENCE_WORKFLOW` can override the workflow filename in the Vercel
+environment.
+
+## Configuration
+
+The frontend requires:
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=<project-url>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+# Optional; defaults to generate-evidence.yml
+GITHUB_EVIDENCE_WORKFLOW=generate-evidence.yml
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Supabase must have GitHub authentication configured and expose the existing
+`midnight` schema used by the code. That schema contains `products`, `artifacts`,
+and `proof_activity` tables with the columns represented in
+`src/lib/queries.ts`. Database migrations and OAuth-provider configuration are
+not currently included in this repository.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The GitHub session must expose a `provider_token` with enough access to list the
+selected repository, dispatch its Actions workflow, inspect runs/artifacts, and
+download the artifact. If the token is missing, sign out and complete GitHub
+sign-in again.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+For local development, set the local site origin in the runtime env:
 
-## Learn More
+```dotenv
+ZKUAT_ALLOWED_ORIGIN=http://localhost:3000
+```
 
-To learn more about Next.js, take a look at the following resources:
+The production runtime default allows only `https://zkuat.works`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Install and run
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm ci
+npm run dev
+```
 
-## Deploy on Vercel
+Open <http://localhost:3000>. Start `@zkuat/runtime` separately; an HTTPS or
+localhost page cannot launch a native process or Docker container on the user's
+machine.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Checks
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+npm run build
+```
+
+## Current implementation boundary
+
+The real runtime path submits and verifies Midnight transactions, but it does
+not yet persist its final job into Supabase. Consequently:
+
+- the completed result and transaction IDs are shown in the current attester
+  session only;
+- the dashboard's stored artifacts/proofs are not automatically updated by a
+  real runtime job;
+- public verifier pages read Supabase, not the Midnight indexer;
+- policy pages render the hard-coded mirror in `src/lib/demo.ts`, not contract
+  ledger state;
+- the demo seeder creates synthetic audit rows and transaction hashes.
+
+For a real proof job, the local runtime's successful transaction/indexer check
+is authoritative. The hosted public verifier is presently a hackathon UI/read-
+model demonstration, not an independent chain verifier.
+
+## Privacy boundary
+
+Raw evidence never reaches Midnight or the public verifier, but it does pass
+through the authenticated Vercel server action and is rendered to the vendor's
+browser before local proving. "Private" in the current implementation means
+private from the chain, auditor, and unauthenticated public—not exclusively
+local to the proof-server process.

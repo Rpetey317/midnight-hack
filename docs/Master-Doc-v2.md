@@ -1,392 +1,268 @@
-# Project Alignment — Privacy-Preserving Software Compliance
+# zkuat current product and implementation brief
 
-## 1. Current project goal
+This filename is retained from the original v2 alignment document. The content
+below describes the current repository rather than the superseded design.
 
-Build a Midnight-based application where a software vendor can prove that a repository satisfies a buyer/auditor policy **without exposing the underlying evidence values**.
+## 1. Project definition
 
-The hackathon version deliberately simplifies the trust model.
+zkuat is a privacy-preserving software compliance application where a vendor can
+prove that GitHub-generated security evidence satisfies a public buyer policy
+without putting the underlying findings on Midnight.
 
-For now:
+The current hackathon trust statement is:
 
-- GitHub Actions is treated as the trusted evidence-generation environment.
-- The workflow produces a small `evidence.json`.
-- The application triggers that workflow and retrieves the generated evidence.
-- The evidence is used as private input to a Compact compliance proof.
-- Midnight stores/verifies the public compliance result.
+> GitHub Actions is trusted to run the repository's compatible measurement
+> workflow. zkuat proves policy evaluation over the accepted artifact; it does
+> not cryptographically prove the scanner or web handoff was honest.
 
-The current implementation is a proof of the architecture, not a production-grade software supply-chain attestation system.
+## 2. Actors
 
-## 2. Core use case
+### Vendor / auditee
 
-There are two main roles.
+The vendor signs into `zkuat.works` with GitHub, selects a repository and policy,
+retrieves the workflow evidence, pairs a local sponsor runtime, and requests the
+proof. The vendor does not connect a browser wallet.
 
-### Auditor / buyer
+### Buyer / auditor
 
-The auditor defines a software-security policy, for example:
+The buyer cares about the public policy definition, artifact identity, validity
+window, and compliance verdict. The buyer does not receive vulnerability counts,
+lint/build output, commit evidence, salt, or Merkle path.
 
-```text
-critical vulnerabilities <= 0
-high vulnerabilities <= 3
-```
+In this hackathon build, arbitrary buyer policy creation is not implemented. The
+runtime deploy command registers two fixed examples.
 
-Policies are registered in the Midnight contract and have a stable ID/version.
+### Local sponsor operator
 
-### Auditee / vendor
+The person running `@zkuat/runtime` controls one Preview/Preprod sponsor seed.
+That wallet pays DUST for the vendor's contract calls and also derives the
+contract anchor witness. For the demo this is normally the vendor's machine and
+operator.
 
-The vendor:
-
-1. selects one of their GitHub repositories;
-2. selects a published policy;
-3. requests validation;
-4. the application triggers the repository's GitHub Actions evidence workflow;
-5. the workflow produces `evidence.json`;
-6. the application retrieves that evidence;
-7. the evidence is supplied privately to the Compact circuit;
-8. a ZK proof is generated;
-9. the resulting compliance transaction is submitted to Midnight.
-
-The auditor later sees only the public compliance result.
-
-## 3. Current architecture
+## 3. Repository state
 
 ```text
-Auditor
-   │
-   │ registers/selects policy
-   ▼
-Midnight Contract
-   ▲
-   │
-   │ compliance proof
-   │
-Vendor Application
-   │
-   │ trigger workflow
-   ▼
-GitHub Actions
-   │
-   │ generates
-   ▼
-evidence.json
-   │
-   │ retrieved by application
-   ▼
-private witness input
-   │
-   ▼
-Compact circuit
-   │
-   ▼
-Midnight proof
+zkuat/
+├── .github/workflows/generate-evidence.yml
+├── contract/   Compact protocol + shared TypeScript encoding
+├── runtime/    local wallet/proof/API/indexer companion
+├── ui/         Vercel Next.js application + Supabase read-model
+└── docs/       current implementation documentation
 ```
 
-The raw evidence must not be written to Midnight.
+## 4. Evidence generation
 
-## 4. GitHub evidence generation
+The compatible GitHub Actions workflow:
 
-Each participating repository contains a GitHub Actions workflow dedicated to evidence generation.
+1. checks out the repository;
+2. installs Node dependencies;
+3. captures `npm audit --json`;
+4. runs lint and build without aborting evidence generation;
+5. runs `npm pack` and hashes the tarball bytes with SHA-256;
+6. writes `evidence.json` containing repository, commit, artifact digest,
+   severity counts, and lint/build booleans;
+7. uploads `zkuat-evidence-<request-id>` for one day.
 
-For the current hackathon version, this workflow is intentionally simple.
+The copy in this repository operates on `ui/`. Repositories added through the
+application must carry an equivalent workflow or a configured alternative
+filename with the same dispatch/artifact/schema contract.
 
-Example output:
+## 5. GitHub and web handoff
 
-```json
-{
-  "repository": "vendor/project",
-  "commit": "abc123...",
-  "vulnerabilities": {
-    "critical": 0,
-    "high": 2,
-    "moderate": 4,
-    "low": 1,
-    "total": 7
-  }
-}
-```
+The hosted Next.js server action uses the signed-in user's Supabase GitHub
+provider token to dispatch the workflow on the default branch, find the run by
+request UUID, wait up to ten minutes, require success, download the artifact,
+and parse `evidence.json`.
 
-The first real tool used is `npm audit`.
+The server returns the raw JSON and run/artifact metadata to the authenticated
+browser. The vendor can inspect it before proving. This means the evidence is
+not exclusively local: Vercel and the vendor browser see it. The privacy claim
+is that it is not published to the auditor, Supabase public read-model, or
+Midnight ledger.
 
-The workflow:
+## 6. Local runtime
+
+`@zkuat/runtime` is an HTTP service bound to loopback. It must be started by the
+user; a deployed web page cannot launch it. The browser pairs using a six-digit
+code and receives an in-memory bearer token.
+
+For each job the runtime:
+
+1. validates the forwarded JSON and self-consistency of request, run URL/ID,
+   artifact name/ID, repository, completion status, and policy slug;
+2. maps the artifact into canonical `zkuat.evidence.v3`;
+3. sets `generatedAt` to local receipt time and `validUntil` to 29 days later;
+4. creates a fresh random salt and Compact commitment;
+5. persists the full private job below `~/.zkuat/runtime`;
+6. starts the local Docker proof server;
+7. starts and synchronizes the sponsor wallet, registering NIGHT outputs for
+   DUST generation when needed;
+8. confirms that the seed-derived anchor matches the configured contract;
+9. submits the anchor transaction;
+10. obtains the indexed Merkle path and submits the compliance proof;
+11. verifies transaction status, contract entry point, record key fields, and
+    verdict through the hosted indexer.
+
+The runtime trusts the paired frontend's GitHub payload. It does not re-download
+or authenticate the artifact itself.
+
+## 7. Compact model
+
+There is one registry contract rather than one contract per policy. It exposes:
 
 ```text
-checkout repository
-      ↓
-install dependencies
-      ↓
-npm audit --json
-      ↓
-normalize output
-      ↓
-evidence.json
-      ↓
-upload GitHub Actions artifact
+attest(leaf)
+registerPolicy(policyId, policy)
+proveCompliance(vendorId, productId, artifactDigest, policyId)
 ```
 
-The workflow artifact is temporary GitHub Actions storage. It is **not committed into the repository**.
+The sealed anchor identity authorizes the first two calls. A depth-16 historic
+Merkle tree authenticates accepted evidence while allowing proofs against older
+roots. Policies are public. Nullifiers prevent one evidence leaf from being
+reused against the same policy. `records` holds the current artifact/policy
+result and `history` preserves every result.
 
-Later, additional tools can contribute fields to the same evidence schema, for example:
+The proof checks:
 
-- OSV-Scanner;
-- Semgrep;
-- OpenSSF Scorecard;
-- SBOM generators;
-- repository configuration checks.
+- the private salted evidence is in the anchored set;
+- private vendor, product, and artifact values match the public inputs;
+- the evidence/policy pair has not been replayed;
+- the committed validity window is no longer than the public policy allows;
+- vulnerability thresholds and required command outcomes hold.
 
-## 5. Application ↔ GitHub flow
+Only the combined verdict is disclosed. A failed predicate produces a valid
+public `compliant=false` record; invalid membership, binding, freshness-window,
+or replay claims fail the transaction.
 
-The application already has GitHub-authenticated users.
+## 8. Implemented policies
 
-When the vendor clicks **Validate / Prove**:
+`bank-v1` requires:
 
 ```text
-User selects repository + policy
-        ↓
-Application triggers evidence workflow
-        ↓
-GitHub Actions executes
-        ↓
-Application identifies the matching workflow run
-        ↓
-Wait for successful completion
-        ↓
-Download evidence artifact
-        ↓
-Parse evidence.json
-        ↓
-Use evidence for proof generation
+critical == 0
+high <= 5
+lint passed
+build passed
+validity window <= 30 days
 ```
 
-A `request_id` should be passed when triggering the workflow so the application can reliably associate the user's validation request with the correct workflow run/artifact.
-
-The details of how the application is internally split into frontend/backend processes are outside this specification.
-
-## 6. Compact / Midnight model
-
-Use **one main registry/verifier contract**, not one contract per policy.
-
-The contract should support the equivalent of:
+`enterprise-v1` requires:
 
 ```text
-registerPolicy(...)
-proveCompliance(policyId, repositoryOrArtifactIdentity, ...)
+critical == 0
+vulnDeps == 0
+lint passed
+build passed
+validity window <= 30 days
 ```
 
-Policies are public contract state.
+The current runtime maps `npm audit`'s `vulnerabilities.total` into `vulnDeps`.
+That naming/measurement mismatch is known and documented; the actual contract
+predicate is unambiguous.
 
-Example policy:
+## 9. Public and private data
+
+### Private from Midnight and the public verifier
 
 ```text
-Policy #1
-
-maxCritical = 0
-maxHigh = 3
+commit SHA
+critical/high/total values
+moderate/low artifact values
+lint/build results
+salt and evidence leaf
+Merkle path
+sponsor seed and derived anchor secret
 ```
 
-The vendor chooses a registered policy and proves their private evidence satisfies it.
-
-Conceptually:
+### Public on Midnight
 
 ```text
-policy = ledger.policies[policyId]
-report = getEvidenceWitness()
-
-assert(report.critical <= policy.maxCritical)
-assert(report.high <= policy.maxHigh)
+derived vendor ID
+derived product ID
+artifact SHA-256
+policy ID and version
+provenAt and validUntil
+one compliance boolean
+nullifier and contract transaction/state effects
 ```
 
-The evidence is obtained through a Compact witness implemented by the application.
+The application intentionally hides findings, not the vendor relationship or
+artifact identity.
 
-The deployed contract never fetches GitHub directly.
+## 10. Transactions and gas sponsorship
 
-## 7. Evidence handoff to Compact
+A proof job normally creates two contract transactions:
 
-The application retrieves `evidence.json` from GitHub and keeps the parsed result available locally.
+1. `attest`
+2. `proveCompliance`
 
-Conceptually:
+Verification is a read. On first use the wallet may separately register NIGHT
+UTXOs for DUST generation. Deployment creates one contract and submits two
+policy-registration calls.
 
-```ts
-const evidence = await retrieveEvidenceFromGithub();
+The sponsor seed is stored only in the local runtime env file. It is never put in
+Vercel, Supabase, frontend environment variables, or the contract witness in raw
+form.
 
-const contract = new Contract({
-  getEvidence: () => evidence
-});
-```
+## 11. Hosted UI and public verifier status
 
-Compact declares the witness:
+The deployed UI implements GitHub OAuth, repository registration, workflow
+retrieval, local-runtime pairing, policy selection, proof progress, and display
+of real runtime transaction receipts.
 
-```text
-witness getEvidence(): Evidence
-```
+Its dashboard and public verifier are currently a separate Supabase-backed
+read-model. The repository includes no database migrations. A real completed
+runtime job is not yet written into `artifacts` or `proof_activity`, policy pages
+use a hard-coded mirror of contract policies, and verifier pages do not query the
+Midnight indexer. The demo seeder inserts synthetic transaction hashes.
 
-During proof generation:
+Therefore the local runtime's indexer check is authoritative for real jobs. The
+public verifier currently demonstrates the intended product experience rather
+than providing independent live-chain verification.
 
-```text
-GitHub evidence
-     ↓
-application
-     ↓
-Compact witness
-     ↓
-compiled circuit
-     ↓
-proof server
-     ↓
-ZK proof
-```
+## 12. Minimum reproducible demo
 
-The raw evidence is not sent to the Midnight ledger.
+1. Install/compile the contract and runtime.
+2. Configure a funded Preview/Preprod sponsor seed.
+3. Deploy the contract and record its address.
+4. Start the runtime and leave it running.
+5. Sign into `zkuat.works` with GitHub.
+6. Add a repository that carries the compatible evidence workflow.
+7. Request evidence and wait for the successful Actions artifact.
+8. Pair the browser with the local runtime.
+9. Select one of the two policies and generate the proof.
+10. Observe the `attest` and `proveCompliance` transaction IDs and the final
+    indexed `verified` or `rejected` record.
 
-## 8. Public vs private data
+## 13. Deliberate hackathon scope
 
-### Private
+Not implemented:
 
-For the current version:
+- signed evidence, Sigstore/Rekor, SLSA, or KMS attestors;
+- runtime-side GitHub authentication/retrieval;
+- arbitrary policy creation/governance;
+- multiple sponsor wallets or concurrent transaction queues;
+- remote key custody;
+- automatic Supabase/indexer synchronization;
+- a direct chain-backed public verifier;
+- production recovery guarantees, monitoring, rate limiting, or key rotation.
 
-```text
-exact vulnerability counts
-future scanner findings
-future SBOM/security information
-raw evidence.json
-```
+## 14. Logical next steps
 
-### Public
+The cleanest continuation is to preserve the Compact evidence/policy boundary
+while strengthening integration and provenance:
 
-At minimum:
+1. persist each verified runtime receipt into the application read-model;
+2. make the public verifier query and deserialize actual indexer state;
+3. replace UI policy fixtures with ledger reads;
+4. move GitHub artifact retrieval/verification into the local runtime or add a
+   signed provenance envelope;
+5. rename or correctly compute `vulnDeps` in the next evidence-schema version;
+6. add Supabase migrations and reproducible frontend deployment configuration;
+7. add live-network integration tests and operational diagnostics;
+8. later add richer scanners, SBOM/provenance inputs, and policy governance.
 
-```text
-vendor identity
-repository/product identity
-policy ID/version
-proof timestamp
-compliance result
-```
+The core product remains:
 
-A future version should bind proofs to an immutable artifact digest rather than only a repository/commit identity.
-
-## 9. Continuous compliance
-
-The long-term product idea remains **continuous privacy-preserving compliance**.
-
-The same vendor can repeatedly prove compliance:
-
-```text
-Artifact / version A   Policy X   ✓
-Artifact / version B   Policy X   ✓
-Artifact / version C   Policy X   ✓
-```
-
-Policies may also change over time.
-
-The important model is:
-
-```text
-one private evidence format
-        ↓
-multiple buyer policies
-        ↓
-different proofs
-        ↓
-compliance history
-```
-
-The same evidence can also be evaluated against multiple policies without exposing its raw values.
-
-## 10. What is intentionally simplified for the hackathon
-
-The previous design assumed a stronger provenance and attestation architecture.
-
-That is **not required for the current MVP**.
-
-For now, do not build around:
-
-- custom Sigstore/Rekor commitments;
-- blinded evidence commitments;
-- custom attestor private keys;
-- direct SLSA verification;
-- direct GitHub attestation verification inside Compact;
-- trusted reusable workflow registries;
-- KMS-backed attestors;
-- production-grade evidence provenance.
-
-Instead, assume:
-
-> GitHub Actions is the trusted environment and the `evidence.json` produced by the selected workflow is accepted as the evidence source.
-
-This is sufficient to demonstrate the ZK/privacy and policy architecture.
-
-Future versions can replace this simplified trust assumption with real software provenance and trusted-build attestations.
-
-## 11. Current MVP
-
-The minimum successful demo is:
-
-1. Auditor creates/registers a policy.
-2. Vendor selects a GitHub repository.
-3. Vendor selects that policy.
-4. Application triggers the repository evidence workflow.
-5. GitHub Actions runs `npm audit`, lint, and the production build.
-6. `evidence.json` is generated and uploaded as an artifact.
-7. Application retrieves it.
-8. Application supplies it privately to the Compact witness.
-9. Proof generation checks the evidence against the selected policy.
-10. Midnight accepts the proof.
-11. Auditor sees that the vendor/repository satisfies the policy.
-
-Example:
-
-```text
-PRIVATE EVIDENCE
-
-critical = 0
-high = 2
-moderate = 4
-```
-
-Policy:
-
-```text
-critical <= 0
-high <= 3
-```
-
-Public result:
-
-```text
-Vendor X
-Repository Y
-Policy #1
-COMPLIANT
-```
-
-## 12. Future upgrades
-
-After the MVP works, the architecture can evolve toward:
-
-- multiple scanners feeding the same evidence schema;
-- real SBOM evidence;
-- artifact/image SHA-256 binding;
-- trusted reusable workflows;
-- GitHub/SLSA provenance validation;
-- signed/attested evidence;
-- proof expiration;
-- automatic CI proof refresh;
-- multiple independent evidence sources;
-- real OpenSSF/NIST-derived policy packs.
-
-The important point is that these upgrades should strengthen the **evidence provenance layer** without changing the core application model:
-
-```text
-authenticated/private evidence
-        ↓
-buyer-defined policy
-        ↓
-ZK proof
-        ↓
-public compliance record
-```
-
-## 13. Current project definition
-
-> A privacy-preserving software compliance platform where auditors publish machine-verifiable security policies and vendors prove that evidence generated from their repositories satisfies those policies without exposing the underlying evidence values.
-
-For the hackathon, GitHub Actions is the trusted evidence source. The application triggers the workflow, retrieves `evidence.json`, supplies it privately to the Compact circuit, generates a proof, and records the public compliance result on Midnight.
+> private measured evidence → public buyer policy → local zero-knowledge proof →
+> public, artifact-bound compliance record.
