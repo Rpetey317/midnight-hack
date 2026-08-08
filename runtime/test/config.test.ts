@@ -33,6 +33,21 @@ describe('loadConfig', () => {
     expect(config.indexer).toContain('indexer.preview.midnight.network');
     expect(config.proofServer).toBe('http://127.0.0.1:6300');
     expect(config.dockerNetwork).toBeNull();
+    expect(config.allowedOrigins).toEqual(['https://zkuat.works']);
+  });
+
+  it('accepts an exact list of browser origins', () => {
+    const config = loadConfig({
+      env: {
+        ...baseEnv,
+        ZKUAT_ALLOWED_ORIGINS: 'https://zkuat.works,http://localhost:3000',
+      },
+      envFile: '/does/not/exist',
+    });
+    expect(config.allowedOrigins).toEqual([
+      'https://zkuat.works',
+      'http://localhost:3000',
+    ]);
   });
 
   it('uses the private Compose network inside the runtime container', () => {

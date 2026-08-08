@@ -51,7 +51,7 @@ export class RuntimeServer {
 
   private cors(request: http.IncomingMessage, response: http.ServerResponse): boolean {
     const origin = request.headers.origin;
-    if (origin && origin !== this.config.allowedOrigin) {
+    if (origin && !this.config.allowedOrigins.includes(origin)) {
       send(response, 403, { error: 'origin is not allowed' });
       return false;
     }

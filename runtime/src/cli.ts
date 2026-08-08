@@ -37,7 +37,7 @@ async function start(): Promise<void> {
     [
       `zkuat runtime listening at ${config.runtimeUrl.toString().replace(/\/$/, '')}`,
       `PAIRING CODE: ${server.auth.code}`,
-      `allowed origin: ${config.allowedOrigin}`,
+      `allowed origins: ${config.allowedOrigins.join(', ')}`,
       '',
     ].join('\n'),
   );

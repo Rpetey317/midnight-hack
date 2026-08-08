@@ -73,8 +73,9 @@ the local proof server.
 
 ## Authentication and authorization
 
-The HTTP listener accepts only the exact `ZKUAT_ALLOWED_ORIGIN` when an Origin
-header is present. Only `/v1/health` and `/v1/pair` are unauthenticated. A correct
+The HTTP listener accepts only an exact origin in `ZKUAT_ALLOWED_ORIGINS` when an
+Origin header is present. Compose allows `https://zkuat.works` and
+`http://localhost:3000`. Only `/v1/health` and `/v1/pair` are unauthenticated. A correct
 pairing code creates a random bearer token held only in runtime process memory
 and browser component state.
 

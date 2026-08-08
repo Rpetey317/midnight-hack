@@ -27,7 +27,7 @@ export interface RuntimeConfig {
   runtimeUrl: URL;
   bindHost: string;
   bindPort: number;
-  allowedOrigin: string;
+  allowedOrigins: string[];
   indexer: string;
   indexerWS: string;
   node: string;
@@ -138,6 +138,17 @@ function webOrigin(value: string, field: string): string {
   return parsed.origin;
 }
 
+function webOrigins(env: Record<string, string | undefined>): string[] {
+  const configured = env.ZKUAT_ALLOWED_ORIGINS?.trim();
+  const values = configured
+    ? configured.split(',').map((value) => value.trim())
+    : [env.ZKUAT_ALLOWED_ORIGIN?.trim() || 'https://zkuat.works'];
+  if (values.some((value) => !value)) {
+    throw new Error('zkuat: ZKUAT_ALLOWED_ORIGINS must be a comma-separated list of origins');
+  }
+  return [...new Set(values.map((value) => webOrigin(value, 'ZKUAT_ALLOWED_ORIGINS')))];
+}
+
 export function loadConfig(options: LoadConfigOptions = {}): RuntimeConfig {
   const envFile = path.resolve(options.envFile ?? path.join(process.cwd(), '.env'));
   const fileEnv = parseEnvFile(envFile);
@@ -203,10 +214,7 @@ export function loadConfig(options: LoadConfigOptions = {}): RuntimeConfig {
           ? '::1'
           : runtimeUrl.hostname,
     bindPort,
-    allowedOrigin: webOrigin(
-      env.ZKUAT_ALLOWED_ORIGIN?.trim() || 'https://zkuat.works',
-      'ZKUAT_ALLOWED_ORIGIN',
-    ),
+    allowedOrigins: webOrigins(env),
     indexer: env.ZKUAT_INDEXER_HTTP_URL?.trim() || defaults.indexer,
     indexerWS: env.ZKUAT_INDEXER_WS_URL?.trim() || defaults.indexerWS,
     node: env.ZKUAT_NODE_URL?.trim() || defaults.node,

@@ -77,13 +77,8 @@ selected repository, dispatch its Actions workflow, inspect runs/artifacts, and
 download the artifact. If the token is missing, sign out and complete GitHub
 sign-in again.
 
-For local development, set the local site origin in the runtime env:
-
-```dotenv
-ZKUAT_ALLOWED_ORIGIN=http://localhost:3000
-```
-
-The production runtime default allows only `https://zkuat.works`.
+The root Compose configuration accepts both the production origin
+`https://zkuat.works` and local frontend origin `http://localhost:3000`.
 
 ## Install and run
 

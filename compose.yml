@@ -8,11 +8,12 @@ services:
     env_file:
       - ./runtime/.env
     environment:
-      # Container networking is fixed here so runtime/.env contains only the
-      # operator's wallet, chain, and allowed-origin configuration.
+      # Container networking and browser origins are fixed here so runtime/.env
+      # contains only the operator's wallet and chain configuration.
       ZKUAT_DOCKER_NETWORK: zkuat-runtime
       ZKUAT_PROOF_SERVER_URL: http://zkuat-proof-server:6300
       ZKUAT_RUNTIME_URL: http://127.0.0.1:4317
+      ZKUAT_ALLOWED_ORIGINS: https://zkuat.works,http://localhost:3000
     ports:
       - "127.0.0.1:4317:4317"
     networks:

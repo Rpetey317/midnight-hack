@@ -55,7 +55,6 @@ state, and Compact private state remain separately under `~/.zkuat/runtime`.
 ZKUAT_NETWORK=preview
 ZKUAT_SPONSOR_WALLET_SEED="<24-word-English-BIP-39-recovery-phrase>"
 ZKUAT_CONTRACT_ADDRESS=<deployed-contract-address>
-ZKUAT_ALLOWED_ORIGIN=https://zkuat.works
 ZKUAT_PROOF_SERVER_IMAGE=midnightntwrk/proof-server:8.1.0
 ```
 
@@ -65,7 +64,8 @@ ZKUAT_PROOF_SERVER_IMAGE=midnightntwrk/proof-server:8.1.0
 | `ZKUAT_SPONSOR_WALLET_SEED` | Yes | Valid 24-word English BIP-39 recovery phrase; quote it in dotenv files |
 | `ZKUAT_CONTRACT_ADDRESS` | For `start` | Hexadecimal address printed by `deploy` |
 | `ZKUAT_RUNTIME_URL` | No | Browser-facing loopback origin; Compose fixes it to `http://127.0.0.1:4317` |
-| `ZKUAT_ALLOWED_ORIGIN` | No | Exact browser origin allowed by CORS; default `https://zkuat.works` |
+| `ZKUAT_ALLOWED_ORIGINS` | No | Comma-separated exact browser origins; Compose allows the hosted UI and `http://localhost:3000` |
+| `ZKUAT_ALLOWED_ORIGIN` | No | Single-origin fallback for direct source runs |
 | `ZKUAT_PROOF_SERVER_URL` | No | Proof-server origin; Compose supplies the private Docker DNS origin |
 | `ZKUAT_PROOF_SERVER_IMAGE` | No | Docker image; default `midnightntwrk/proof-server:8.1.0` |
 | `ZKUAT_INDEXER_HTTP_URL` | No | Override the selected network's hosted GraphQL endpoint |
@@ -73,11 +73,11 @@ ZKUAT_PROOF_SERVER_IMAGE=midnightntwrk/proof-server:8.1.0
 | `ZKUAT_NODE_URL` | No | Override the selected network's hosted RPC endpoint |
 | `ZKUAT_STORAGE_DIR` | No | State root; default `~/.zkuat/runtime` |
 
-Compose supplies `ZKUAT_RUNTIME_URL`, `ZKUAT_PROOF_SERVER_URL`, and the internal
-`ZKUAT_DOCKER_NETWORK`; do not add or override them in `runtime/.env`. Keep the
-env file mode `0600`. The recovery phrase grants control of the sponsor wallet:
-use a dedicated wallet and never copy the phrase into Vercel, Supabase, browser
-storage, or source control.
+Compose supplies `ZKUAT_RUNTIME_URL`, `ZKUAT_PROOF_SERVER_URL`, the internal
+`ZKUAT_DOCKER_NETWORK`, and the two allowed browser origins; do not add or
+override them in `runtime/.env`. Keep the env file mode `0600`. The recovery
+phrase grants control of the sponsor wallet: use a dedicated wallet and never
+copy the phrase into Vercel, Supabase, browser storage, or source control.
 
 ## Configure and deploy
 
@@ -111,7 +111,7 @@ streams the startup banner to the terminal:
 ```text
 zkuat runtime listening at http://127.0.0.1:4317
 PAIRING CODE: 123456
-allowed origin: https://zkuat.works
+allowed origins: https://zkuat.works, http://localhost:3000
 ```
 
 Leave that terminal attached while using the UI. `start` acquires

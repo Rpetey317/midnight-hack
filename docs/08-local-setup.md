@@ -54,7 +54,6 @@ Before deployment, set at least:
 ```dotenv
 ZKUAT_NETWORK=preview
 ZKUAT_SPONSOR_WALLET_SEED="<24-word-English-BIP-39-recovery-phrase>"
-ZKUAT_ALLOWED_ORIGIN=https://zkuat.works
 ZKUAT_PROOF_SERVER_IMAGE=midnightntwrk/proof-server:8.1.0
 ```
 
@@ -66,11 +65,8 @@ file. Compose fixes the browser endpoint to `http://127.0.0.1:4317` and supplies
 the proof-server's private Docker-network origin; neither value needs to be in
 `runtime/.env`.
 
-For frontend development at `http://localhost:3000`, change the allowed origin:
-
-```dotenv
-ZKUAT_ALLOWED_ORIGIN=http://localhost:3000
-```
+Compose accepts requests from both `https://zkuat.works` and
+`http://localhost:3000`; no env-file change is needed for frontend development.
 
 ## Deploy once
 
@@ -189,8 +185,8 @@ Common failures:
   status command;
 - **wallet waits for DUST**: confirm the seed has unshielded NIGHT and allow time
   after first registration;
-- **origin is not allowed**: make `ZKUAT_ALLOWED_ORIGIN` exactly match the page's
-  origin, without a path;
+- **origin is not allowed**: add the page's exact origin to
+  `ZKUAT_ALLOWED_ORIGINS` in `compose.yml`, without a path;
 - **pairing fails after restart**: use the newly printed code;
 - **workflow/artifact mismatch**: verify the target repository implements the
   request-ID run name and artifact conventions;
