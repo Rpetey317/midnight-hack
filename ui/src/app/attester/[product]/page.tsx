@@ -5,6 +5,7 @@ import { AppNav } from "@/components/app/app-nav";
 import { EvidencePanel } from "@/components/app/evidence-panel";
 import { ProvePanel } from "@/components/app/prove-panel";
 import { ArtifactPicker } from "@/components/app/artifact-picker";
+import { GithubEvidenceValidation } from "@/components/app/github-evidence-validation";
 import { createClient } from "@/lib/supabase/server";
 import { getProduct } from "@/lib/queries";
 import { evidenceFor } from "@/lib/demo";
@@ -69,6 +70,8 @@ export default async function AttesterProduct({
             <ExternalLink className="size-3.5" strokeWidth={1.5} />
           </a>
         </div>
+
+        <GithubEvidenceValidation productId={product.id} />
 
         {artifacts.length === 0 ? (
           <div className="mt-8 rounded-2xl border border-border bg-card px-6 py-12">
