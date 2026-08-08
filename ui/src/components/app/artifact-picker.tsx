@@ -20,7 +20,7 @@ export function ArtifactPicker({
 
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <span className="text-xs uppercase tracking-wider text-muted-foreground">Artifact</span>
+      <span className="text-xs uppercase tracking-wider text-muted-foreground">Proven build</span>
       <Tabs
         value={selected}
         onValueChange={(v) => router.push(`/attester/${productId}?artifact=${v}`)}
@@ -29,8 +29,9 @@ export function ArtifactPicker({
         <TabsList className="w-full overflow-x-auto">
           {artifacts.map((a) => (
             <TabsTrigger key={a.digest} value={a.digest} className="whitespace-nowrap font-mono">
-              {shortDigest(a.digest, 8, 4)}
-              {a.commit ? ` · ${shortCommit(a.commit)}` : ""}
+              {/* The commit is what a developer recognises; the digest disambiguates. */}
+              {a.commit ? `${shortCommit(a.commit)} · ` : ""}
+              {shortDigest(a.digest, 6, 4)}
             </TabsTrigger>
           ))}
         </TabsList>

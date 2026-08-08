@@ -24,6 +24,16 @@ export type RuntimeJobStatus =
   | "failed"
   | "cancelled";
 
+const TERMINAL: ReadonlySet<string> = new Set([
+  "verified",
+  "rejected",
+  "failed",
+  "cancelled",
+]);
+
+/** True once the runtime will report no further status for a job. */
+export const isTerminalStatus = (status: RuntimeJobStatus) => TERMINAL.has(status);
+
 export type RuntimeJobInput = {
   evidence: unknown;
   requestId: string;

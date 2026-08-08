@@ -5,8 +5,21 @@ import type { ComplianceRecord, Policy } from "./types";
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const DIGEST_RE = /^[0-9a-f]{64}$/;
 
-export const policyFor = (slug: string): Policy =>
-  POLICIES.find((p) => p.slug === slug) ?? POLICIES[0];
+/**
+ * Stored proofs address a policy by slug or by its contract-derived id.
+ * Undefined means no known policy matches — a verifier must be shown the raw
+ * value rather than a guess.
+ */
+export const findPolicy = (idOrSlug: string): Policy | undefined =>
+  POLICIES.find((p) => p.slug === idOrSlug || p.id === idOrSlug);
+
+/**
+ * @deprecated Falls back to `POLICIES[0]`, so an unrecognised id renders as a
+ * real policy the proof was never made against. Prefer `findPolicy` and handle
+ * the undefined case.
+ */
+export const policyFor = (idOrSlug: string): Policy =>
+  findPolicy(idOrSlug) ?? POLICIES[0];
 
 /** Renders a stored audit as the public compliance record a verifier reads. */
 export function recordFromAudit(a: PublicAudit): ComplianceRecord {

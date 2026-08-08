@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Search } from "lucide-react";
@@ -30,6 +30,9 @@ export function VerifyForm({
   const [query, setQuery] = useState(defaultQuery);
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
+  // Opening a proof id is a navigation, so its pending state lives in a
+  // transition rather than in `busy`.
+  const [opening, startOpening] = useTransition();
   const [hits, setHits] = useState<Hit[] | null>(null);
 
   const submit = async () => {
@@ -42,7 +45,7 @@ export function VerifyForm({
 
     // A proof id addresses one audit directly; anything else is a repo name.
     if (UUID_RE.test(value)) {
-      router.push(`/verify/${value}`);
+      startOpening(() => router.push(`/verify/${value}`));
       return;
     }
 
@@ -67,7 +70,7 @@ export function VerifyForm({
           onChange={setQuery}
           error={error}
           leftIcon={<Search className="size-4" strokeWidth={1.5} />}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
+          onKeyDown={(e) => e.key === "Enter" && !busy && !opening && submit()}
           classNames={{ input: "font-mono" }}
         />
 
@@ -104,9 +107,9 @@ export function VerifyForm({
                 <span className="hidden sm:inline">Sample proof id</span>
               </Button>
             )}
-            <Button onClick={submit} disabled={busy}>
-              {busy ? "Searching…" : "Look up"}
-              {busy && <Loader size={14} />}
+            <Button onClick={submit} disabled={busy || opening}>
+              {busy ? "Searching…" : opening ? "Opening…" : "Look up"}
+              {(busy || opening) && <Loader variant="comet" size={14} />}
             </Button>
           </div>
         </div>

@@ -58,20 +58,19 @@ export function VerdictPanel({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full flex-col gap-1.5 px-5 py-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-6 sm:py-6"
+        className="flex w-full flex-col gap-1.5 px-6 py-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring sm:py-6"
       >
-        {/* Status, provenance and the toggle share one row at every width. */}
-        <div className="flex w-full items-center gap-2.5 sm:gap-4">
+        {/* Status, provenance and the toggle share one row at every width. The
+            gap matches the card padding, so the icon sits evenly between the
+            card edge and the label. */}
+        <div className="flex w-full items-center gap-6">
           <motion.span
             initial={reduce ? false : { scale: 0.7, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 380, damping: 26 }}
-            className={cn(
-              "grid size-8 shrink-0 place-items-center rounded-full bg-secondary sm:size-11",
-              s.tone,
-            )}
+            className={cn("grid shrink-0 place-items-center", s.tone)}
           >
-            <Icon className="size-4 sm:size-5" strokeWidth={1.5} />
+            <Icon className="size-5 sm:size-6" strokeWidth={1.5} />
           </motion.span>
 
           <h2 className={cn("truncate text-lg font-semibold tracking-tight sm:text-xl", s.tone)}>
@@ -92,7 +91,7 @@ export function VerdictPanel({
           />
         </div>
 
-        <p className="text-sm text-muted-foreground sm:pl-15">
+        <p className="text-sm text-muted-foreground sm:pl-12">
           {policy.name} v{policy.version} · issued by {policy.issuer}
         </p>
       </button>

@@ -7,6 +7,7 @@ import { ArtifactPicker } from "@/components/app/artifact-picker";
 import { GithubEvidenceValidation } from "@/components/app/github-evidence-validation";
 import { createClient } from "@/lib/supabase/server";
 import { getProduct } from "@/lib/queries";
+import { findPolicy } from "@/lib/audit";
 import { evidenceFor } from "@/lib/demo";
 import { fmtDate, shortCommit, shortDigest } from "@/lib/format";
 
@@ -55,7 +56,6 @@ export default async function AttesterProduct({
               {product.repo}
             </h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              {artifacts.length} artifact{artifacts.length === 1 ? "" : "s"} ·{" "}
               {proofs.length} proof{proofs.length === 1 ? "" : "s"} on record
             </p>
           </div>
@@ -74,7 +74,7 @@ export default async function AttesterProduct({
 
         {artifacts.length === 0 ? (
           <div className="mt-8 rounded-2xl border border-border bg-card px-6 py-12">
-            <h2 className="text-lg font-medium tracking-tight">No artifacts yet</h2>
+            <h2 className="text-lg font-medium tracking-tight">No proofs yet</h2>
             <p className="mt-1.5 max-w-md text-sm text-muted-foreground">
               Request repository validation above to retrieve its GitHub Actions evidence and
               submit a proof through the paired local runtime.
@@ -107,7 +107,9 @@ export default async function AttesterProduct({
               </h2>
             </header>
             <ul>
-              {proofs.map((p) => (
+              {proofs.map((p) => {
+                const policy = findPolicy(p.policy_id);
+                return (
                 <li key={p.id} className="border-b border-border last:border-0">
                   <Link
                     href={`/verify/${p.id}`}
@@ -119,7 +121,10 @@ export default async function AttesterProduct({
                           p.verdict ? "bg-success" : "bg-destructive"
                         }`}
                       />
-                      <span className="font-mono">{p.policy_id}</span>
+                      {/* Never name a policy the proof may not have been made against. */}
+                      <span className={policy ? undefined : "font-mono text-xs"}>
+                        {policy?.name ?? p.policy_id}
+                      </span>
                       <span className="text-muted-foreground">v{p.policy_version}</span>
                     </span>
                     <span className="font-mono text-xs text-muted-foreground">
@@ -130,15 +135,17 @@ export default async function AttesterProduct({
                     </span>
                   </Link>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </section>
         )}
 
         {current && (
           <p className="mt-6 text-xs text-muted-foreground">
-            Artifact {shortDigest(current.digest)}
-            {current.commit_sha ? ` · commit ${shortCommit(current.commit_sha)}` : ""}
+            Evidence shown for
+            {current.commit_sha ? ` commit ${shortCommit(current.commit_sha)} ·` : ""}{" "}
+            {shortDigest(current.digest)}
           </p>
         )}
       </main>

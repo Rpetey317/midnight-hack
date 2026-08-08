@@ -43,6 +43,8 @@ export interface TodoListProps {
   onOpenChange?: (open: boolean) => void;
   collapseOnComplete?: boolean;
   maxHeight?: number;
+  /** Chores read well crossed off; finished pipeline stages do not. */
+  strikeCompleted?: boolean;
   className?: string;
 }
 
@@ -206,6 +208,7 @@ export function TodoList({
   onOpenChange,
   collapseOnComplete = true,
   maxHeight = 248,
+  strikeCompleted = true,
   className,
 }: TodoListProps) {
   const reduce = useReducedMotion() ?? false;
@@ -354,8 +357,8 @@ export function TodoList({
                           aria-hidden="true"
                           initial={false}
                           animate={{
-                            scaleX: status === "completed" ? 1 : 0,
-                            opacity: status === "completed" ? 1 : 0,
+                            scaleX: strikeCompleted && status === "completed" ? 1 : 0,
+                            opacity: strikeCompleted && status === "completed" ? 1 : 0,
                           }}
                           transition={
                             reduce

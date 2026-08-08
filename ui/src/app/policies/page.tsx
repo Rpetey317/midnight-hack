@@ -57,7 +57,7 @@ function Stat({
   mono?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card px-5 py-4">
+    <div className="rounded-xl border border-border bg-card px-6 py-5">
       <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
         <Icon className="size-3.5" strokeWidth={1.5} />
         {label}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, Boxes, CheckCircle2, GitCommitHorizontal } from "lucide-react";
+import { ArrowRight, Boxes, CheckCircle2 } from "lucide-react";
 import { AppNav } from "@/components/app/app-nav";
 import { AddRepoDialog } from "@/components/app/add-repo-dialog";
 import { SeedDemoButton } from "@/components/app/seed-demo-button";
@@ -19,9 +19,10 @@ export default async function Dashboard() {
   const handle = user.user_metadata?.user_name ?? user.email?.split("@")[0] ?? "you";
   const { products, artifacts, proofs } = await getWorkspace();
 
+  // An artifact is only stored once it has been proven, so an artifact count
+  // would restate the proof count.
   const stats = [
     { label: "Repositories", value: products.length, icon: Boxes },
-    { label: "Artifacts", value: artifacts.length, icon: GitCommitHorizontal },
     { label: "Proofs", value: proofs.length, icon: CheckCircle2 },
   ];
 
@@ -40,7 +41,7 @@ export default async function Dashboard() {
           {products.length > 0 && <AddRepoDialog />}
         </div>
 
-        <dl className="mt-8 grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-3">
+        <dl className="mt-8 grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
           {stats.map((s) => (
             <div key={s.label} className="flex flex-col gap-2 bg-card px-6 py-5">
               <dt className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
@@ -101,17 +102,17 @@ export default async function Dashboard() {
                             ? `${shortDigest(latest.digest)} · ${
                                 latest.commit_sha ? shortCommit(latest.commit_sha) : "no commit"
                               }`
-                            : "No artifacts yet"}
+                            : "No proofs yet"}
                         </p>
                       </div>
 
                       <div className="flex items-center gap-6 text-xs text-muted-foreground">
-                        <span className="font-mono tabular-nums">
-                          {own.length} artifact{own.length === 1 ? "" : "s"}
-                        </span>
-                        <span className="font-mono tabular-nums">
-                          {count} proof{count === 1 ? "" : "s"}
-                        </span>
+                        {/* The subtitle already says so when there are none. */}
+                        {count > 0 && (
+                          <span className="font-mono tabular-nums">
+                            {count} proof{count === 1 ? "" : "s"}
+                          </span>
+                        )}
                         <ArrowRight
                           className="size-4 transition-transform duration-150 group-hover:translate-x-0.5"
                           strokeWidth={1.5}

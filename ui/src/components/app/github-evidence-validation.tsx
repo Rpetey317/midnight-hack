@@ -1,23 +1,25 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Cpu, ExternalLink, KeyRound, ShieldCheck, X } from "lucide-react";
+import { Cpu, ExternalLink, KeyRound, ShieldCheck, Terminal } from "lucide-react";
 import { StatefulButton } from "@/components/motion/button/stateful";
 import { GithubIcon } from "@/components/app/github-icon";
+import { CopyField } from "@/components/app/copy-field";
+import { RuntimeProgress } from "@/components/app/runtime-progress";
+import { Loader } from "@/components/motion/loader";
 import { requestRepositoryEvidence } from "@/app/actions";
 import {
   createRuntimeJob,
   getRuntimeJob,
+  isTerminalStatus,
   pairRuntime,
   runtimeHealth,
   type RuntimeJob,
   type RuntimePolicySlug,
 } from "@/lib/runtime";
-import { shortDigest } from "@/lib/format";
 
 type Result = Exclude<Awaited<ReturnType<typeof requestRepositoryEvidence>>, { error: string }>;
 
-const TERMINAL = new Set(["verified", "rejected", "failed", "cancelled"]);
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function GithubEvidenceValidation({ productId }: { productId: string }) {
@@ -75,7 +77,7 @@ export function GithubEvidenceValidation({ productId }: { productId: string }) {
         policySlug,
       });
       setJob(current);
-      while (!TERMINAL.has(current.status)) {
+      while (!isTerminalStatus(current.status)) {
         await sleep(1_500);
         current = await getRuntimeJob(runtimeUrl, runtimeToken, current.id);
         setJob(current);
@@ -92,6 +94,31 @@ export function GithubEvidenceValidation({ productId }: { productId: string }) {
 
   return (
     <section className="mt-8 overflow-hidden rounded-2xl border border-border bg-card">
+      {/* Proving needs the companion running locally; once paired, this is noise. */}
+      {!runtimeToken && (
+        <div className="border-b border-border bg-background px-6 py-5">
+          <div className="flex items-start gap-3">
+            <Terminal className="size-4 shrink-0 text-warning" strokeWidth={1.5} />
+            <div className="min-w-0">
+              <h2 className="text-sm font-medium tracking-tight">Start the local runtime first</h2>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Proving runs on your machine, not here. Start the companion from the
+                repository root and leave it attached — its output prints{" "}
+                <code className="rounded bg-card px-1 py-0.5 font-mono text-[11px] text-foreground">
+                  PAIRING CODE: 123456
+                </code>
+                . Enter that code below once the evidence is ready.
+              </p>
+            </div>
+          </div>
+          <CopyField
+            label="Repository root"
+            value="docker compose up"
+            className="mt-3 sm:pl-7"
+          />
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-6 py-4">
         <div>
           <h2 className="text-sm font-medium tracking-tight">GitHub evidence and local proof</h2>
@@ -172,8 +199,12 @@ export function GithubEvidenceValidation({ productId }: { productId: string }) {
                 disabled={runtimeBusy || pairingCode.length !== 6 || Boolean(runtimeToken)}
                 className="mt-auto inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-secondary px-4 text-sm text-foreground transition-colors hover:bg-secondary/70 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <KeyRound className="size-4" strokeWidth={1.5} />
-                {runtimeToken ? "Paired" : "Pair runtime"}
+                {runtimeBusy && !runtimeToken ? (
+                  <Loader variant="comet" size={16} speed={0.9} label="Pairing" />
+                ) : (
+                  <KeyRound className="size-4" strokeWidth={1.5} />
+                )}
+                {runtimeToken ? "Paired" : runtimeBusy ? "Pairing…" : "Pair runtime"}
               </button>
             </div>
 
@@ -194,10 +225,10 @@ export function GithubEvidenceValidation({ productId }: { productId: string }) {
                   </select>
                 </label>
                 <StatefulButton
-                  state={runtimeBusy ? "loading" : runtimeError ? "error" : job && TERMINAL.has(job.status) ? "success" : "idle"}
+                  state={runtimeBusy ? "loading" : runtimeError ? "error" : job && isTerminalStatus(job.status) ? "success" : "idle"}
                   icon={<Cpu className="size-4" strokeWidth={1.5} />}
                   loadingText="Proving locally…"
-                  successText="Verified on chain"
+                  successText="Run complete"
                   errorText="Try again"
                   onClick={prove}
                   className="mt-auto"
@@ -209,36 +240,7 @@ export function GithubEvidenceValidation({ productId }: { productId: string }) {
 
             {runtimeError && <p className="mt-4 text-sm text-destructive">{runtimeError}</p>}
 
-            {job && (
-              <div className="mt-4 rounded-xl border border-border bg-background p-4 text-sm">
-                <p className="flex items-center gap-2 font-medium">
-                  {job.status === "verified" ? (
-                    <Check className="size-4 text-success" strokeWidth={2} />
-                  ) : job.status === "rejected" || job.status === "failed" ? (
-                    <X className="size-4 text-destructive" strokeWidth={2} />
-                  ) : (
-                    <Cpu className="size-4 text-warning" strokeWidth={1.5} />
-                  )}
-                  {job.status.replaceAll("-", " ")}
-                </p>
-                <p className="mt-1 font-mono text-xs text-muted-foreground">job {job.id}</p>
-                {job.anchor && (
-                  <p className="mt-1 font-mono text-xs text-muted-foreground">
-                    anchor tx {shortDigest(job.anchor.txId, 16, 10)}
-                  </p>
-                )}
-                {job.proof && (
-                  <p className="mt-1 font-mono text-xs text-muted-foreground">
-                    proof tx {shortDigest(job.proof.txId, 16, 10)}
-                  </p>
-                )}
-                {job.verification && (
-                  <p className={job.verification.record.compliant ? "mt-2 text-success" : "mt-2 text-destructive"}>
-                    On-chain record: {job.verification.record.compliant ? "policy satisfied" : "policy not satisfied"}
-                  </p>
-                )}
-              </div>
-            )}
+            {job && <RuntimeProgress job={job} />}
           </div>
         </>
       )}

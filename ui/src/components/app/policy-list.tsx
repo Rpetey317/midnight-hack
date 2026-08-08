@@ -31,9 +31,7 @@ export function PolicyList({ className }: { className?: string }) {
               aria-expanded={expanded}
               className="flex w-full items-center gap-4 px-6 py-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-secondary text-muted-foreground">
-                <ScrollText className="size-4" strokeWidth={1.5} />
-              </span>
+              <ScrollText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
               <span className="mr-auto min-w-0">
                 <span className="block truncate text-base font-medium tracking-tight">
                   {p.name}
